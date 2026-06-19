@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.cache/
+
+# macOS
+.DS_Store
+
+# Claude Code / local agent state
+.claude/
+
+# Large 3D asset datasets — fetched/installed separately, not version-controlled
+IDSDL/datasets/assets/
+IDSDL/datasets/futurehssd/
+
+# Generated scene outputs and renders
+results/
+tmp/
+*.blend
+*.blend1
+
+# Documentation site lives in its own repo: github.com/interioragent/docs
+docs/
