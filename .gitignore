@@ -18,8 +18,13 @@ IDSDL/datasets/futurehssd/
 # Generated scene outputs and renders
 results/
 tmp/
+frames/
 *.blend
 *.blend1
+
+# Planner RAG embedding cache — regenerated from assets/skills.json on first run
+# (also exceeds GitHub's 100 MB file-size limit, so it is never committed)
+assets/rag_cache.npz
 
 # Documentation site lives in its own repo: github.com/interioragent/docs
 docs/

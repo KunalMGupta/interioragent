@@ -11,6 +11,11 @@ resolves the layout with geometric and vision-language constraints, and exports 
 
 📖 **Full documentation & visual guide:** <https://interioragent.github.io/docs/>
 
+This repository contains two complementary components:
+
+- **IDSDL** — a structured language that builds explicit **3D scenes** (geometry you can open and render in Blender). *Documented below and on the docs site.*
+- **InteriorPlanner** (`planner_core/`) — a retrieval-augmented **design-image** generator that turns a text prompt into a photorealistic interior collage and supports conversational editing. *See [Interior Planner](#interior-planner-planner_core).*
+
 ---
 
 ## Why IDSDL
@@ -99,7 +104,12 @@ IDSDL/
   renderer/         # Blender rendering helpers
   datasets/         # asset retrievers (large data fetched separately)
   assets/           # bundled door / window / curtain / wall-texture assets
-tests.py            # feature test suite
+planner_core/       # InteriorPlanner — RAG-based design-image generator
+  planner.py        #   generate() + edit() over an LLM image model
+  rag.py            #   SkillsRAG — embedding retrieval over the skills library
+assets/             # planner data: skills.json (rag_cache.npz built on first run)
+examples/           # planner_example.py + sample generate/edit outputs (v1–v3.png)
+tests.py            # IDSDL feature test suite
 docs_figures.py     # builds the documentation example scenes and renders them
 render_docs.py      # render any results/*.blend from top-down / perspective views
 build_preview.py    # generate a standalone HTML preview of the docs
@@ -117,6 +127,75 @@ python tests.py all        # run everything
 ```
 
 Tests need `OPENAI_API_KEY` set and the datasets installed.
+
+## Interior Planner (`planner_core`)
+
+`InteriorPlanner` is a separate, lighter-weight path that generates **interior-design images**
+(not 3D geometry) from a text prompt. It is retrieval-augmented: a library of design "skill
+cards" is embedded and searched, the most relevant cards are synthesized into a single
+conditioning description, and an image model renders a photorealistic **2×4 collage** of one
+coherent room. You can then refine the design conversationally, with state preserved between
+turns.
+
+### Extra setup
+
+`planner_core` reuses `sceneprogllm` and your `OPENAI_API_KEY` (set above), and additionally
+needs:
+
+```bash
+pip install tqdm
+```
+
+Its data lives in `assets/`:
+- `skills.json` — the design skills library (committed).
+- `rag_cache.npz` — cached embeddings of the skills. This is **not** committed; it is built
+  automatically the first time you run the planner (a one-time embedding pass over
+  `skills.json`) and reused afterwards.
+
+### Quick start
+
+```python
+from planner_core import InteriorPlanner
+
+planner = InteriorPlanner()
+
+# Initial generation
+result = planner("A gym in San Diego")
+result.save("v1.png")
+
+# Iterative edits — design state is preserved between calls
+result = planner.edit("make it more minimalist, remove most equipment")
+result.save("v2.png")
+
+result = planner.edit("add large windows with ocean views")
+result.save("v3.png")
+```
+
+A runnable copy is in [`examples/planner_example.py`](examples/planner_example.py). The sample
+outputs below show the first generation followed by the two successive edits:
+
+<p align="center">
+  <img src="examples/v1.png" width="32%">
+  <img src="examples/v2.png" width="32%">
+  <img src="examples/v3.png" width="32%">
+</p>
+
+### How it works
+
+1. **Retrieve** — `SkillsRAG` embeds the prompt and returns the top-k most similar skill cards from `skills.json` (cosine similarity over the cached embeddings).
+2. **Synthesize** — an LLM composes the retrieved cards into one reusable conditioning *skill* (design principles, materials, lighting, composition cues).
+3. **Render** — an image model turns the prompt + conditioning skill into an eight-panel editorial collage of a single consistent room.
+4. **Edit** — `edit(instruction)` refines the current conditioning skill and re-renders, keeping the originally retrieved skills.
+
+Each `generate`/`edit` returns a `DesignResult` with `.image`, the synthesized `.skill`, the
+`.retrieved` cards, and a `.save(path)` helper.
+
+| Call | Description |
+|---|---|
+| `InteriorPlanner(retrieval_top_k=3)` | Construct the planner (loads the skills library + embedding cache). |
+| `planner(prompt)` / `planner.generate(prompt)` | Generate a fresh design; resets state. |
+| `planner.edit(instruction)` | Refine the current design; raises if nothing has been generated yet. |
+| `DesignResult.save(path)` | Save the generated image. |
 
 ## Notes
 
