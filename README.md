@@ -38,7 +38,7 @@ conda create -n interioragent python=3.12 -y
 conda activate interioragent
 
 # 3. Python dependencies
-pip install numpy matplotlib trimesh scipy sceneprogllm
+pip install numpy matplotlib trimesh scipy tqdm sceneprogllm
 ```
 
 A few external pieces are required:
