@@ -1,4 +1,3 @@
-from turtle import position
 import numpy as np
 from IDSDL.object import SceneProgObject, placemethod
 
