@@ -835,36 +835,20 @@ class GridGroup(SceneProgObject):
 
 
 class RoomGroup(SceneProgObject):
+    # Placement methods that take a `facing` argument and feed room-size computation.
+    GRID_PLACEMENTS = frozenset({
+        'place_on_center', 'place_on_back', 'place_on_front', 'place_on_left', 'place_on_right',
+        'place_on_back_left', 'place_on_back_right', 'place_on_front_left', 'place_on_front_right',
+        'place_on_back_wall_left', 'place_on_back_wall_center', 'place_on_back_wall_right',
+        'place_on_front_wall_left', 'place_on_front_wall_center', 'place_on_front_wall_right',
+        'place_on_left_wall_left', 'place_on_left_wall_center', 'place_on_left_wall_right',
+        'place_on_right_wall_left', 'place_on_right_wall_center', 'place_on_right_wall_right',
+        'place_on_back_left_corner', 'place_on_back_right_corner',
+        'place_on_front_left_corner', 'place_on_front_right_corner',
+    })
+
     def __init__(self, scene, name=None, modulate_scale=1.0):
         super().__init__(scene, name=name)
-        self.grid_facings = {
-            'place_on_back_left_corner': None,
-            'place_on_back_wall_left': None,
-            'place_on_back_wall_center': None,
-            'place_on_back_wall_right': None,
-            'place_on_back_right_corner': None,
-            'place_on_left_wall_right': None,
-            'place_on_back_left': None,
-            'place_on_back': None,
-            'place_on_back_right': None,
-            'place_on_right_wall_left': None,
-            'place_on_left_wall_center': None,
-            'place_on_left': None,
-            'place_on_center': None,
-            'place_on_right': None,
-            'place_on_right_wall_center': None,
-            'place_on_left_wall_left': None,
-            'place_on_front_left': None,
-            'place_on_front': None,
-            'place_on_front_right': None,
-            'place_on_right_wall_right': None,
-            'place_on_front_left_corner': None,
-            'place_on_front_wall_right': None,
-            'place_on_front_wall_center': None,
-            'place_on_front_wall_left': None,
-            'place_on_front_right_corner': None,
-        }
-
         self.modulate_scale = modulate_scale
         self.wall_assets = {
             'back_wall': {'left': [], 'center': [], 'right': []},
@@ -1000,7 +984,7 @@ class RoomGroup(SceneProgObject):
             return CIRCULATION_GAP, CIRCULATION_GAP, 0
 
         obj = op.obj
-        facing = self.grid_facings[point]
+        facing = op.facing  # resolved (caller value or heuristic default) by the compile pre-pass
 
         w, h, d = obj.get_whd()
         if facing in ['front', 'back']:
@@ -1125,70 +1109,60 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_center(self, obj, facing=None):
-        facing = self.grid_facings['place_on_center']
         obj.set_location(self.WIDTH / 2, self.compute_obj_y(obj), self.DEPTH / 2)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back(self, obj, facing=None):
-        facing = self.grid_facings['place_on_back']
         obj.set_location(self.WIDTH / 2, self.compute_obj_y(obj), self.DEPTH / 4)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front(self, obj, facing=None):
-        facing = self.grid_facings['place_on_front']
         obj.set_location(self.WIDTH / 2, self.compute_obj_y(obj), 3 * self.DEPTH / 4)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_left(self, obj, facing=None):
-        facing = self.grid_facings['place_on_left']
         obj.set_location(self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH / 2)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_right(self, obj, facing=None):
-        facing = self.grid_facings['place_on_right']
         obj.set_location(3 * self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH / 2)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_left(self, obj, facing=None):
-        facing = self.grid_facings['place_on_back_left']
         obj.set_location(self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH / 4)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_right(self, obj, facing=None):
-        facing = self.grid_facings['place_on_back_right']
         obj.set_location(3 * self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH / 4)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_left(self, obj, facing=None):
-        facing = self.grid_facings['place_on_front_left']
         obj.set_location(self.WIDTH / 4, self.compute_obj_y(obj), 3 * self.DEPTH / 4)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_right(self, obj, facing=None):
-        facing = self.grid_facings['place_on_front_right']
         obj.set_location(3 * self.WIDTH / 4, self.compute_obj_y(obj), 3 * self.DEPTH / 4)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_wall_left(self, obj, facing=None):
-        facing = self.grid_facings['place_on_back_wall_left']
         _, delta_d = self.wall_deltas(obj, facing)
         obj.set_location(self.WIDTH / 4, self.compute_obj_y(obj), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1196,7 +1170,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_back_wall_center(self, obj, facing=None):
-        facing = self.grid_facings['place_on_back_wall_center']
         _, delta_d = self.wall_deltas(obj, facing)
         obj.set_location(self.WIDTH / 2, self.compute_obj_y(obj), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1204,7 +1177,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_back_wall_right(self, obj, facing=None):
-        facing = self.grid_facings['place_on_back_wall_right']
         _, delta_d = self.wall_deltas(obj, facing)
         obj.set_location(3 * self.WIDTH / 4, self.compute_obj_y(obj), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1212,7 +1184,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_left_wall_right(self, obj, facing=None):
-        facing = self.grid_facings['place_on_left_wall_right']
         delta_w, _ = self.wall_deltas(obj, facing)
         obj.set_location(delta_w, self.compute_obj_y(obj), self.DEPTH / 4)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1220,7 +1191,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_left_wall_center(self, obj, facing=None):
-        facing = self.grid_facings['place_on_left_wall_center']
         delta_w, _ = self.wall_deltas(obj, facing)
         obj.set_location(delta_w, self.compute_obj_y(obj), self.DEPTH / 2)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1228,7 +1198,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_left_wall_left(self, obj, facing=None):
-        facing = self.grid_facings['place_on_left_wall_left']
         delta_w, _ = self.wall_deltas(obj, facing)
         obj.set_location(delta_w, self.compute_obj_y(obj), 3 * self.DEPTH / 4)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1236,7 +1205,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_right_wall_left(self, obj, facing=None):
-        facing = self.grid_facings['place_on_right_wall_left']
         delta_w, _ = self.wall_deltas(obj, facing)
         obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), self.DEPTH / 4)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1244,7 +1212,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_right_wall_center(self, obj, facing=None):
-        facing = self.grid_facings['place_on_right_wall_center']
         delta_w, _ = self.wall_deltas(obj, facing)
         obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), self.DEPTH / 2)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1252,7 +1219,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_right_wall_right(self, obj, facing=None):
-        facing = self.grid_facings['place_on_right_wall_right']
         delta_w, _ = self.wall_deltas(obj, facing)
         obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), 3 * self.DEPTH / 4)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1260,7 +1226,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_front_wall_left(self, obj, facing=None):
-        facing = self.grid_facings['place_on_front_wall_left']
         _, delta_d = self.wall_deltas(obj, facing)
         obj.set_location(3 * self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1268,7 +1233,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_front_wall_center(self, obj, facing=None):
-        facing = self.grid_facings['place_on_front_wall_center']
         _, delta_d = self.wall_deltas(obj, facing)
         obj.set_location(self.WIDTH / 2, self.compute_obj_y(obj), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1276,7 +1240,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_front_wall_right(self, obj, facing=None):
-        facing = self.grid_facings['place_on_front_wall_right']
         _, delta_d = self.wall_deltas(obj, facing)
         obj.set_location(self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1284,7 +1247,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_back_left_corner(self, obj, facing=None):
-        facing = self.grid_facings['place_on_back_left_corner']
         delta_w, delta_d = self.wall_deltas(obj, facing)
         obj.set_location(delta_w, self.compute_obj_y(obj), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1292,7 +1254,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_back_right_corner(self, obj, facing=None):
-        facing = self.grid_facings['place_on_back_right_corner']
         delta_w, delta_d = self.wall_deltas(obj, facing)
         obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1300,7 +1261,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_front_left_corner(self, obj, facing=None):
-        facing = self.grid_facings['place_on_front_left_corner']
         delta_w, delta_d = self.wall_deltas(obj, facing)
         obj.set_location(delta_w, self.compute_obj_y(obj), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1308,7 +1268,6 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_front_right_corner(self, obj, facing=None):
-        facing = self.grid_facings['place_on_front_right_corner']
         delta_w, delta_d = self.wall_deltas(obj, facing)
         obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
@@ -1813,10 +1772,15 @@ class RoomGroup(SceneProgObject):
         self.reset_compile_state()
         self.clear_constraints()
 
+        # Resolve each grid placement's facing exactly once (caller value, else heuristic
+        # default) and inject it back into the op so both room-sizing and the placement body
+        # see the same value. Idempotent on recompile, and resolving once keeps the random
+        # corner choice consistent between sizing and placement.
         for op in self.operations:
-            if op is not None:
-                facing = self.fill_facing_heuristic(op.name, op.facing)
-                self.grid_facings[op.name] = facing
+            if op is not None and op.name in self.GRID_PLACEMENTS:
+                resolved = self.fill_facing_heuristic(op.name, op.facing)
+                op.facing = resolved
+                op.arguments['facing'] = resolved
 
         self.init_dims()
 
