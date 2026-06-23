@@ -718,7 +718,14 @@ class SceneProgObject:
         minimums = []
         maximums = []
 
-        for child in self.children:
+        # Decorative lights (added by add_lighting) sit at ceiling height and must not
+        # inflate the object's bounding box. Skip them; fall back to all children only if
+        # the node has nothing but lights.
+        children = [c for c in self.children if not getattr(c, "is_light", False)]
+        if not children:
+            children = self.children
+
+        for child in children:
             child_aabb = child.get_aabb()
             minimums.append(child_aabb[0])
             maximums.append(child_aabb[1])
@@ -915,6 +922,11 @@ class SceneProgObject:
             x = locs[i, 0]
             z = locs[i, 1]
             new_light = light.copy()
+            # Lights are decorative children: they must move with the object but must not
+            # count toward its bounding box / footprint (otherwise density, which controls
+            # the light count and spread, would change the object's reported size).
+            new_light.is_light = True
+            new_light.ignore_overlap = True
             new_light.set_location(x, y, z)
             self.add_child(new_light)
             if self.scene is not None and hasattr(self.scene, "ceiling_lights"):

@@ -22,6 +22,10 @@ frames/
 *.blend
 *.blend1
 
+# Transient scripts emitted by sceneprogexec (random-digit-named, plus *_exec.py)
+/[0-9]*.py
+*_exec.py
+
 # Planner RAG embedding cache — regenerated from assets/skills.json on first run
 # (also exceeds GitHub's 100 MB file-size limit, so it is never committed)
 assets/rag_cache.npz

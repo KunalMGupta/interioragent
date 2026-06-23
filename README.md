@@ -44,7 +44,11 @@ pip install numpy matplotlib trimesh scipy tqdm sceneprogllm
 A few external pieces are required:
 
 - **SceneProgExec** — runs the Blender export/render pipeline. Follow the setup at
-  <https://github.com/KunalMGupta/SceneProgExec> (this also wires up Blender).
+  <https://github.com/KunalMGupta/SceneProgExec> (this also wires up Blender). Then make
+  `sceneprogllm` available inside Blender's bundled Python:
+  ```bash
+  sceneprogexec install sceneprogllm
+  ```
 - **Asset datasets** — the large 3D furniture datasets are **not** included in this repo.
   Download `datasets.zip` and extract it into `IDSDL/` (so you have `IDSDL/datasets/...`).
 - **OpenAI API key** — used for asset retrieval and the VLM constraints:
@@ -108,7 +112,6 @@ planner_core/       # InteriorPlanner — RAG-based design-image generator
   planner.py        #   generate() + edit() over an LLM image model
   rag.py            #   SkillsRAG — embedding retrieval over the skills library
 assets/             # planner data: skills.json (rag_cache.npz built on first run)
-examples/           # planner_example.py + sample generate/edit outputs (v1–v3.png)
 tests.py            # IDSDL feature test suite
 docs_figures.py     # builds the documentation example scenes and renders them
 render_docs.py      # render any results/*.blend from top-down / perspective views
@@ -170,15 +173,6 @@ result.save("v2.png")
 result = planner.edit("add large windows with ocean views")
 result.save("v3.png")
 ```
-
-A runnable copy is in [`examples/planner_example.py`](examples/planner_example.py). The sample
-outputs below show the first generation followed by the two successive edits:
-
-<p align="center">
-  <img src="examples/v1.png" width="32%">
-  <img src="examples/v2.png" width="32%">
-  <img src="examples/v3.png" width="32%">
-</p>
 
 ### How it works
 

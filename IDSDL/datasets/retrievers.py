@@ -76,7 +76,8 @@ This is the default retriever for SceneProg. Unless specified otherwise, always 
             "hssd/2665c18655d09ed5c0d9149c78b0f72c93cbe860",
             "future/d1571866-191b-46d0-b0bc-e486fc24f263",
             "hssd/1e4e58bf53e51df27beeb774b5d70818de124068",
-            "hssd/0f123a681f597d75bdec3319293b54b9090b4caa"
+            "hssd/0f123a681f597d75bdec3319293b54b9090b4caa",
+            "future/90579f33-88b9-4805-be6d-69a596011576",
         ]
         
         self.llm = LLM(
@@ -449,7 +450,14 @@ response_format="image",
         vertices[:,-1] *= 0.05
 
         uid = np.random.randint(0, 1e6)
-        frame = trimesh.Trimesh(vertices=vertices, faces=frame.faces, process=False)  
+        frame = trimesh.Trimesh(vertices=vertices, faces=frame.faces, process=False)
+        # Give the frame the SAME texture material as the canvas. Concatenating a textured
+        # mesh with a plain (default-gray) mesh makes trimesh bake that gray into the merged
+        # material, darkening the painting -- and AddAsset's force="mesh" load re-merges the
+        # same way. A homogeneous texture+texture merge preserves the bright image.
+        frame.visual = trimesh.visual.TextureVisuals(
+            uv=np.zeros((len(frame.vertices), 2)), image=image
+        )
         self.mesh = trimesh.util.concatenate([self.canvas, frame])
 
         os.makedirs(os.path.join(os.path.dirname(__file__), "/tmp"), exist_ok=True)        
@@ -478,6 +486,7 @@ Retrieves wall art objects that are placed on the wall. These include paintings,
         with open(os.path.join(os.path.dirname(__file__), "assets/wall_art.json"), "r") as f:
             self.wall_art = json.load(f)
         self.painting_generator = Painting()
+        self.bad_paintings = ["future/90579f33-88b9-4805-be6d-69a596011576"]
 
     def get_likely_asset(self, query: str) -> str:
         wall_art_idx = [self.all_models.tolist().index(model) for model in self.wall_art if model in self.all_models]
@@ -493,6 +502,9 @@ Retrieves wall art objects that are placed on the wall. These include paintings,
     def __call__(self, query: str) -> tuple[str, float]:
 
         top_models, top_similarities = self.get_likely_asset(query)
+        for model in top_models:
+            if model in self.bad_paintings:
+                top_similarities[top_models.index(model)] = -1  # Invalidate the similarity for bad paintings
         if top_similarities.max() < 0.5:
             # If no suitable model is found, generate a painting
             path, scale = self.painting_generator(query)

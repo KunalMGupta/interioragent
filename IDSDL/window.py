@@ -8,12 +8,12 @@ import bpy
 from sceneprogllm import LLM
 
 class CurtainBuilder:
-    def __init__(self, path, query):
+    def __init__(self, path, query, curtain_path):
         self.myllm = LLM(
             system_desc="Your task is to create a seamless, flat texture pattern designed for curtain fabric, viewed from directly above, with no folds or shadows, showing only the fabric's surface pattern, suitable for use as a Blender material map.",
             response_format="image",
         )
-        self.curtain_path = "/Users/kunalgupta/Documents/packages/sceneprogldl/assets/curtain.glb"
+        self.curtain_path = curtain_path
         self.path = path
         self.query = query
 
@@ -322,7 +322,7 @@ class Window(SceneProgObjectWall):
         if texture:
             to_run = f"""
 {CURTAIN_BUILDER_SCRIPT}
-curtain_builder = CurtainBuilder("{self.curtain_path_instance}", {repr(texture)})
+curtain_builder = CurtainBuilder("{self.curtain_path_instance}", {repr(texture)}, {repr(self.curtain_path)})
 curtain_builder()
 """
             self.exec(to_run)
