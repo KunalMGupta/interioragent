@@ -871,6 +871,11 @@ class SceneProgObject:
 
         light = self.scene.AddAsset(desc, modulate_scale=modulate_scale)
 
+        # Cap the fixture height at 1.5 m: shorten tall lights without touching width/depth.
+        MAX_LIGHT_HEIGHT = 1.5
+        if light.get_height() > MAX_LIGHT_HEIGHT:
+            light.scale_only_height(MAX_LIGHT_HEIGHT)
+
         def compute_lights(density_value):
             W, _, D = self.get_whd()
             w, _, d = light.get_whd()
