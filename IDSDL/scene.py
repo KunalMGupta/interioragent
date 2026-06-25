@@ -4,6 +4,9 @@ from IDSDL.object import SceneProgObject
 from sceneprogexec import SceneProgExec
 from IDSDL.datasets.retrievers import SceneProgAssetRetriever
 from IDSDL.groups import *
+from IDSDL.groups_extra import (
+    StackGroup, PyramidGroup, PileGroup, SymmetryGroup, FacingGroup, RingsGroup,
+)
 
 
 class SceneProgRoom:
@@ -118,6 +121,25 @@ class SceneProgRoom:
 
     def GridGroup(self, sparsity: float = 0.0, randomness: float = 0.0):
         return GridGroup(self, sparsity=sparsity, randomness=randomness)
+
+    # --- additional motif groups (IDSDL/groups_extra.py) ---
+    def StackGroup(self):
+        return StackGroup(self)
+
+    def PyramidGroup(self):
+        return PyramidGroup(self)
+
+    def PileGroup(self):
+        return PileGroup(self)
+
+    def SymmetryGroup(self):
+        return SymmetryGroup(self)
+
+    def FacingGroup(self):
+        return FacingGroup(self)
+
+    def RingsGroup(self, sparsity: float = 0.0):
+        return RingsGroup(self, sparsity=sparsity)
 
     def RoomGroup(self, modulate_scale: float = 1.0):
         return RoomGroup(self, modulate_scale)

@@ -19,7 +19,7 @@ DOCS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
 PAGES = [
     "index", "installation", "getting-started", "object-registration",
     "groups", "relative-group", "around-group", "grid-group", "room-group", "hierarchical",
-    "sentence-ascii-generator",
+    "sentence-ascii-generator", "motif-groups",
     "constraints", "gradient-constraints", "vlm-constraints",
 ]
 

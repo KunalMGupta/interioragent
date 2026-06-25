@@ -465,7 +465,74 @@ def ascii_hi():
     return scene
 
 
+# ===========================================================================
+# New motif groups (IDSDL/groups_extra.py)
+# ===========================================================================
+
+def extra_stack():
+    scene = SceneProgRoom("extra_stack", seed=SEED)
+    crate = scene.AddAsset("a wooden storage crate")
+    with scene.StackGroup() as stack:
+        stack.place_stack(3 * crate)
+    scene.bind(stack)
+    return scene
+
+
+def extra_pyramid():
+    scene = SceneProgRoom("extra_pyramid", seed=SEED)
+    crate = scene.AddAsset("a wooden storage crate")
+    with scene.PyramidGroup() as pyr:
+        pyr.place_pyramid(6 * crate)
+    scene.bind(pyr)
+    return scene
+
+
+def extra_pile():
+    scene = SceneProgRoom("extra_pile", seed=SEED)
+    cushion = scene.AddAsset("a square floor cushion")
+    with scene.PileGroup() as pile:
+        pile.place_pile(7 * cushion, spread=0.8)
+    scene.bind(pile)
+    return scene
+
+
+def extra_symmetry():
+    scene = SceneProgRoom("extra_symmetry", seed=SEED)
+    with scene.SymmetryGroup() as sym:
+        bed = scene.AddAsset("a queen-sized bed with a wooden frame")
+        sym.set_anchor(bed)
+        nightstand = scene.AddAsset("a small wooden nightstand with a drawer")
+        sym.place_flanking(nightstand)
+    scene.bind(sym)
+    return scene
+
+
+def extra_facing():
+    scene = SceneProgRoom("extra_facing", seed=SEED)
+    chair = scene.AddAsset("a cozy lounge chair")
+    with scene.FacingGroup() as g:
+        table = scene.AddAsset("a rectangular wooden coffee table")
+        g.set_anchor(table)
+        g.place_facing_rows(2 * chair, 2 * chair)
+    scene.bind(g)
+    return scene
+
+
+def extra_rings():
+    scene = SceneProgRoom("extra_rings", seed=SEED)
+    chair = scene.AddAsset("an upholstered accent chair")
+    with scene.RingsGroup(sparsity=0.3) as g:
+        table = scene.AddAsset("a large round dining table with a dark wood finish")
+        g.set_anchor(table)
+        g.place_rings([4 * chair, 8 * chair])
+    scene.bind(g)
+    return scene
+
+
 FIGURES = {
+    # new motif groups
+    "extra_stack": extra_stack, "extra_pyramid": extra_pyramid, "extra_pile": extra_pile,
+    "extra_symmetry": extra_symmetry, "extra_facing": extra_facing, "extra_rings": extra_rings,
     # registration
     "reg_single": reg_single, "reg_scaling": reg_scaling,
     "reg_copies": reg_copies, "reg_rotation": reg_rotation,

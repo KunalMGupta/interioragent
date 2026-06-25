@@ -1228,6 +1228,131 @@ def test_43():
 
 
 # ---------------------------------------------------------------------------
+# 44-49  New motif groups (IDSDL/groups_extra.py)
+# ---------------------------------------------------------------------------
+def test_44():
+    """StackGroup: objects stacked vertically, each resting on the one below."""
+    header(44, "StackGroup vertical stack")
+    scene = SceneProgRoom("test44", seed=SEED)
+    box = scene.AddAsset("a wooden storage crate")
+    boxes = 3 * box
+    with scene.StackGroup() as stack:
+        stack.place_stack(boxes)
+    scene.bind(stack)
+
+    spans = [(float(b.get_aabb()[0, 1]), float(b.get_aabb()[1, 1])) for b in boxes]
+    spans.sort()
+    print_positions("stack", boxes)
+    for i in range(1, len(spans)):
+        assert spans[i][0] >= spans[i - 1][0] - 1e-3, f"levels not ascending: {spans}"
+        assert abs(spans[i][0] - spans[i - 1][1]) < 0.06, f"gap/overlap between levels: {spans}"
+    scene.export("results/test44_stack.blend")
+
+
+def test_45():
+    """PyramidGroup: centered tiers of decreasing count, stacked upward."""
+    header(45, "PyramidGroup tiers")
+    scene = SceneProgRoom("test45", seed=SEED)
+    crate = scene.AddAsset("a wooden storage crate")
+    crates = 6 * crate
+    with scene.PyramidGroup() as pyr:
+        pyr.place_pyramid(crates)
+    scene.bind(pyr)
+
+    bottoms = sorted(float(c.get_aabb()[0, 1]) for c in crates)
+    print(f"  tier bottoms: {[round(b,2) for b in bottoms]}")
+    assert bottoms[-1] - bottoms[0] > 0.1, f"pyramid did not stack upward: {bottoms}"
+    scene.export("results/test45_pyramid.blend")
+
+
+def test_46():
+    """PileGroup: scattered objects de-overlapped by the inherited solver."""
+    header(46, "PileGroup organic scatter")
+    scene = SceneProgRoom("test46", seed=SEED)
+    cushion = scene.AddAsset("a square floor cushion")
+    cushions = 5 * cushion
+    with scene.PileGroup() as pile:
+        pile.place_pile(cushions, spread=0.8)
+    scene.bind(pile)
+
+    def overlaps(a, b, eps=0.02):
+        return not (a[1, 0] - eps <= b[0, 0] or b[1, 0] - eps <= a[0, 0]
+                    or a[1, 2] - eps <= b[0, 2] or b[1, 2] - eps <= a[0, 2])
+    aabbs = [c.get_aabb() for c in cushions]
+    bad = [(i, j) for i in range(len(aabbs)) for j in range(i + 1, len(aabbs))
+           if overlaps(aabbs[i], aabbs[j])]
+    print(f"  {len(cushions)} cushions, overlapping pairs after solve: {len(bad)}")
+    assert not bad, f"pile still overlaps: {bad}"
+    scene.export("results/test46_pile.blend")
+
+
+def test_47():
+    """SymmetryGroup: flanking pairs mirror-symmetric about the anchor."""
+    header(47, "SymmetryGroup flanking")
+    scene = SceneProgRoom("test47", seed=SEED)
+    with scene.SymmetryGroup() as sym:
+        bed = scene.AddAsset("a queen-sized bed with a wooden frame")
+        sym.set_anchor(bed)
+        nightstand = scene.AddAsset("a small wooden nightstand with a drawer")
+        sym.place_flanking(nightstand)
+    scene.bind(sym)
+
+    flanks = [c for c in sym.get_children() if c is not bed]
+    cx = float(bed.get_location()[0])
+    xs = sorted(float(c.get_location()[0]) for c in flanks)
+    zs = [float(c.get_location()[2]) for c in flanks]
+    print(f"  anchor x={cx:.2f}  flank xs={[round(x,2) for x in xs]}  zs={[round(z,2) for z in zs]}")
+    assert len(flanks) == 2, f"expected one mirrored pair, got {len(flanks)}"
+    assert abs((xs[0] + xs[1]) / 2 - cx) < 0.05, "pair not symmetric about anchor"
+    assert abs(zs[0] - zs[1]) < 0.05, "pair not at equal depth"
+    scene.export("results/test47_symmetry.blend")
+
+
+def test_48():
+    """FacingGroup: two rows on opposite sides of the anchor, each facing it."""
+    header(48, "FacingGroup face-to-face rows")
+    scene = SceneProgRoom("test48", seed=SEED)
+    chair = scene.AddAsset("a cozy lounge chair")
+    side1, side2 = 2 * chair, 2 * chair
+    with scene.FacingGroup() as g:
+        table = scene.AddAsset("a rectangular wooden coffee table")
+        g.set_anchor(table)
+        g.place_facing_rows(side1, side2)
+    scene.bind(g)
+
+    cz = float(table.get_location()[2])
+    z1 = [float(o.get_location()[2]) for o in side1]
+    z2 = [float(o.get_location()[2]) for o in side2]
+    print(f"  anchor z={cz:.2f}  side1 z={[round(z,2) for z in z1]}  side2 z={[round(z,2) for z in z2]}")
+    assert all(z > cz for z in z1), "side1 should sit on the +z side of the anchor"
+    assert all(z < cz for z in z2), "side2 should sit on the -z side of the anchor"
+    scene.export("results/test48_facing.blend")
+
+
+def test_49():
+    """RingsGroup: concentric rings, outer ring farther from the anchor than inner."""
+    header(49, "RingsGroup concentric surround")
+    scene = SceneProgRoom("test49", seed=SEED)
+    chair = scene.AddAsset("an upholstered accent chair")
+    inner, outer = 4 * chair, 6 * chair
+    with scene.RingsGroup(sparsity=0.3) as g:
+        table = scene.AddAsset("a large round dining table with a dark wood finish")
+        g.set_anchor(table)
+        g.place_rings([inner, outer])
+    scene.bind(g)
+
+    c = np.array(table.get_location(), dtype=float)
+    def radius(o):
+        p = np.array(o.get_location(), dtype=float)
+        return float(np.hypot(p[0] - c[0], p[2] - c[2]))
+    r_in = np.mean([radius(o) for o in inner])
+    r_out = np.mean([radius(o) for o in outer])
+    print(f"  mean radius inner={r_in:.2f}  outer={r_out:.2f}")
+    assert r_out > r_in + 0.1, f"outer ring not beyond inner: inner={r_in:.2f} outer={r_out:.2f}"
+    scene.export("results/test49_rings.blend")
+
+
+# ---------------------------------------------------------------------------
 # Registry + runner
 # ---------------------------------------------------------------------------
 
@@ -1279,6 +1404,13 @@ TESTS = {
     41: test_41,   # ClearanceConstraint dir="sides"
     42: test_42,   # ClearanceConstraint dir="all" (rear clearance)
     43: test_43,   # AccessConstraint dir="front"
+    # --- new motif groups (groups_extra.py) ---
+    44: test_44,   # StackGroup (stack)
+    45: test_45,   # PyramidGroup (pyramid)
+    46: test_46,   # PileGroup (pile / scatter)
+    47: test_47,   # SymmetryGroup (flanking / on_each_side)
+    48: test_48,   # FacingGroup (face_to_face)
+    49: test_49,   # RingsGroup (concentric surround)
 }
 
 
