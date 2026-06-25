@@ -49,8 +49,16 @@ A few external pieces are required:
   ```bash
   sceneprogexec install sceneprogllm
   ```
-- **Asset datasets** — the large 3D furniture datasets are **not** included in this repo.
-  Download `datasets.zip` and extract it into `IDSDL/` (so you have `IDSDL/datasets/...`).
+- **Asset datasets** — the large 3D furniture datasets are **not** included in this repo
+  and must be downloaded separately for asset retrieval to work.
+  1. Download `datasets.zip` from
+     [this OneDrive link](https://ucsdcloud-my.sharepoint.com/:u:/g/personal/k5gupta_ucsd_edu/IQA-MyG8SVWHQq4bWCD7amCmAWr9R9hyxe8e6udYgZNZ_TI?e=aX7HBn).
+  2. Extract it into `IDSDL/` so that the data lands at `IDSDL/datasets/assets/` and
+     `IDSDL/datasets/futurehssd/`:
+     ```bash
+     unzip datasets.zip -d IDSDL/
+     ```
+  These directories are git-ignored, so they will not be committed.
 - **OpenAI API key** — used for asset retrieval and the VLM constraints:
   ```bash
   export OPENAI_API_KEY="sk-..."
