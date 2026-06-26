@@ -32,3 +32,9 @@ assets/rag_cache.npz
 
 # Documentation site lives in its own repo: github.com/interioragent/docs
 docs/
+
+# Linux: Blender binary installation (downloaded at build time via Dockerfile)
+blender-*/
+
+# Linux: compiled ELF binary (not source-controlled)
+code

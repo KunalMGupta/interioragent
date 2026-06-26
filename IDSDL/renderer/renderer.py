@@ -2,7 +2,7 @@
 from sceneprogexec import SceneProgExec
 
 class SceneRenderer:
-    def __init__(self, resolution_x: int = 1920, resolution_y: int = 1080, samples: int = 100, frame_rate: int = 30, num_frames: int = 360, cuda: bool = False, verbose=False):
+    def __init__(self, resolution_x: int = 1920, resolution_y: int = 1080, samples: int = 100, frame_rate: int = 30, num_frames: int = 360, cuda: bool = True, verbose=False):
         self.script = f"""
 from utils import *
 worker = SceneRendererWorker({resolution_x}, {resolution_y}, {samples}, {frame_rate}, {num_frames}, {cuda})

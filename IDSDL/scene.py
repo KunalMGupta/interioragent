@@ -301,6 +301,11 @@ assign_generated_texture(
 bpy.ops.import_scene.gltf(filepath=r'{obj.mesh_path}')
 """
 
+        lines += """
+# Pack all external images/textures into the .blend file so it is self-contained
+bpy.ops.file.pack_all()
+"""
+
         self.exec(lines, target, verbose=True)
         # self.renderer.render_from_edge_midpoints(target, output_paths=['tmp/right.png', 'tmp/back.png', 'tmp/left.png', 'tmp/front.png'])
 

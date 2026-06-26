@@ -965,8 +965,10 @@ reasoning: ...
     def __call__(self, query: str):
         if self.seed is not None and query in self._cache:
             path, scale = self._cache[query]
-            print(f"Cache hit (seed={self.seed}): {query}")
-            return path, scale
+            if os.path.exists(path):
+                print(f"Cache hit (seed={self.seed}): {query}")
+                return path, scale
+            print(f"Cache hit (seed={self.seed}) but file missing, re-generating: {query}")
 
         response = self.llm(query)
         try:
