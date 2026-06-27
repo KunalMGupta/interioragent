@@ -47,11 +47,51 @@ class AnchorGroup(SceneProgObject):
         )
         return self.anchor_info
 
+    # Proportions for objects placed on top, relative to the anchor they rest on.
+    # A mis-scaled retrieval (e.g. a "small desk lamp" that comes back huge) is
+    # uniformly shrunk to a believable size: footprint to a share of the anchor top
+    # (split across N items), height to a fraction of the anchor height, and the
+    # combined anchor+object stack capped to a hard ceiling. Never up-scaled.
+    # Deterministic — no VLM.
+    ON_TOP_FOOTPRINT_FRACTION = 0.5   # object footprint <= this share of the anchor top
+    ON_TOP_HEIGHT_FRACTION = 0.4      # object height <= this * anchor height
+    ON_TOP_MAX_COMBINED_HEIGHT = 3.5  # anchor + on-top object stack must not exceed this [m]
+
+    def _fit_on_top(self, obj, anchor_w, anchor_h, anchor_d, n):
+        w0, h0, d0 = obj.get_whd()
+        if min(w0, h0, d0) <= 0:
+            return
+        f = self.ON_TOP_FOOTPRINT_FRACTION
+        caps = [
+            f * (anchor_w / max(n, 1)) / w0,   # share of the anchor width
+            f * anchor_d / d0,                  # within the anchor depth
+            self.ON_TOP_HEIGHT_FRACTION * anchor_h / h0,  # <= 0.4x the anchor height
+            1.0,                                # never enlarge
+        ]
+        # Hard ceiling on the combined anchor+object stack (e.g. a tall shelf plus a
+        # tall object must still clear the room): object height <= 3.5m - anchor height.
+        combined_headroom = self.ON_TOP_MAX_COMBINED_HEIGHT - anchor_h
+        if combined_headroom > 0:
+            caps.append(combined_headroom / h0)
+        scale = min(caps)
+        if scale < 1.0:
+            # Uniform shrink by a factor: multiply the existing transform scale (which
+            # carries the retriever's real-world size). NOTE: do NOT use obj.scale(),
+            # which sets scale absolutely from the normalized (width=1) mesh and so
+            # discards the retrieved size when called after load.
+            cur = obj.transform.scale
+            obj.transform.set_scale([cur[0] * scale, cur[1] * scale, cur[2] * scale])
+
     @placemethod
     def place_on_top(self, objs):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
         objs = self.to_list(objs)
         N = len(objs)
+
+        # Size each object to the anchor before placing it (proportions fix).
+        anchor_w, anchor_h, anchor_d = self.anchor.get_whd()
+        for obj in objs:
+            self._fit_on_top(obj, anchor_w, anchor_h, anchor_d, N)
 
         aabb = self.anchor.get_aabb()
         vmin = aabb[0]

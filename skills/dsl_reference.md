@@ -82,6 +82,14 @@ g.add_lighting("a chandelier", density=0) # ceiling light(s); density=0 -> singl
 ```
 These three run *last* in compile (after layout), so they sit correctly.
 
+`place_on_top` rows the object(s) across the anchor's top (resting on it) and
+**proportions** each one to the anchor first: a mis-scaled retrieval (e.g. a "small
+desk lamp" that comes back huge) is uniformly shrunk to satisfy hard caps: footprint
+≤ a share of the anchor top (`ON_TOP_FOOTPRINT_FRACTION`, 0.5, split across N), height
+≤ **0.4× the anchor height** (`ON_TOP_HEIGHT_FRACTION`), and the **combined anchor+object
+stack ≤ 3.5 m** (`ON_TOP_MAX_COMBINED_HEIGHT`; binds for tall anchors). Deterministic,
+never up-scaled — no VLM needed. All three are `AnchorGroup` class constants.
+
 **Post-placement orientation (opt-in).** Placement bakes a fixed rotation into
 each object, which is often wrong for orientation-sensitive cases. Available on
 **every group** (anchor groups *and* RoomGroup); defaults unchanged — reorient
