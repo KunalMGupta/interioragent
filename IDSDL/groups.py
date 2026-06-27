@@ -1,3 +1,5 @@
+import os
+import random
 import numpy as np
 from IDSDL.object import SceneProgObject, placemethod
 
@@ -127,6 +129,8 @@ class AnchorGroup(SceneProgObject):
         # Run optimization
         self.OverlapConstraint()
         self.ObjectProportionsConstraint()
+        self.RotationConstraint()
+        self._run_constraint_hooks()
         self.grad_optimize()
 
         # Execute delayed operations last
@@ -141,6 +145,10 @@ class AnchorGroup(SceneProgObject):
         op = self.get_operation("add_lighting")
         if op is not None:
             op.execute()
+
+        # Apply opt-in rotation overrides after positions have settled, so the
+        # VLM rotation check below judges the corrected orientation.
+        self._apply_orientations()
 
         self.vlm_optimize()
         self.finalize_compile()
@@ -847,7 +855,9 @@ class RoomGroup(SceneProgObject):
         'place_on_front_left_corner', 'place_on_front_right_corner',
     })
 
-    def __init__(self, scene, name=None, modulate_scale=1.0):
+    def __init__(self, scene, name=None, modulate_scale=1.0,
+                 auto_render=True, render_dir=None,
+                 render_resolution=(1280, 900), render_samples=48):
         super().__init__(scene, name=name)
         self.modulate_scale = modulate_scale
         self.wall_assets = {
@@ -856,6 +866,14 @@ class RoomGroup(SceneProgObject):
             'right_wall': {'left': [], 'center': [], 'right': []},
             'front_wall': {'left': [], 'center': [], 'right': []},
         }
+        # Interior auto-rendering: once the room is assembled (on compile), drop
+        # a set of inside-the-room views (4 walls + 4 corners) so the layout can
+        # be inspected without manually invoking the renderer. Disable with
+        # scene.RoomGroup(auto_render=False).
+        self.auto_render = auto_render
+        self.render_dir = render_dir
+        self.render_resolution = render_resolution
+        self.render_samples = render_samples
 
     def _is_group_like(self, obj):
         return isinstance(obj, SceneProgObject) and len(obj.children) > 0
@@ -1076,9 +1094,19 @@ class RoomGroup(SceneProgObject):
 
     def init_dims(self):
         col_widths, row_depths, heights = self.compute_grid_dims()
-        self.WIDTH = np.sum(col_widths) * self.modulate_scale
-        self.DEPTH = np.sum(row_depths) * self.modulate_scale
+        cw = np.asarray(col_widths, dtype=float) * self.modulate_scale
+        rd = np.asarray(row_depths, dtype=float) * self.modulate_scale
+        self.WIDTH = float(np.sum(cw))
+        self.DEPTH = float(np.sum(rd))
         self.HEIGHT = np.min((np.max([heights + 2.0, 3.0]), 3.0))
+        # Cumulative center of each of the 5 columns / 5 rows. Placements land at
+        # the center of their *sized* slot via these tables instead of fixed
+        # W/4,W/2,3W/4 (and D/...) fractions — fractions assume evenly-sized rows,
+        # so a deep item in one slot bled into the adjacent slot (e.g. a student
+        # grid touching the teacher desk). col_centers[1..3]/row_centers[1..3] are
+        # the interior floor slots; [0]/[4] are the wall rows/cols.
+        self.col_centers = (np.cumsum(cw) - cw / 2.0).tolist()
+        self.row_centers = (np.cumsum(rd) - rd / 2.0).tolist()
 
     def facing_to_rotation(self, facing):
         if facing == 'front':
@@ -1109,139 +1137,139 @@ class RoomGroup(SceneProgObject):
 
     @placemethod
     def place_on_center(self, obj, facing=None):
-        obj.set_location(self.WIDTH / 2, self.compute_obj_y(obj), self.DEPTH / 2)
+        obj.set_location(self.col_centers[2], self.compute_obj_y(obj), self.row_centers[2])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back(self, obj, facing=None):
-        obj.set_location(self.WIDTH / 2, self.compute_obj_y(obj), self.DEPTH / 4)
+        obj.set_location(self.col_centers[2], self.compute_obj_y(obj), self.row_centers[1])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front(self, obj, facing=None):
-        obj.set_location(self.WIDTH / 2, self.compute_obj_y(obj), 3 * self.DEPTH / 4)
+        obj.set_location(self.col_centers[2], self.compute_obj_y(obj), self.row_centers[3])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_left(self, obj, facing=None):
-        obj.set_location(self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH / 2)
+        obj.set_location(self.col_centers[1], self.compute_obj_y(obj), self.row_centers[2])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_right(self, obj, facing=None):
-        obj.set_location(3 * self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH / 2)
+        obj.set_location(self.col_centers[3], self.compute_obj_y(obj), self.row_centers[2])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_left(self, obj, facing=None):
-        obj.set_location(self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH / 4)
+        obj.set_location(self.col_centers[1], self.compute_obj_y(obj), self.row_centers[1])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_right(self, obj, facing=None):
-        obj.set_location(3 * self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH / 4)
+        obj.set_location(self.col_centers[3], self.compute_obj_y(obj), self.row_centers[1])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_left(self, obj, facing=None):
-        obj.set_location(self.WIDTH / 4, self.compute_obj_y(obj), 3 * self.DEPTH / 4)
+        obj.set_location(self.col_centers[1], self.compute_obj_y(obj), self.row_centers[3])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_right(self, obj, facing=None):
-        obj.set_location(3 * self.WIDTH / 4, self.compute_obj_y(obj), 3 * self.DEPTH / 4)
+        obj.set_location(self.col_centers[3], self.compute_obj_y(obj), self.row_centers[3])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_wall_left(self, obj, facing=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH / 4, self.compute_obj_y(obj), delta_d)
+        obj.set_location(self.col_centers[1], self.compute_obj_y(obj), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_wall_center(self, obj, facing=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH / 2, self.compute_obj_y(obj), delta_d)
+        obj.set_location(self.col_centers[2], self.compute_obj_y(obj), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_wall_right(self, obj, facing=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(3 * self.WIDTH / 4, self.compute_obj_y(obj), delta_d)
+        obj.set_location(self.col_centers[3], self.compute_obj_y(obj), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_left_wall_right(self, obj, facing=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(delta_w, self.compute_obj_y(obj), self.DEPTH / 4)
+        obj.set_location(delta_w, self.compute_obj_y(obj), self.row_centers[1])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_left_wall_center(self, obj, facing=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(delta_w, self.compute_obj_y(obj), self.DEPTH / 2)
+        obj.set_location(delta_w, self.compute_obj_y(obj), self.row_centers[2])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_left_wall_left(self, obj, facing=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(delta_w, self.compute_obj_y(obj), 3 * self.DEPTH / 4)
+        obj.set_location(delta_w, self.compute_obj_y(obj), self.row_centers[3])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_right_wall_left(self, obj, facing=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), self.DEPTH / 4)
+        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), self.row_centers[1])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_right_wall_center(self, obj, facing=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), self.DEPTH / 2)
+        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), self.row_centers[2])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_right_wall_right(self, obj, facing=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), 3 * self.DEPTH / 4)
+        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), self.row_centers[3])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_wall_left(self, obj, facing=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(3 * self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH - delta_d)
+        obj.set_location(self.col_centers[3], self.compute_obj_y(obj), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_wall_center(self, obj, facing=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH / 2, self.compute_obj_y(obj), self.DEPTH - delta_d)
+        obj.set_location(self.col_centers[2], self.compute_obj_y(obj), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_wall_right(self, obj, facing=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH / 4, self.compute_obj_y(obj), self.DEPTH - delta_d)
+        obj.set_location(self.col_centers[1], self.compute_obj_y(obj), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
@@ -1768,6 +1796,35 @@ class RoomGroup(SceneProgObject):
         total_area = self.WIDTH * self.DEPTH
         return area / total_area if total_area > 0 else 0.0
 
+    def _apply_face_wall(self, obj, wall_name):
+        """Rotate `obj` to face the named wall, snapped to the nearest 90 degrees.
+
+        Faces the wall's center direction (not an exact object) so the result is
+        always orthogonal — the right tool for functional orientation like a desk
+        grid facing the teacher's wall. The room spans [0,WIDTH]x[0,DEPTH] with
+        back_wall at z=0, front_wall at z=DEPTH, left_wall at x=0, right_wall at x=WIDTH.
+        """
+        centers = {
+            "back_wall":  (self.WIDTH / 2.0, 0.0),
+            "front_wall": (self.WIDTH / 2.0, self.DEPTH),
+            "left_wall":  (0.0, self.DEPTH / 2.0),
+            "right_wall": (self.WIDTH, self.DEPTH / 2.0),
+        }
+        if wall_name not in centers:
+            raise ValueError(
+                f"Unknown wall name {wall_name!r}; expected one of {list(centers)}"
+            )
+
+        loc = obj.get_world_location()
+        tx, tz = centers[wall_name]
+        dx, dz = tx - float(loc[0]), tz - float(loc[2])
+        if abs(dx) < 1e-6 and abs(dz) < 1e-6:
+            return  # object sits at the wall's center line; nothing to do
+
+        rot = np.degrees(np.arctan2(dx, dz))   # same convention as face_towards
+        rot = round(rot / 90.0) * 90.0         # snap to the nearest 90 degrees
+        obj.set_rotation(rot % 360.0)
+
     def compile(self):
         self.reset_compile_state()
         self.clear_constraints()
@@ -1802,6 +1859,7 @@ class RoomGroup(SceneProgObject):
 
         self.OverlapConstraint()
         self.OutOfBoundsConstraint()
+        self._run_constraint_hooks()
         self.grad_optimize()
 
         for op in self.operations:
@@ -1816,15 +1874,85 @@ class RoomGroup(SceneProgObject):
         self.scene.DEPTH = self.DEPTH
         self.scene.HEIGHT = self.HEIGHT
 
+        # Apply opt-in rotation overrides after layout/wall placement settle, so the
+        # VLM rotation check below judges the corrected orientation.
+        self._apply_orientations()
+
         self.RoomProportionsConstraint()
+        self.RotationConstraint()
         self.WallOverlapConstraint()
         self.vlm_optimize()
 
         self.finalize_compile()
         self.is_frozen_group = True
         self.last_compile_report = self.make_compile_report()
+
+        if self.auto_render:
+            self.render_interior()
+
         return self.last_compile_report
-    
+
+    def render_interior(self, output_dir=None):
+        """
+        Render a set of inside-the-room views of the assembled room — four
+        wall-facing shots and four 3/4 corner overviews — into output_dir
+        (default: the run's tmp scratchpad, tmp/<run id>/room_views). Builds a
+        temporary .blend from the current scene state (the same serialization
+        render() uses) and drives the interior cameras in IDSDL/renderer.
+        Returns the output directory.
+
+        Wrapped so a renderer/Blender problem never breaks scene assembly.
+        """
+        from IDSDL.renderer.renderer import SceneRenderer
+
+        if output_dir is None:
+            output_dir = self.render_dir or self._run_dir("room_views")
+
+        try:
+            blend_path = self._build_blend()
+            rx, ry = self.render_resolution
+            renderer = SceneRenderer(
+                resolution_x=rx, resolution_y=ry,
+                samples=self.render_samples, verbose=True,
+            )
+            renderer.render_room(blend_path, output_dir)
+            print(f"[RoomGroup] interior views written to '{output_dir}/'")
+        except Exception as e:
+            print(f"[RoomGroup] interior auto-render skipped ({type(e).__name__}: {e})")
+        return output_dir
+
+    def render_interior_combined(self, resolution=(640, 480), samples=None):
+        """
+        Render the four interior wall views and stack them side by side into one
+        image (back | front | left | right), returning its path. This is the
+        inside-the-room analogue of SceneProgObject.render(): VLM constraints on
+        a closed room must see the interior, not the exterior box.
+        """
+        import matplotlib.pyplot as plt
+        from IDSDL.renderer.renderer import SceneRenderer
+
+        run_dir = self._run_dir("vlm_views")
+        blend_path = self._build_blend()
+
+        rx, ry = resolution
+        renderer = SceneRenderer(
+            resolution_x=rx, resolution_y=ry,
+            samples=samples if samples is not None else self.render_samples,
+            verbose=True,
+        )
+
+        uid = random.randint(0, 1000000)
+        wall_paths = [
+            os.path.join(run_dir, f"{name}_{uid}.png")
+            for name in ("back", "front", "left", "right")
+        ]
+        renderer.render_interior_walls(blend_path, wall_paths)
+
+        combined = np.hstack([plt.imread(p) for p in wall_paths])
+        combined_path = os.path.join(run_dir, f"combined_{uid}.png")
+        plt.imsave(combined_path, combined)
+        return combined_path
+
     def recenter(self):
         self.scene.bind(self)
         
@@ -2000,6 +2128,7 @@ class BasicRoomGroup(RoomGroup):
 
         self.OverlapConstraint()
         self.OutOfBoundsConstraint()
+        self._run_constraint_hooks()
         self.grad_optimize()
         self.finalize_compile()
         self.is_frozen_group = True

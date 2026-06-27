@@ -1002,7 +1002,17 @@ Do not output anything except a room rescale instruction or 'no rescale'.
         super().__init__(group)
 
     def compute_gradients(self):
-        render = self.group.render()
+        # Judge room proportions from inside the room. The generic render()
+        # uses exterior cameras, which for a closed room only see the outer
+        # box; render_interior_combined() gives the VLM an interior view.
+        if hasattr(self.group, "render_interior_combined"):
+            try:
+                render = self.group.render_interior_combined()
+            except Exception:
+                render = self.group.render()
+        else:
+            render = self.group.render()
+
         occupancy_ratio = self.group.compute_occupancy_ratio()
         descriptions = self.group.get_descriptions()
 
@@ -1085,6 +1095,78 @@ Consider moving overlapping assets to different wall positions to resolve these 
 """
     
 
+class RotationConstraint(ConstraintBase):
+    """VLM check on object orientation within an anchor group.
+
+    Placement bakes a fixed rotation, which is often wrong for
+    orientation-sensitive arrangements: chairs that should face the conversation
+    center, or a desk/table whose front (drawers, usable side) must face its
+    paired chair rather than sit rotated 180 degrees away. This renders the group
+    and asks the VLM to flag such issues. Like the other VLM constraints it only
+    emits text — act on it with group.face(obj, toward=...) / group.rotate(obj, deg).
+    """
+
+    def __init__(self, group):
+        self.name = "RotationConstraint"
+        self.type = "VLM"
+
+        self.VLM = LLM(
+            system_desc="""
+You are given an image showing front, right, back, left renders of a furniture
+arrangement or a room interior. Judge whether each object is ORIENTED (rotated)
+correctly for its function:
+- Seating (chairs, sofas, stools, benches) should face the shared focal point of the
+  group (e.g. the central table) or face the people they converse with — not face away
+  or sit sideways to the group.
+- A desk, console, dresser or table with a clear front (drawers, knee-well, usable side)
+  should have that front toward its paired chair/user, not rotated ~180 degrees away.
+- Rows or grids of seats/desks (classroom, lecture, dining bench) should all face the
+  same focal point — the teacher's desk, lectern, screen, or front of the room — not
+  away from it or in mixed directions.
+- Objects with no meaningful front (rugs, round tables, plants, lamps) never need rotation.
+
+If something is mis-oriented, respond with one short instruction per object, like:
+- rotate accent chair to face the coffee table
+- rotate desk by 180
+
+If every object is correctly oriented, respond with exactly:
+no rotation
+
+Do not output anything except rotation instructions or 'no rotation'.
+""",
+        )
+
+        super().__init__(group)
+
+    def compute_gradients(self):
+        # Judge orientation from the right viewpoint: a closed RoomGroup must be
+        # seen from inside (exterior cameras only see the outer box), while an open
+        # anchor group is judged from its exterior 4-view.
+        if hasattr(self.group, "render_interior_combined"):
+            try:
+                render = self.group.render_interior_combined()
+            except Exception:
+                render = self.group.render()
+        else:
+            render = self.group.render()
+
+        descriptions = self.group.get_descriptions()
+
+        if isinstance(descriptions, str):
+            object_desc = descriptions
+        else:
+            object_desc = ",".join(descriptions)
+
+        prompt = f"""
+The arrangement has the following objects: {object_desc}
+Reason about whether any object is rotated incorrectly for its function and, if so,
+say which object to rotate and toward what.
+"""
+
+        response = self.VLM(prompt, image_paths=[render])
+        return response
+
+
 CONSTRAINTS = [
     OverlapConstraint,
     ClearanceConstraint,
@@ -1093,6 +1175,7 @@ CONSTRAINTS = [
     VisibilityConstraint,
     ObjectProportionsConstraint,
     RoomProportionsConstraint,
+    RotationConstraint,
     # RenderingConstraint,
     WallOverlapConstraint,
 ]

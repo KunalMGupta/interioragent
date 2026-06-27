@@ -1,4 +1,6 @@
 import os
+import time
+import random
 import numpy as np
 from IDSDL.object import SceneProgObject
 from sceneprogexec import SceneProgExec
@@ -21,6 +23,19 @@ class SceneProgRoom:
         self.object_retriever = SceneProgAssetRetriever(seed=seed)
         self.vlm_feedback = ""
         self.HEIGHT = 4
+
+        # Unique per-run scratchpad under tmp/. Every intermediate (group
+        # blends, wall meshes) and rendering (VLM views, RoomGroup interior
+        # views) for this run is written here, so a run's outputs are isolated
+        # and can be browsed afterwards to inspect quality.
+        run_id = f"{time.strftime('%Y%m%d_%H%M%S')}_{os.getpid()}_{random.randint(0, 0xFFFF):04x}"
+        self.run_dir = os.path.join("tmp", run_id)
+
+    def run_subdir(self, name=""):
+        """Return (creating if needed) a subdirectory of this run's scratchpad."""
+        path = os.path.join(self.run_dir, name) if name else self.run_dir
+        os.makedirs(path, exist_ok=True)
+        return path
 
     # ----------------------------
     # asset registration
@@ -141,8 +156,16 @@ class SceneProgRoom:
     def RingsGroup(self, sparsity: float = 0.0):
         return RingsGroup(self, sparsity=sparsity)
 
-    def RoomGroup(self, modulate_scale: float = 1.0):
-        return RoomGroup(self, modulate_scale)
+    def RoomGroup(self, modulate_scale: float = 1.0, auto_render: bool = True,
+                  render_dir=None, render_resolution=(1280, 900), render_samples=48):
+        return RoomGroup(
+            self,
+            modulate_scale=modulate_scale,
+            auto_render=auto_render,
+            render_dir=render_dir,
+            render_resolution=render_resolution,
+            render_samples=render_samples,
+        )
 
     def SentenceASCIIGenerator(self):
         return SentenceASCIIGenerator(self)
@@ -269,13 +292,12 @@ light_object.location = [{translation[0]}, -{translation[2]}, {self.HEIGHT}]  # 
 bpy.context.collection.objects.link(light_object)
 """
 
-        os.makedirs("tmp", exist_ok=True)
+        run_dir = self.run_subdir()
 
         for wall in self.walls:
             wall._rebuild()
-            import random
             uid = random.randint(1000, 9999)
-            mesh_path = f"tmp/{wall.name}_{uid}.glb"
+            mesh_path = os.path.join(run_dir, f"{wall.name}_{uid}.glb")
             try:
                 wall.export(mesh_path)
             except Exception:

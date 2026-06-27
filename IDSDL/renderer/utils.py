@@ -385,6 +385,98 @@ def get_scene_params():
 
 
 # ---------------------------------------------------------------------
+# INTERIOR-VIEW HELPERS (for RoomGroup scenes)
+# ---------------------------------------------------------------------
+#
+# A RoomGroup exports its architectural shell as meshes named in
+# IDSDL/wall.py: 'back_wall', 'front_wall', 'left_wall', 'right_wall',
+# 'floor' and 'ceiling'. The outside-the-box cameras (corners / edges /
+# front) can't see into a closed room, so these helpers let us hide the
+# ceiling and drive cameras from *inside* the room for layout inspection.
+
+ROOM_SHELL_NAMES = ("back_wall", "front_wall", "left_wall", "right_wall", "floor", "ceiling")
+
+
+def find_room_object(name):
+    """Find a shell object by exact name, tolerating Blender '.001' suffixes."""
+    obj = bpy.data.objects.get(name)
+    if obj is not None and obj.type == 'MESH':
+        return obj
+    for o in bpy.data.objects:
+        if o.type == 'MESH' and o.name.split('.')[0] == name:
+            return o
+    return None
+
+
+def object_world_aabb(obj):
+    """World-space (center, size) of an object's bounding box, as Vectors."""
+    mn = Vector((float('inf'),) * 3)
+    mx = Vector((float('-inf'),) * 3)
+    for v in obj.bound_box:
+        w = obj.matrix_world @ Vector(v)
+        for i in range(3):
+            mn[i] = min(mn[i], w[i])
+            mx[i] = max(mx[i], w[i])
+    return (mn + mx) / 2.0, (mx - mn)
+
+
+def set_shell_visibility(name, visible):
+    """Show/hide a shell object (e.g. the ceiling) in renders. Returns True if found."""
+    obj = find_room_object(name)
+    if obj is None:
+        return False
+    obj.hide_render = not visible
+    try:
+        obj.hide_set(not visible)
+    except RuntimeError:
+        pass
+    return True
+
+
+def compute_room_box():
+    """
+    Interior bounding box of a RoomGroup scene, as a dict:
+        cx, cy            horizontal centre
+        hx, hy            half-extents of the footprint (x, y)
+        floor_z, ceil_z   inner floor and ceiling heights
+        height            ceil_z - floor_z
+
+    The footprint comes from the 'floor' object (never removed); the height
+    from the 'ceiling' object. Either falls back to the overall scene bounds,
+    so the helper still works on shell-less scenes. Note a windowed wall is
+    removed on export (see place_window_floor_to_ceiling), which is why we key
+    off the floor/ceiling rather than the individual wall meshes.
+    """
+    floor = find_room_object("floor")
+    ceiling = find_room_object("ceiling")
+
+    if floor is not None:
+        fc, fs = object_world_aabb(floor)
+        cx, cy = fc.x, fc.y
+        hx, hy = fs.x / 2.0, fs.y / 2.0
+        floor_z = fc.z + fs.z / 2.0          # top surface of the floor slab
+    else:
+        (scx, scy, scz), (sw, sd, sh) = get_scene_params()
+        cx, cy = scx, scy
+        hx, hy = sw / 2.0, sd / 2.0
+        floor_z = scz - sh / 2.0
+
+    if ceiling is not None:
+        cc, cs = object_world_aabb(ceiling)
+        ceil_z = cc.z - cs.z / 2.0           # underside of the ceiling slab
+    else:
+        (_, _, scz2), (_, _, sh2) = get_scene_params()
+        ceil_z = scz2 + sh2 / 2.0
+
+    return {
+        "cx": cx, "cy": cy,
+        "hx": hx, "hy": hy,
+        "floor_z": floor_z, "ceil_z": ceil_z,
+        "height": ceil_z - floor_z,
+    }
+
+
+# ---------------------------------------------------------------------
 # WORKER
 # ---------------------------------------------------------------------
 
@@ -581,6 +673,113 @@ class SceneRendererWorker:
         )
 
         render_video()
+
+    # -----------------------------------------------------------------
+    # INTERIOR VIEWS (RoomGroup scenes)
+    #
+    # The exterior cameras above cannot see inside a closed room. These
+    # methods hide the ceiling and drive the camera from *inside*, which is
+    # what you want for inspecting a layout and iterating on it.
+    # -----------------------------------------------------------------
+
+    def _setup_interior(self, path, hide_ceiling=True, lens=22.0):
+        """Load the scene, hide the ceiling, widen the lens, return (cam, room box)."""
+        cam_ob = self.init(path)
+        if hide_ceiling:
+            set_shell_visibility("ceiling", False)
+        cam_ob.data.lens = lens          # wide-angle so interiors fit the frame
+        return cam_ob, compute_room_box()
+
+    def _render_interior_view(self, cam_ob, output_path, camera_location, target_location):
+        place_camera(cam_ob, camera_location, target_location)
+        setup_renderer(
+            output_path=output_path,
+            resolution_x=self.resolution_x,
+            resolution_y=self.resolution_y,
+            samples=self.samples,
+            use_cuda=self.cuda,
+            transparent=True,
+        )
+        render_image()
+
+    def render_interior_walls(self, path, output_paths):
+        """
+        Four eye-level interior shots, each looking squarely at one wall, in the
+        order [back, front, left, right]. The camera sits just inside the
+        opposite wall with the ceiling hidden, so each wall and the furniture in
+        front of it is clearly visible. `output_paths` is a list of 4 paths.
+
+        Wall labels follow the export convention in IDSDL/scene.py
+        (back = +Y, front = -Y, right = +X, left = -X).
+        """
+        cam_ob, box = self._setup_interior(path)
+        cx, cy, hx, hy = box["cx"], box["cy"], box["hx"], box["hy"]
+        fz, H = box["floor_z"], box["height"]
+
+        eye = fz + 0.55 * H              # camera height
+        tgt = fz + 0.45 * H             # aim a touch below eye level
+        inset = 0.92                    # keep the camera just inside the back wall
+
+        # Footprint-edge target points for each wall.
+        targets = [
+            (cx,      cy + hy),   # back
+            (cx,      cy - hy),   # front
+            (cx - hx, cy     ),   # left
+            (cx + hx, cy     ),   # right
+        ]
+
+        for i, (tx, ty) in enumerate(targets):
+            if i >= len(output_paths):
+                break
+            # Place the camera opposite the target wall, just inside the room.
+            camx = cx + (cx - tx) * inset
+            camy = cy + (cy - ty) * inset
+            self._render_interior_view(
+                cam_ob, output_paths[i], (camx, camy, eye), (tx, ty, tgt)
+            )
+
+    def render_interior_corners(self, path, output_paths):
+        """
+        Four high 3/4 'dollhouse' shots from the room's top corners, each
+        looking at the centre with the ceiling removed. Good for seeing the
+        overall arrangement and circulation. `output_paths` is a list of 4.
+        """
+        cam_ob, box = self._setup_interior(path)
+        cx, cy, hx, hy = box["cx"], box["cy"], box["hx"], box["hy"]
+        fz, H = box["floor_z"], box["height"]
+
+        inset = 0.9
+        eye = fz + 0.92 * H
+        tgt = fz + 0.35 * H
+
+        corners = [
+            (cx - hx * inset, cy - hy * inset),
+            (cx + hx * inset, cy - hy * inset),
+            (cx + hx * inset, cy + hy * inset),
+            (cx - hx * inset, cy + hy * inset),
+        ]
+        for i, (camx, camy) in enumerate(corners):
+            if i >= len(output_paths):
+                break
+            self._render_interior_view(
+                cam_ob, output_paths[i], (camx, camy, eye), (cx, cy, tgt)
+            )
+
+    def render_room(self, path, output_dir):
+        """
+        Convenience: render a full interior set of a RoomGroup scene into
+        `output_dir` — four wall views (wall_back/front/left/right.png) and four
+        corner views (corner_0..3.png). Returns the list of written paths.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+        wall_paths = [
+            os.path.join(output_dir, f"wall_{n}.png")
+            for n in ("back", "front", "left", "right")
+        ]
+        corner_paths = [os.path.join(output_dir, f"corner_{i}.png") for i in range(4)]
+        self.render_interior_walls(path, wall_paths)
+        self.render_interior_corners(path, corner_paths)
+        return wall_paths + corner_paths
 
 
 # ---------------------------------------------------------------------

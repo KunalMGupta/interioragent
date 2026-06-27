@@ -1,8 +1,24 @@
 # IDSDL skills
 
-Reusable, agent-runnable playbooks for extending IDSDL **without changing core logic**. Each skill
-is a folder with a `SKILL.md` (name + description front matter, then instructions), following the
-Claude Code skill format.
+This folder holds two distinct, complementary kinds of knowledge. Don't confuse them.
+
+### A. Scene-generation knowledge base — **start at [SKILLS.md](SKILLS.md)**
+
+How to *use* the DSL to build and iteratively optimize a scene from a prompt
+(coarse-to-fine workflow, constraint model, VLM-feedback playbook, per-scene
+examples). This is the everyday loop for producing rooms. Layout:
+
+| Path | Purpose |
+|---|---|
+| [SKILLS.md](SKILLS.md) | entry point — workflow + index (read first) |
+| [dsl_reference.md](dsl_reference.md) | the DSL API cheat sheet |
+| [workflow/](workflow/) | coarse_to_fine · constraints · vlm_feedback · rendering |
+| [examples/](examples/) | per-scene-type recipes (living_room, classroom, kitchen, …) |
+
+### B. Codebase-extension playbooks (Claude Code SKILL.md format)
+
+Reusable, agent-runnable playbooks for extending IDSDL **without changing core logic**. Each is a
+folder with a `SKILL.md` (name + description front matter, then instructions).
 
 | Skill | Purpose |
 |---|---|
