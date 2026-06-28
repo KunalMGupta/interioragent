@@ -27,6 +27,8 @@ import os
 import runpy
 import sys
 
+from IDSDL.service import core as _svc   # shared logic (browse/montage live here)
+
 
 def latest_run_dir():
     dirs = sorted(glob.glob("tmp/2*"), key=os.path.getmtime)
@@ -204,87 +206,16 @@ def cmd_inspect(query, render=False):
     return 0
 
 
-def _montage(items, out_path, cols=4, cell=260, pad=10, label_h=52):
-    """Grid of (idx, preview, model, desc, offset) tiles into one labeled PNG.
-
-    Laid out a few columns wide so the image is tall and scrolls vertically in an editor's
-    image viewer. Each tile shows #idx, the id stem, the description, and the asset's
-    current front offset (highlighted when non-zero).
-    """
-    import math
-    from PIL import Image, ImageDraw, ImageFont, ImageEnhance
-    n = len(items)
-    if n == 0:
-        return None
-    cols = min(cols, n)
-    rows = math.ceil(n / cols)
-    W = cols * cell + (cols + 1) * pad
-    H = rows * (cell + label_h) + (rows + 1) * pad
-    sheet = Image.new("RGB", (W, H), (250, 250, 250))
-    draw = ImageDraw.Draw(sheet)
-    try:
-        f1 = ImageFont.truetype("DejaVuSans-Bold.ttf", 15)
-        f2 = ImageFont.truetype("DejaVuSans.ttf", 13)
-    except Exception:
-        f1 = f2 = ImageFont.load_default()
-    for k, (idx, preview, model, desc) in enumerate(items):
-        r, c = divmod(k, cols)
-        x = pad + c * (cell + pad)
-        y = pad + r * (cell + label_h + pad)
-        if preview:
-            try:
-                im = Image.open(preview).convert("RGB")
-                im = ImageEnhance.Brightness(im).enhance(1.5)
-                im.thumbnail((cell, cell))
-                sheet.paste(im, (x + (cell - im.width) // 2, y + label_h + (cell - im.height) // 2))
-            except Exception:
-                draw.rectangle([x, y + label_h, x + cell, y + label_h + cell], outline=(200, 200, 200))
-        stem = model.split("/")[-1][:14]
-        draw.text((x + 4, y + 3), f"#{idx}  {stem}", fill=(170, 0, 0), font=f1)
-        draw.text((x + 4, y + 24), (desc or "")[:40], fill=(60, 60, 60), font=f2)
-    sheet.save(out_path)
-    return out_path
-
-
 def cmd_browse(query, n=24, text=False, out=None):
-    """Montage the dataset assets matching a query so you can eyeball them by hand.
-
-    Default ranks by embedding similarity (semantic); --text does a substring match on the
-    asset descriptions (offline, no API). Prints a manifest (idx -> model id -> desc) and a
-    montage PNG path you can open.
-    """
-    import numpy as np
-    from IDSDL.datasets.retrievers import FUTURE_HSSD_ASSET_RETRIEVERS
-    r = FUTURE_HSSD_ASSET_RETRIEVERS[0]   # base FutureHSSD: full embeddings + metadata
-
-    if text:
-        ql = query.lower()
-        models = [m for m in r.all_models.tolist()
-                  if ql in (r.metadata.get(m, {}).get("description", "").lower())][:n]
-        sims = [None] * len(models)
-    else:
-        embd = np.array(r.encoder.embed_query(query))
-        sims_all = np.dot(r.all_embeddings, embd)
-        idx = np.argsort(sims_all)[-n:][::-1]
-        models = [r.all_models[i] for i in idx]
-        sims = [float(sims_all[i]) for i in idx]
-
-    items, manifest = [], []
-    for i, m in enumerate(models):
-        desc = r.metadata.get(m, {}).get("description", "")
-        items.append((i, r._preview_path(m), m, desc))
-        manifest.append((i, m, sims[i], desc))
-
-    out = out or os.path.join(SCRATCH_BROWSE, f"browse_{''.join(ch if ch.isalnum() else '_' for ch in query)[:32]}.png")
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    path = _montage(items, out)
-
-    print(f"\nbrowse {query!r} ({'text' if text else 'semantic'}): {len(models)} assets")
-    print(f"montage: {path}")
+    """Montage the dataset assets matching a query so you can eyeball them by hand. Thin wrapper
+    over the shared IDSDL.service.core.browse (single source of the browse/montage logic)."""
+    d = _svc.browse(query, n=n, semantic=not text, out=out)
+    print(f"\nbrowse {query!r} ({'semantic' if d['semantic'] else 'text'}): {len(d['manifest'])} assets")
+    print(f"montage: {d['montage_path']}")
     print("(use the model id with AddAsset(..., asset_id=...) ; for selection use `gallery`)")
-    for i, m, s, d in manifest:
-        sm = f"{s:.3f}" if s is not None else "  -  "
-        print(f"  #{i:<2} {sm} {m}  {d[:50]}")
+    for m in d["manifest"]:
+        sm = f"{m['similarity']:.3f}" if m["similarity"] is not None else "  -  "
+        print(f"  #{m['idx']:<2} {sm} {m['model']}  {(m['desc'] or '')[:50]}")
     return 0
 
 
@@ -436,6 +367,43 @@ def cmd_gallery(source, n=None, page=0, out=None, hint=None):
 # Prompt sets used by `candidates` to over-generate a pool from the FULL dataset, which you
 # then curate down in the selection gallery. Add categories here as we build more pools.
 CANDIDATE_PROMPTS = {
+    "hair_salon": [
+        # --- styling chairs / barber seating (specific + generic, to surface what really exists) ---
+        "a barber chair", "a salon styling chair", "a hydraulic barber chair", "a hairdressing chair",
+        "a reclining barber chair", "a vintage barber chair", "a modern salon chair", "a beauty salon chair",
+        "a black leather salon chair", "an upholstered swivel chair with a chrome base",
+        "a swivel armchair on a star base", "a salon chair with a footrest",
+        # --- stools / tool carts / trolleys ---
+        "a rolling salon stool", "a hydraulic cutting stool", "a saddle stool on wheels",
+        "a hairdresser's tool trolley", "a rolling utility cart with drawers", "a salon trolley cart",
+        "a beauty trolley on wheels", "a small rolling cart with trays", "a tool cart on casters",
+        # --- mirrors / styling stations ---
+        "a large wall mirror", "a tall framed mirror", "a full-length floor mirror",
+        "a salon styling station with a mirror", "a wall-mounted vanity mirror", "a rectangular wall mirror",
+        "an ornate gold framed mirror", "a round wall mirror", "a styling station console with drawers",
+        "a barber station cabinet with a mirror",
+        # --- wash / shampoo area ---
+        "a shampoo bowl basin", "a salon backwash unit", "a reclining shampoo chair with a basin",
+        "a ceramic wash basin on a pedestal", "a hair washing sink station", "a beauty salon sink",
+        # --- drying / processing equipment ---
+        "a hooded hair dryer chair", "a standing hooded salon dryer", "a rollerball hair processor",
+        "a salon hair dryer on a stand", "a bonnet hood dryer",
+        # --- reception / checkout / retail display ---
+        "a reception desk", "a salon reception counter", "a curved reception desk", "a modern front desk",
+        "a retail checkout counter", "a glass display counter", "a freestanding retail shelf unit",
+        "a wall-mounted display shelf", "a glass display cabinet", "a cosmetics product display shelf",
+        "a tiered product display stand", "a tall open shelving unit", "a retail product cabinet",
+        # --- waiting area ---
+        "a waiting room bench", "a row of linked waiting chairs", "a small two-seat sofa",
+        "a modern lounge armchair", "a magazine rack", "a small round coffee table", "a low side table",
+        # --- storage / utility / plants ---
+        "a tall storage cabinet", "a towel storage cabinet", "a low cabinet with drawers",
+        "a mini refrigerator", "a coat rack stand", "a tall potted floor plant", "a medium potted plant",
+        "a decorative floor vase", "a trash can", "a floor rug",
+        # --- wall decor / lighting / signage ---
+        "a framed wall art print", "a set of framed pictures", "a pendant ceiling light",
+        "a modern chandelier", "a wall-mounted menu price board", "a neon wall sign", "a round wall clock",
+    ],
     "presentation": [
         # chalk / black boards
         "a large green chalkboard", "a black chalkboard with a wooden frame", "a classroom blackboard",

@@ -1091,6 +1091,64 @@ WallArtRetriever.
         return top_models, top_similarities
 
 
+class HairSalonRetriever(FutureHSSDAssetRetriever):
+    """Curated pool of hair-salon furniture, fixtures and equipment (gallery-curated from the
+    full dataset + ingested custom salon assets: barber chair, hairdressing chair, backwash
+    shampoo unit, neon sign). Keeps salon queries inside salon-appropriate assets so a
+    'styling chair' returns a barber chair, not a generic dining chair."""
+    def __init__(self):
+        super().__init__()
+        self.name = "HairSalonRetriever"
+        self.description = """
+Retrieves furniture, fixtures and equipment for a HAIR SALON / BARBERSHOP / BEAUTY SALON:
+barber and styling chairs, shampoo / backwash units and wash basins, hairdressing stools and
+tool trolleys, styling-station mirrors and dressing tables, reception desks and checkout
+counters, retail product display shelves and cabinets, waiting-area seating, towel storage,
+mini fridges, salon signage, and the salon's plants / mirrors / decor. Use this retriever for
+any object described in a hair-salon / barbershop / beauty-salon context.
+"""
+        self.examples = """
+1. A salon styling chair
+2. A barber chair
+3. A salon backwash shampoo unit
+4. A salon reception desk
+5. A salon product display shelf
+6. A large salon wall mirror
+7. A hairdresser's tool trolley
+8. A neon salon sign
+"""
+        with open(os.path.join(os.path.dirname(__file__), "assets/hair_salon.json"), "r") as f:
+            self.pool = json.load(f)
+
+    # Prefer the curated salon pool, but fall back to the full dataset so a generic item the
+    # small pool lacks (e.g. a pink velvet sofa) can still surface. Curated assets get a small
+    # similarity bonus so they win when close; a clearly-better general asset (Δ > bonus) wins.
+    POOL_BONUS = 0.04
+
+    def get_likely_asset(self, query: str):
+        embd = np.array(self.encoder.embed_query(query))
+        index = {m: i for i, m in enumerate(self.all_models.tolist())}
+
+        # curated-pool candidates (bonused)
+        pool_models = [m for m in self.pool if m in index]
+        pool_sims = np.dot(np.array([self.all_embeddings[index[m]] for m in pool_models]), embd) \
+            + self.POOL_BONUS
+
+        # general full-dataset candidates (fallback variety)
+        gen_sims_all = np.dot(self.all_embeddings, embd)
+        gen_idx = np.argsort(gen_sims_all)[-20:][::-1]
+        gen_models = [self.all_models[i] for i in gen_idx]
+        gen_sims = gen_sims_all[gen_idx]
+
+        # merge: keep each model's best score, sort, take top 20 for the visual picker
+        best = {}
+        for m, s in list(zip(pool_models, pool_sims)) + list(zip(gen_models, gen_sims)):
+            if m not in best or s > best[m]:
+                best[m] = float(s)
+        ranked = sorted(best.items(), key=lambda kv: kv[1], reverse=True)[:20]
+        return [m for m, _ in ranked], np.array([s for _, s in ranked])
+
+
 class CherryBlossomRetriever(SceneProgAssetRetrieverBase):
     def __init__(self):
         super().__init__()
@@ -1183,6 +1241,7 @@ FUTURE_HSSD_ASSET_RETRIEVERS = [
     BathroomFurnitureAndMiscellaneousRetriever(),
     CountersRetriever(),
     GameEquipmentRetriever(),
+    HairSalonRetriever(),
     CherryBlossomRetriever(),
     SceneMotifCoderObject(),
 ]

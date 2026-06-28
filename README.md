@@ -207,6 +207,27 @@ Each `generate`/`edit` returns a `DesignResult` with `.image`, the synthesized `
   from this repo (see `.gitignore`); the docs live at
   [interioragent/docs](https://github.com/interioragent/docs).
 
+## MCP server (warm, typed tools for agents)
+
+`IDSDL/service/mcp_server.py` is a stdio [MCP](https://modelcontextprotocol.io) server that
+exposes the asset/scene tooling as **warm, typed tools returning structured data + inline
+images** — so an agent (e.g. Claude Code) drives the asset-discovery loop without cold-reloading
+the ~687 MB embeddings on every CLI call. The shared logic lives in `IDSDL/service/core.py`
+(warm singletons: base retriever, router, planner); the workbench CLI uses the same core.
+
+Setup:
+```bash
+/opt/conda/envs/interioragent/bin/pip install mcp        # one-time dependency
+```
+Registration is `/.mcp.json` (project-scoped; Claude Code discovers it on session start and
+prompts to approve `idsdl`). Requires `OPENAI_API_KEY` in the environment.
+
+Tools (`mcp__idsdl__*`): **retrieve / inspect** (route+resolve a query → candidate contact sheet
+inline), **browse** (montage of dataset matches), **reselect / show / pin** (session-memory picks
+— instant, no re-retrieval; `pin` → the `AddAsset(asset_id=…)` snippet), **candidates / gallery /
+pool_add** (pool curation), **ingest_glbs** (custom-asset ingestion + auto re-warm), **plan**
+(design brief + collage) and **run_scene** (build+render a DSL program → VLM feedback + room views).
+
 ## About
 
 InteriorAgent-IDSDL is part of the Ph.D. research of **Kunal Gupta** (CSE, UC San Diego) on

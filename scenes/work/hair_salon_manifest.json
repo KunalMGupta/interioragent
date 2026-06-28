@@ -1,0 +1,30 @@
+{
+ "barber_chair.glb": {
+  "description": "Salon barber styling chair with an upholstered seat, back and armrests on a chrome hydraulic pedestal base with a footrest ring",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.65
+ },
+ "hairdressing_chair.glb": {
+  "description": "Salon hairdressing chair with an upholstered seat and back on a swivel base",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.65
+ },
+ "station_hair_wash_basin.glb": {
+  "description": "Salon backwash shampoo unit: a reclining chair joined to a ceramic neck-rest wash basin with a chrome faucet",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.75
+ },
+ "cc0_-_neon_sign_open.glb": {
+  "description": "Neon illuminated wall sign with glowing tube lettering on a dark backing",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.10
+ }
+}

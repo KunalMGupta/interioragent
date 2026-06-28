@@ -5,5 +5,33 @@
   "freetop": false,
   "on_top_or_inside": false,
   "scale": 2.4
+ },
+ "custom/d5884fb54a16d8f18a19a40989fcca074f5fcb84": {
+  "description": "Neon illuminated wall sign with glowing tube lettering on a dark backing",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.1
+ },
+ "custom/59a3f803acb6e00ec8e3637e862c879cf03c06be": {
+  "description": "Salon barber styling chair with an upholstered seat, back and armrests on a chrome hydraulic pedestal base with a footrest ring",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.65
+ },
+ "custom/192be4071c49f540d8b40c30b1bc0f565237c75b": {
+  "description": "Salon backwash shampoo unit: a reclining chair joined to a ceramic neck-rest wash basin with a chrome faucet",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.75
+ },
+ "custom/c07ce1eb88401269c124d2db012ed5712087d197": {
+  "description": "Salon hairdressing chair with an upholstered seat and back on a swivel base",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.65
  }
 }

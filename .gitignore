@@ -11,9 +11,22 @@ __pycache__/
 # Claude Code / local agent state
 .claude/
 
-# Large 3D asset datasets — fetched/installed separately, not version-controlled
-IDSDL/datasets/assets/
+# Large 3D asset datasets — fetched/installed separately, not version-controlled.
+# DO track the small hand-curated pool id-lists under assets/ (essential to retrieval);
+# ignore only the heavy install-time blobs (embeddings, full metadata, mesh binaries).
+IDSDL/datasets/assets/*.npz
+IDSDL/datasets/assets/futurehssd.json
+IDSDL/datasets/assets/*.glb
+IDSDL/datasets/assets/*.obj
 IDSDL/datasets/futurehssd/
+# Custom-ingested assets: track metadata + preview PNGs, but NOT the heavy .glb meshes
+# (large, fetched out-of-band like the main dataset; see scenes/work/*_attributions.md)
+IDSDL/datasets/custom/models/*.glb
+
+# Supplied glb upload bundles + raw gallery selections (scratch; the ingested assets +
+# curated pool jsons are the durable artifacts)
+/*.zip
+/selection.json
 
 # Generated scene outputs and renders
 results/
