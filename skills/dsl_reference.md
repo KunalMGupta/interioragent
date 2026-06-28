@@ -181,7 +181,10 @@ is deterministic (no solve), so keep its `randomness` modest. Good defaults: sea
 
 ## Constraints (see workflow/constraints.md for the full model)
 
-- **Auto** (you do nothing): `OverlapConstraint`, `OutOfBoundsConstraint`.
+- **Auto** (you do nothing): `OverlapConstraint`, `OutOfBoundsConstraint`, and
+  **door clearance** — every `place_door` auto-registers a `ClearanceConstraint`
+  (~0.9 m) at the doorway, so floor furniture is kept out of the way. Don't add your
+  own clearance for a door.
 - **Manual gradient** (you add, they move objects): add them *inside* the group's
   `with` block via the native convenience methods (available on every group).
   `compile()` (on `__exit__`) re-runs them after the auto constraints and before

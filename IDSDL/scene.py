@@ -316,6 +316,11 @@ mesh_obj.hide_render = True
 """
 
         for i, obj in enumerate(self.objects):
+            # Mesh-less helper objects (e.g. the invisible door-clearance proxy) take part
+            # in the layout solve but carry no geometry — skip them in serialization, as
+            # _build_blend already does.
+            if obj.mesh_path is None:
+                continue
             if obj.mesh_path not in self.unique_assets:
                 raise ValueError(f"Object mesh path not registered: {obj.mesh_path}")
 

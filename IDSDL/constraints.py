@@ -849,7 +849,11 @@ class VisibilityConstraint(ConstraintBase):
             )
 
         else:
-            raise ValueError("Invalid direction for trapezoid construction")
+            # Diagonal sightline: the trapezoid is only defined for near-axis-aligned
+            # source->target. Degrade to a no-op rather than aborting the whole compile,
+            # so one awkward visibility call can't sink a scene. (Author lesson: keep the
+            # viewer and target roughly axis-aligned — see workflow/constraints.md.)
+            return None
 
         return trapezoid
 
@@ -888,6 +892,8 @@ class VisibilityConstraint(ConstraintBase):
     def compute_gradients(self):
         raytracer = Raytracer2D(self.group)
         trapezoid = self.build_trapezoid(self.source, self.target)
+        if trapezoid is None:
+            return
 
         v1 = self.source.get_location()
         v2 = self.target.get_location()
@@ -1228,6 +1234,13 @@ class GradSolver:
     def compute_gradients(self):
         for constraint in self.group.grad_constraints:
             constraint.compute_gradients()
+
+        # Static objects (e.g. the invisible door-clearance proxy) exert force on
+        # their neighbours via the constraints above, but must never move themselves.
+        # Zero their accumulated gradient so the action sampler can't translate them.
+        for obj in self.objects:
+            if getattr(obj, "is_static", False):
+                obj.grad = np.zeros(3, dtype=np.float32)
 
         if len(self.objects) == 0:
             return 0.0

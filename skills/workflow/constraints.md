@@ -13,10 +13,30 @@ them and never tune them.
 |------------|------------------|----------|
 | `OverlapConstraint` | objects don't interpenetrate (2D footprint) | every group's compile (GridGroup skips — deterministic layout) |
 | `OutOfBoundsConstraint` | objects stay within group WIDTH/DEPTH | RoomGroup, BasicRoomGroup |
+| **door clearance** (auto) | floor furniture is kept ~0.9 m clear of every doorway | RoomGroup, automatically per `place_door` |
 
 Trust these. If two things overlap in the render anyway, the cause is usually
 upstream (bad placement verb, an item that's a wall-object, or a group that
 didn't recompile) — not the solver.
+
+### Door clearance is automatic — you do nothing
+
+Every `room.place_door(wall, position)` now **auto-keeps the doorway clear** so a person can
+walk through and the door can swing. Two layers, both automatic:
+1. **In-solve nudge** — on compile the RoomGroup drops an invisible, static floor proxy at
+   the doorway (facing into the room, `ignore_overlap=True`, never rendered/exported) and runs
+   the same `ClearanceConstraint` (`distance=RoomGroup.DOOR_CLEARANCE`, default 0.9 m,
+   `dir="front"`) you'd add by hand, so the gradient solve moves furniture out as it settles.
+2. **Deterministic guarantee** — after the solve, `_enforce_door_clearances()` pushes any
+   item still intruding into the doorway band straight out along the wall normal and repairs
+   resulting overlaps (the same belt-and-suspenders pattern as `_snap_overlaps`/`_clamp_to_bounds`).
+   This is needed because the area-weighted solver moves large/heavy furniture (a sofa) slowly,
+   so the nudge alone can leave a big piece in the doorway.
+
+No author action, no new constraint type. **Do not** add your own clearance for a door; just
+place the door. Wall-mounted items and the door leaf itself are unaffected — only floor
+furniture moves. (Caveat: a doorway is a no-furniture zone ~0.9 m deep × door-width wide — so
+don't *design* a layout that needs that floor; put the door where the traffic lane already is.)
 
 ## 2. Manual gradient constraints — you add these, they move objects
 
@@ -54,6 +74,55 @@ registered hooks, then solves — so manual constraints are enforced every compi
 > constraints on a Relative/Around/Room group. (The older `tests.py`
 > `ConstraintRoom(hooks=[...])` harness still works but is no longer needed.)
 
+### Clearance recipe — wardrobes, cabinets, appliances (you add these)
+
+Anything with a door/drawer that opens, or that you stand in front of to use, needs a
+clear band in front of it — **doors are auto-handled, everything else is on you:**
+
+```python
+with scene.RoomGroup() as room:
+    room.place_on_back_wall_center(wardrobe)          # faces +z (into room) by default
+    room.add_clearance(wardrobe, distance=0.8, dir="front")   # keep the swing/standing zone open
+    room.place_on_left_wall_center(fridge)            # faces +x (into room)
+    room.add_clearance(fridge, distance=0.9, dir="front")
+```
+
+- `dir="front"` is what you want almost always — it clears the space the doors open
+  into / you stand in. It uses the object's **facing**, so make sure the wardrobe faces
+  into the room (the wall placements do this by default; verify with the RotationConstraint
+  render if unsure).
+- Rough distances: wardrobe/closet **0.8–1.0 m**, kitchen appliances **0.9 m** (appliance
+  + a person), dresser/low cabinet **0.6 m**, desk knee space **0.5 m**.
+- `dir="sides"` / `dir="all"` exist but are rarely needed — reach for `front` first.
+- The clearance **moves the blocker, not the cabinet**: the cabinet is wall-anchored and
+  effectively pinned; the floor item in front gets pushed away. If two cabinets face each
+  other across a narrow room the solve can fight itself — widen the room (`modulate_scale`)
+  or drop one clearance.
+
+### Visibility — keep it axis-aligned and use floor children (you add these)
+
+`room.add_visibility(viewer, target)` keeps the sightline from `viewer` to `target` clear
+by pushing **other floor objects** out of the trapezoid between them. To use it *properly*
+(it is sharp-edged):
+
+1. **`viewer` and `target` must both be floor objects the group can see** — direct floor
+   children (or leaves of a nested cluster that the room flattens). A **wall-mounted** item
+   (`place_on_wall_*`: art, a TV on a bracket, a board) is a *wall object*, **not** a group
+   child — the solver can't reason about it as a target. For "keep the painting visible,"
+   the thing you actually keep clear is the **floor in front of the wall** — put the viewer
+   (sofa/bench) opposite the art and let blockers be pushed aside; or hang the focal piece
+   on a floor console (a TV on a media unit) and target that.
+2. **Keep `viewer → target` roughly axis-aligned** (along +x/−x/+z/−z). The sightline
+   trapezoid is only defined for near-axis-aligned pairs; a diagonal pair is now a **silent
+   no-op** (it used to raise and abort the whole scene). So if visibility "does nothing,"
+   the usual cause is a diagonal or near-diagonal arrangement — line the two up on a row/column.
+3. The blockers it moves are the group's other floor children; `ignore_overlap` items and
+   wall objects are skipped. It will **not** separate two items locked inside the same frozen
+   cluster (they move as a unit) — put the viewer and the blocker in the *room*, not nested.
+
+Canonical good use: `sofa` on one wall, `media_console` opposite, both centred on the same
+column → `room.add_visibility(sofa, media_console)` keeps the coffee table out of the line.
+
 ## 3. VLM constraints — auto-run, but only produce text
 
 `VLM` type. They render the group, ask an LLM to judge it, and **append the
@@ -67,6 +136,28 @@ program, recompile).
 | `RotationConstraint` | anchor groups **and RoomGroup** | exterior 4-view (open groups) / **interior** 4-view (RoomGroup) | per-object rotation fix (`rotate <x> to face <y>` / `rotate <x> by 180`), or `no rotation` |
 | `RoomProportionsConstraint` | RoomGroup | **interior** 4-view (`render_interior_combined`) + occupancy ratio | `rescale room by 0.5–2.0`, or `no rescale` |
 | `WallOverlapConstraint` | RoomGroup | wall views | wall items overlapping each other / openings |
+
+### Wall overlap is your job to resolve (the warning is text-only)
+
+`WallOverlapConstraint` renders the walls and flags wall items that collide — with each
+other or with a window/door opening. It **does not move anything**; resolving it is the
+scene author's responsibility. The collisions come from the wall-slot occupancy model:
+each wall has **three slots** (`left` / `center` / `right`), and every wall fixture, window,
+and **door** registers the slot(s) it occupies. Two things in the same wall+slot overlap.
+
+How to resolve a flagged overlap:
+- **Different slot.** Move one item to a free slot — `place_on_wall_back_left` instead of
+  `..._center`, etc. Check what's already there: a door on `front-center` means no wall art
+  on `front-center`; a floor-to-ceiling window claims **all three** slots of its wall.
+- **Different wall.** If a wall is full (e.g. door + window already), hang the art elsewhere.
+- **Multiple items on one wall span.** Use `place_on_wall_freeform(wall, [a, b, c])` to lay
+  several pieces along one wall without slot collisions, instead of stacking them in one slot.
+- **Floor furniture vs wall-hung.** `place_on_<wall>_wall_<pos>` (floor item *against* the
+  wall) and `place_on_wall_<wall>_<pos>` (item mounted *on* the wall) occupy independently —
+  a console against the back wall and a picture above it is fine; two pictures in `back-center`
+  is not.
+
+Re-run after the fix and confirm the warning is gone before sign-off.
 
 Act on `RotationConstraint` with the opt-in orientation controls:
 `group.face(obj, toward=...)` (default = anchor; for RoomGroup pass an object or a
@@ -114,7 +205,15 @@ change you agree with → recompile.
 
 - Objects overlapping / leaving the room? → auto gradient already handles it; if
   not, the placement is wrong, not the solver.
-- Need physical clearance / reach / sightline? → add a **manual** constraint (hook).
+- Doorway blocked by furniture? → **already automatic** (`place_door` registers clearance);
+  don't add your own. If something still sits in the doorway it's a wall object or a frozen
+  cluster, not a free floor item.
+- Cabinet/wardrobe/appliance door swing or standing space? → add a **manual** `add_clearance`
+  (`dir="front"`, ~0.6–1.0 m).
+- Need reach / sightline? → add a **manual** `add_access` / `add_visibility` (keep the
+  visibility pair axis-aligned and both floor objects).
+- Two wall items / a picture over a door overlapping? → **WallOverlap** (VLM text); move one
+  to a free wall slot or use `place_on_wall_freeform` — the solver won't fix it.
 - "Feels too big / small", "sofa dwarfs the table"? → **VLM** feedback; rescale in
   the program yourself and recompile.
 - Object facing the wrong way (chair sideways to the group, desk drawers away from

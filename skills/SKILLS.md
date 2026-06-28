@@ -68,8 +68,8 @@ the summary:
 
 | Kind | Examples | Who applies it | What you do |
 |------|----------|----------------|-------------|
-| **Auto gradient** | Overlap, OutOfBounds | the DSL, automatically every compile | nothing — trust it |
-| **Manual gradient** | Clearance, Access, Visibility | you, via `room.add_clearance/add_access/add_visibility(...)` inside the group | add it deliberately where physics/usage demands (wardrobe clearance, sofa→TV sightline, chair→desk access) |
+| **Auto gradient** | Overlap, OutOfBounds, **door clearance** | the DSL, automatically every compile (door clearance fires per `place_door`) | nothing — trust it |
+| **Manual gradient** | Clearance, Access, Visibility | you, via `room.add_clearance/add_access/add_visibility(...)` inside the group | add it deliberately where physics/usage demands (wardrobe/cabinet/appliance clearance, sofa→TV sightline, chair→desk access). Keep visibility pairs axis-aligned + floor objects. |
 | **VLM (textual)** | ObjectProportions, RoomProportions, WallOverlap | auto-runs, but only **writes text** to `scene.vlm_feedback` — never moves anything | read the feedback and act on it yourself (rescale, reposition, recompile) |
 
 Key mental model: **gradient constraints move objects; VLM constraints only talk.**

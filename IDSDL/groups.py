@@ -1970,6 +1970,118 @@ class RoomGroup(SceneProgObject):
             dz = float(self.rng.uniform(-1, 1)) * self.randomness * slack_z
             obj.set_location(t[0] + dx, t[1], t[2] + dz)
 
+    # Auto door clearance: every doorway keeps a patch of floor clear so a door can
+    # open and people can pass. Reuses the existing ClearanceConstraint via an invisible,
+    # static floor proxy at the doorway — no new constraint type, zero author action.
+    DOOR_CLEARANCE = 0.9       # metres kept clear in front of a doorway
+    DOOR_PROXY_DEPTH = 0.05    # thin footprint hugging the wall
+
+    def _make_door_proxy(self, door_width, center_along_wall, wall_name):
+        """Invisible, static floor proxy at a doorway, facing into the room. Carries no
+        mesh (never rendered/exported) but has a footprint the ClearanceConstraint pushes
+        floor furniture away from."""
+        facing = {'back_wall': 0.0, 'front_wall': 180.0,
+                  'left_wall': 90.0, 'right_wall': 270.0}[wall_name]
+        depth = self.DOOR_PROXY_DEPTH
+        # wall-local (along-wall, height, into-room) -> room coords (mirrors window.transform_position)
+        if wall_name == 'back_wall':
+            rx, rz = center_along_wall, depth
+        elif wall_name == 'front_wall':
+            rx, rz = center_along_wall, self.DEPTH - depth
+        elif wall_name == 'left_wall':
+            rx, rz = depth, center_along_wall
+        else:  # right_wall
+            rx, rz = self.WIDTH - depth, center_along_wall
+
+        hw, hd = door_width / 2.0, depth / 2.0
+        verts = np.array([
+            [-hw, 0.0, -hd], [hw, 0.0, -hd], [hw, 0.0, hd], [-hw, 0.0, hd],
+            [-hw, 0.1, -hd], [hw, 0.1, -hd], [hw, 0.1, hd], [-hw, 0.1, hd],
+        ], dtype=np.float32)
+
+        proxy = SceneProgObject(self.scene, name="door_clearance_proxy")
+        proxy.vertices = verts
+        proxy.mesh_path = None        # -> skipped in _build_blend (never rendered)
+        proxy.ignore_overlap = True   # -> skipped by Overlap / snap / clamp passes
+        proxy.is_static = True        # -> grad zeroed each solver step (never moves)
+        proxy.is_proxy = True         # -> purged before each recompile
+        proxy.set_rotation(facing)
+        proxy.set_location(float(rx), 0.05, float(rz))
+        proxy.parent = self
+        return proxy
+
+    def _doorway_specs(self):
+        """(wall_name, center_along_wall, door_width) for every placed door."""
+        specs = []
+        for op in self.operations:
+            if op is None or op.name != 'place_door':
+                continue
+            wall = op.arguments.get('wall')
+            position = op.arguments.get('position')
+            wall_ = self._wall_name_to_wall(wall)
+            door_width, _ = wall_.get_partition_dimensions_by_label(position, margin=0.05)
+            door_height = 0.7 * wall_.height
+            if door_width > 0.5 * door_height:
+                door_width = 0.5 * door_height
+            if door_width <= 0:
+                continue
+            center_along, _ = wall_.get_partition_center_by_label(position, margin=0.0)
+            specs.append((wall, center_along, door_width))
+        return specs
+
+    def _register_door_clearances(self):
+        """Drop an invisible static proxy at each placed doorway and register a
+        ClearanceConstraint so floor furniture is nudged clear of it during the solve."""
+        # purge proxies from a previous compile so they don't accumulate
+        self.children = [c for c in self.children if not getattr(c, "is_proxy", False)]
+        for wall, center_along, door_width in self._doorway_specs():
+            proxy = self._make_door_proxy(door_width, center_along, wall)
+            self.children.append(proxy)
+            self.ClearanceConstraint(proxy, distance=self.DOOR_CLEARANCE, dir="front")
+
+    def _enforce_door_clearances(self):
+        """Deterministic guarantee (run after the stochastic solve, like _snap_overlaps /
+        _clamp_to_bounds): push any floor item that still intrudes into a doorway band out
+        along the inward wall normal, so every doorway is actually walkable. The gradient
+        proxy above usually does this during the solve; this pass guarantees it even for
+        large/heavy furniture the area-weighted solver moves slowly."""
+        clear = self.DOOR_CLEARANCE
+        moved = False
+        floor_children = [c for c in self.children
+                          if not getattr(c, "is_proxy", False)
+                          and not getattr(c, "ignore_overlap", False)
+                          and not getattr(c, "is_light", False)]
+        for wall, center_along, door_width in self._doorway_specs():
+            hw = door_width / 2.0
+            for c in floor_children:
+                aabb = c.get_aabb()
+                xmin, _, zmin = aabb[0]
+                xmax, _, zmax = aabb[1]
+                if wall in ('back_wall', 'front_wall'):
+                    # door spans x in [center-hw, center+hw]; band is `clear` deep off the wall
+                    if xmax <= center_along - hw or xmin >= center_along + hw:
+                        continue
+                    if wall == 'back_wall':              # wall at z=0, push +z
+                        if zmin < clear:
+                            c.translate(0, 0, clear - zmin); moved = True
+                    else:                                # front wall at z=DEPTH, push -z
+                        if zmax > self.DEPTH - clear:
+                            c.translate(0, 0, (self.DEPTH - clear) - zmax); moved = True
+                else:
+                    if zmax <= center_along - hw or zmin >= center_along + hw:
+                        continue
+                    if wall == 'left_wall':              # wall at x=0, push +x
+                        if xmin < clear:
+                            c.translate(clear - xmin, 0, 0); moved = True
+                    else:                                # right wall at x=WIDTH, push -x
+                        if xmax > self.WIDTH - clear:
+                            c.translate((self.WIDTH - clear) - xmax, 0, 0); moved = True
+        if moved:
+            # repair any overlaps / OOB the push introduced (reuses the solver's deterministic passes)
+            self.grad_solver.objects = self.children
+            self.grad_solver._snap_overlaps()
+            self.grad_solver._clamp_to_bounds()
+
     def compile(self):
         self.reset_compile_state()
         self.clear_constraints()
@@ -2006,10 +2118,19 @@ class RoomGroup(SceneProgObject):
 
         self.compile_children()
 
+        # Auto-invoke door clearance: add invisible static proxies at every doorway and
+        # register their ClearanceConstraint before the solve, so floor furniture is
+        # pushed out of the doorway just like any author-added clearance.
+        self._register_door_clearances()
+
         self.OverlapConstraint()
         self.OutOfBoundsConstraint()
         self._run_constraint_hooks()
         self.grad_optimize()
+
+        # Deterministic doorway guarantee: ensure every doorway band is actually clear,
+        # even for large furniture the area-weighted solver moves slowly.
+        self._enforce_door_clearances()
 
         for op in self.operations:
             if op.name in skip_for_now:
