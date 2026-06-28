@@ -10,17 +10,15 @@ from IDSDL.scene import SceneProgRoom
 
 scene = SceneProgRoom("ClassroomV1", seed=7)
 
-# --- student desk unit: chair on the BACK of the desk ---
-# Convention: for any desk+seat (student/teacher/reception), the seat goes on the
-# BACK of the desk. The "look" direction is then chair->desk (the desk's front),
-# so the whole unit is internally consistent and orients correctly as a block.
-# (place_on_front_adjacent put the chair in front, making students look away from
-# the teacher — see skills/workflow/vlm_feedback.md.)
+# --- student desk unit ---
+# Rule for any desk+seat (student/teacher/reception): place_desk_chair puts the chair on
+# the BACK of the desk and rotates the desk 180, so the desk's working front faces the
+# chair. Dataset desks are all modeled with their front at +z, so this fixed rotation
+# gives the correct pose for every desk — no per-asset front-cache entry needed.
 with scene.RelativeGroup() as desk_unit:
     desk = scene.AddAsset("a wooden student desk with metal frame")
-    desk_unit.set_anchor(desk)
     chair = scene.AddAsset("a small blue plastic school chair")
-    desk_unit.place_on_back_adjacent(chair)
+    desk_unit.place_desk_chair(desk, chair)
 
 # --- rows of student desks (3 columns x 2 rows), spaced into individual desks
 # with aisles (sparsity adds both column and row gaps; 0 = merged benches) ---
@@ -30,9 +28,8 @@ with scene.GridGroup(sparsity=0.5) as student_grid:
 # --- teacher area at the front ---
 with scene.RelativeGroup() as teacher_area:
     teacher_desk = scene.AddAsset("a large teachers desk")
-    teacher_area.set_anchor(teacher_desk)
     teacher_chair = scene.AddAsset("a grey office chair")
-    teacher_area.place_on_back_adjacent(teacher_chair)
+    teacher_area.place_desk_chair(teacher_desk, teacher_chair)
     # Phase 2: a task lamp on the teacher's desk
     teacher_area.place_on_top(scene.AddAsset("a small desk task lamp"))
     # Phase 3: warm ceiling light over the front of the room
@@ -60,9 +57,8 @@ with scene.RoomGroup() as room:
     # direction), 90-snapped.
     room.place_on_front(teacher_area, facing="back")
     room.face(teacher_area, toward="back_wall")
-    # The teacher-desk asset is modeled front-reversed; its 180 correction now lives
-    # in the front-orientation cache (IDSDL/datasets/front_offsets.json), applied
-    # automatically on load — so no per-scene rotate() is needed here anymore.
+    # (The desk's own front/back is handled inside place_desk_chair above — the unit just
+    # needs to face the students here.)
     # student rows fill the room; functionally they MUST face the teaching wall.
     # Orient the grid toward the front wall (the wall the teacher/chalkboard are on),
     # snapped to 90 deg — robust and deterministic, unlike the VLM rotation check.

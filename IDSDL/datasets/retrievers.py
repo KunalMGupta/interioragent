@@ -3,7 +3,50 @@ import sys
 import json
 import trimesh
 import numpy as np
-from PIL import Image, ImageEnhance
+import math
+import tempfile
+from PIL import Image, ImageEnhance, ImageDraw, ImageFont
+
+# --- Shared, load-once caches -------------------------------------------------
+# futurehssd.npz is ~700 MB and futurehssd.json ~7.5 MB. They are IDENTICAL for every
+# retriever, but all ~19 FutureHSSD retrievers are instantiated at import time, so loading
+# them per-instance cost ~12 s and ~13.6 GB of redundant work on every run. Load once and
+# share (read-only data) across all instances.
+_NPZ_CACHE = {}
+_JSON_CACHE = {}
+
+# Ingested assets (IDSDL/ingest.py) live in a separate, concatenated file pair so they become
+# first-class in every retriever's pool without rewriting the 700 MB base npz.
+_CUSTOM_DIR = os.path.join(os.path.dirname(__file__), "custom")
+_CUSTOM_NPZ = os.path.join(_CUSTOM_DIR, "custom.npz")
+_CUSTOM_JSON = os.path.join(_CUSTOM_DIR, "custom.json")
+
+
+def _load_embeddings(path):
+    if path not in _NPZ_CACHE:
+        data = np.load(path)
+        emb, mods = data["all_embeddings"], data["all_models"]
+        if os.path.exists(_CUSTOM_NPZ):
+            cd = np.load(_CUSTOM_NPZ, allow_pickle=False)
+            if len(cd["all_models"]):
+                emb = np.vstack([emb, cd["all_embeddings"].astype(emb.dtype)])
+                # don't cast models: custom ids ("custom/<sha1>") are wider than the base
+                # <U45 dtype; np.concatenate widens automatically.
+                mods = np.concatenate([mods, cd["all_models"]])
+        _NPZ_CACHE[path] = (emb, mods)
+    return _NPZ_CACHE[path]
+
+
+def _load_json_cached(path):
+    if path not in _JSON_CACHE:
+        with open(path, "r") as f:
+            data = json.load(f)
+        # fold ingested asset metadata into the base metadata dict
+        if isinstance(data, dict) and os.path.exists(_CUSTOM_JSON):
+            with open(_CUSTOM_JSON, "r") as cf:
+                data = {**data, **json.load(cf)}
+        _JSON_CACHE[path] = data
+    return _JSON_CACHE[path]
 from langchain_openai import OpenAIEmbeddings
 from sceneprogllm import LLM
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))  # Ensure the current directory is in the path
@@ -45,6 +88,9 @@ class SceneProgAssetRetrieverBase:
         return path
 
 class FutureHSSDAssetRetriever(SceneProgAssetRetrieverBase):
+    USE_VISUAL_SELECTION = True   # pick candidates by looking at preview images
+    PICK_K = 6                    # number of candidates shown to the visual picker
+
     def __init__(self):
         self.name = "FutureHSSDAssetRetriever"
         self.description = f"""
@@ -58,18 +104,23 @@ This is the default retriever for SceneProg. Unless specified otherwise, always 
 4. A modern lounge chair
 """
         self.encoder = OpenAIEmbeddings(model="text-embedding-3-large", api_key=os.getenv("OPENAI_API_KEY"))
-        data = np.load(os.path.join(os.path.dirname(__file__), "assets/futurehssd.npz"))
-        self.all_embeddings = data["all_embeddings"]
-        self.all_models = data["all_models"]
+        self.all_embeddings, self.all_models = _load_embeddings(
+            os.path.join(os.path.dirname(__file__), "assets/futurehssd.npz")
+        )
         # breakpoint()
         self.config = {
             "FUTURE_PATH_MODELS" : os.path.join(os.path.dirname(__file__), "futurehssd/3D-FUTURE-models"),
             "HSSD_PATH_MODELS" : os.path.join(os.path.dirname(__file__), "futurehssd/HSSD-models"),
+            "FUTURE_PATH_IMAGES" : os.path.join(os.path.dirname(__file__), "futurehssd/3D-FUTURE-images"),
+            "HSSD_PATH_IMAGES" : os.path.join(os.path.dirname(__file__), "futurehssd/HSSD-images"),
+            "CUSTOM_PATH_MODELS" : os.path.join(_CUSTOM_DIR, "models"),
+            "CUSTOM_PATH_IMAGES" : os.path.join(_CUSTOM_DIR, "images"),
         }
         # with open(os.path.join(os.path.dirname(__file__), "config.json"), "r") as f:
             # self.config = json.load(f)
-        with open(os.path.join(os.path.dirname(__file__), "assets/futurehssd.json"), "r") as f:
-            self.metadata = json.load(f)
+        self.metadata = _load_json_cached(
+            os.path.join(os.path.dirname(__file__), "assets/futurehssd.json")
+        )
 
         self.bad_assets = [
             "hssd/8be974a24717e214eede244a635af9b5d8ca20c",
@@ -87,6 +138,39 @@ Given a list of asset descriptions, pick the best one that matches the query. Re
             response_format="json",
             response_params={"asset": "str"},
         )
+
+        # Agentic visual selection: pick the best candidate by LOOKING at the
+        # datasets' pre-rendered preview images (not just their text descriptions).
+        self.visual_llm = LLM(
+            system_desc="""
+You are choosing the single best 3D asset for a scene from a numbered grid of candidate
+preview renders.
+
+Core criteria, in order:
+(1) TYPE - the object matches what the query asks for.
+(2) SINGLE, CORRECT object - not a cluttered set, a whole room, or the wrong category.
+(3) style and proportions.
+
+HARD RULE on simplicity / placeability (this OVERRIDES a closer-looking type match):
+Objects must be easy to place things on and fit into a scene, so prefer minimalistic pieces
+with ONE clean primary surface. For DESKS and TABLES this is critical: a raised HUTCH, back
+shelf, upper cabinet, shelf tower, cubbies, or ANY second stacked/elevated surface is a
+DISQUALIFYING feature. A query like "desk", "office desk", "teacher's desk", "large desk",
+"writing desk", "computer desk", "study table" MUST be satisfied by a simple FLAT-TOP desk
+(a single top on legs, optionally with drawers underneath) - do NOT pick a hutch or
+multi-tier desk for these, even if it looks more "the part" for the role. ONLY choose a
+hutch / secretary / reception / dresser / vanity / storage-top form when the query LITERALLY
+contains such a word.
+
+Respond with the chosen number and a brief reason.
+""",
+            response_format="json",
+            response_params={"choice": "int", "reasoning": "str"},
+        )
+        # Populated on every call so the caller can inspect / override the pick.
+        self.last_candidates = []
+        self.last_sheet = None
+        self.last_reasoning = None
 
     def remove_bad_assets(self, top_models, top_similarities):
         # Filter out bad assets
@@ -133,33 +217,180 @@ Query: {query}
             model = response.asset
         return model
 
+    # ------------------------------------------------------------------
+    # Agentic visual selection (pick candidates by their preview renders)
+    # ------------------------------------------------------------------
+    def _preview_path(self, model):
+        """Resolve a model id to its pre-rendered preview PNG, or None if absent."""
+        if "/" not in model:
+            return None
+        kind, mid = model.split("/", 1)
+        if kind == "hssd":
+            p = os.path.join(self.config["HSSD_PATH_IMAGES"], mid + ".png")
+        elif kind == "future":
+            p = os.path.join(self.config["FUTURE_PATH_IMAGES"], mid + ".png")
+        elif kind == "custom":
+            p = os.path.join(self.config["CUSTOM_PATH_IMAGES"], mid + ".png")
+        else:
+            return None
+        return p if os.path.exists(p) else None
+
+    def _candidate(self, model, similarity=None):
+        path, scale = self.model_to_path_scale(model)
+        return {
+            "model": model,
+            "path": path,
+            "scale": float(scale),
+            "preview": self._preview_path(model),
+            "desc": self.metadata.get(model, {}).get("description", ""),
+            "similarity": (float(similarity) if similarity is not None else None),
+            "chosen": False,
+        }
+
+    def _flag_chosen(self, model):
+        for c in self.last_candidates:
+            c["chosen"] = (c["model"] == model)
+
+    def _build_contact_sheet(self, items, cell=320, cols=3, pad=12, label_h=30):
+        """Compose a numbered grid of candidate previews into one PNG; return its path.
+
+        ``items`` is a list of (label:int, preview_path:str).
+        """
+        n = len(items)
+        cols = min(cols, n)
+        rows = math.ceil(n / cols)
+        W = cols * cell + (cols + 1) * pad
+        H = rows * (cell + label_h) + (rows + 1) * pad
+        sheet = Image.new("RGB", (W, H), (245, 245, 245))
+        draw = ImageDraw.Draw(sheet)
+        try:
+            font = ImageFont.truetype("DejaVuSans-Bold.ttf", 24)
+        except Exception:
+            font = ImageFont.load_default()
+        for idx, (label, path) in enumerate(items):
+            r, c = divmod(idx, cols)
+            x = pad + c * (cell + pad)
+            y = pad + r * (cell + label_h + pad)
+            try:
+                im = Image.open(path).convert("RGB")
+                # Dataset previews render on black; brighten so dark assets read clearly.
+                im = ImageEnhance.Brightness(im).enhance(1.5)
+                im.thumbnail((cell, cell))
+                ox = x + (cell - im.width) // 2
+                oy = y + label_h + (cell - im.height) // 2
+                sheet.paste(im, (ox, oy))
+            except Exception:
+                draw.rectangle([x, y + label_h, x + cell, y + label_h + cell], outline=(200, 200, 200))
+            draw.text((x + 6, y + 4), f"#{label}", fill=(200, 0, 0), font=font)
+        out = os.path.join(tempfile.gettempdir(), f"candidates_{os.urandom(6).hex()}.png")
+        sheet.save(out)
+        return out
+
+    def select_best_model_visual(self, query, top_models, top_similarities, k=None):
+        """Pick the best candidate by showing the VLM a numbered grid of previews.
+
+        Pure / thread-safe: returns ``(model, candidates, sheet_path, reasoning)`` and does
+        NOT touch instance state, so it can run concurrently (prefetch). Falls back to the
+        text-only picker when fewer than two previews resolve or the VLM call fails.
+        """
+        k = k or self.PICK_K
+        cands = [self._candidate(m, s) for m, s in zip(top_models, top_similarities)]
+        with_prev = [c for c in cands if c["preview"]][:k]
+        candidates = with_prev if len(with_prev) >= 2 else cands[:k]
+
+        def _flag(model):
+            for c in candidates:
+                c["chosen"] = (c["model"] == model)
+
+        if len(with_prev) < 2:
+            model = self.select_best_model(query, top_models, top_similarities)
+            _flag(model)
+            return model, candidates, None, "fewer than 2 previews; used text fallback"
+
+        items = [(i + 1, c["preview"]) for i, c in enumerate(with_prev)]
+        sheet = self._build_contact_sheet(items)
+        listing = "\n".join(
+            f"#{i+1}: {c['desc']} (approx size {c['scale']:.2f} m)"
+            for i, c in enumerate(with_prev)
+        )
+        prompt = f"""Query: {query}
+
+The attached image is a numbered grid of candidate 3D assets. The candidates are:
+{listing}
+
+Pick the single numbered candidate that best matches the query.
+"""
+        try:
+            resp = self.visual_llm(prompt, image_paths=[sheet])
+            choice = int(resp["choice"]) if isinstance(resp, dict) else int(resp.choice)
+            reason = resp.get("reasoning", "") if isinstance(resp, dict) else getattr(resp, "reasoning", "")
+            if not (1 <= choice <= len(with_prev)):
+                raise ValueError(f"choice {choice} out of range")
+            model = with_prev[choice - 1]["model"]
+            reasoning = f"chose #{choice}: {reason}"
+        except Exception as e:
+            print(f"[retriever] visual pick failed ({e}); falling back to text pick")
+            model = self.select_best_model(query, top_models, top_similarities)
+            reasoning = f"visual pick failed ({e}); used text fallback"
+        _flag(model)
+        return model, candidates, sheet, reasoning
+
     def model_to_path_scale(self, model: str) -> tuple[str, float]:
         """
         Convert model name to path and scale.
         """
-        if "future" in model:
-            path = os.path.join(self.config["FUTURE_PATH_MODELS"], model.split('/')[1]+'.glb')
-            scale = self.metadata[model]["scale"]
-        elif "hssd" in model:
-            path = os.path.join(self.config["HSSD_PATH_MODELS"], model.split('/')[1]+'.glb')
-            scale = self.metadata[model]["scale"]
+        kind, mid = model.split('/', 1)
+        if kind == "future":
+            path = os.path.join(self.config["FUTURE_PATH_MODELS"], mid + '.glb')
+        elif kind == "hssd":
+            path = os.path.join(self.config["HSSD_PATH_MODELS"], mid + '.glb')
+        elif kind == "custom":
+            path = os.path.join(self.config["CUSTOM_PATH_MODELS"], mid + '.glb')
         else:
             raise ValueError(f"Unknown model type: {model}")
-
+        scale = self.metadata[model]["scale"]
         return path, scale
 
-    def __call__(self, query: str) -> tuple[str, float]:
+    def resolve(self, query: str, pin: str = None) -> dict:
+        """Resolve a query to a full result dict WITHOUT touching instance state.
+
+        Thread-safe (reads the shared, read-only embeddings; all mutable work is on local
+        variables), so it can run concurrently for parallel prefetch. Returns
+        ``{path, scale, model, candidates, sheet, reasoning}``.
+        """
+        if pin is not None:
+            c = self._candidate(pin)
+            c["chosen"] = True
+            return {"path": c["path"], "scale": c["scale"], "model": pin,
+                    "candidates": [c], "sheet": None, "reasoning": "pinned"}
 
         top_models, top_similarities = self.get_likely_asset(query)
         top_models, top_similarities = self.remove_bad_assets(top_models, top_similarities)
-        model = self.select_best_model(query, top_models, top_similarities)
-        path, scale = self.model_to_path_scale(model)
+        if self.USE_VISUAL_SELECTION:
+            model, candidates, sheet, reasoning = self.select_best_model_visual(
+                query, top_models, top_similarities)
+        else:
+            candidates = [self._candidate(m, s) for m, s in zip(top_models, top_similarities)][: self.PICK_K]
+            model = self.select_best_model(query, top_models, top_similarities)
+            for c in candidates:
+                c["chosen"] = (c["model"] == model)
+            sheet, reasoning = None, None
 
+        path, scale = self.model_to_path_scale(model)
         if hasattr(self, "floor_plants"):
             scale = np.random.uniform(0.6, 1)  # Random scale for floor plants
+        return {"path": path, "scale": scale, "model": model,
+                "candidates": candidates, "sheet": sheet, "reasoning": reasoning}
 
-        print(f"Selected model: {model} with path: {path} and scale: {scale}")
-        return path, scale
+    def __call__(self, query: str, pin: str = None) -> tuple[str, float]:
+        d = self.resolve(query, pin)
+        # convenience instance state for single-call inspection (workbench inspect)
+        self.last_candidates = d["candidates"]
+        self.last_sheet = d["sheet"]
+        self.last_reasoning = d["reasoning"]
+        tag = " (pinned)" if pin is not None else ""
+        print(f"Selected model{tag}: {d['model']} with path: {d['path']} and scale: {d['scale']}")
+        return d["path"], d["scale"]
 
 class CaseGoodsRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -819,6 +1050,47 @@ Only use this retriever when specifically looking for counters.
         top_similarities = similarities[top_indices]
         return top_models, top_similarities
 
+
+class PresentationFixtureRetriever(FutureHSSDAssetRetriever):
+    """Functional presentation/teaching fixtures for classrooms, meeting rooms, lecture
+    halls and labs — the gap that previously sent chalkboards to WallArt (decor). Pool:
+    boards, pinboards, easels, projectors, screens, podiums, maps/globes, wall displays."""
+    def __init__(self):
+        super().__init__()
+        self.name = "PresentationFixtureRetriever"
+        self.description = """
+Retrieves functional PRESENTATION and TEACHING fixtures for classrooms, meeting rooms,
+lecture halls and labs: chalkboards, blackboards, whiteboards, dry-erase / marker boards,
+bulletin / notice / cork boards, easels and flip charts, projectors, projection / projector
+screens, podiums and lecterns, wall maps and globes, and wall-mounted flat-screen TVs /
+displays. Use this for any functional board, projection device, podium, teaching aid, or
+wall display. Do NOT use it for decorative wall art (paintings, posters) — that is
+WallArtRetriever.
+"""
+        self.examples = """
+1. A large green chalkboard
+2. A white dry-erase whiteboard
+3. A ceiling projector
+4. A pull-down projection screen
+5. A wooden lectern or podium
+6. A wall-mounted flat-screen TV for a meeting room
+7. A world map for a classroom wall
+"""
+        with open(os.path.join(os.path.dirname(__file__), "assets/presentation_fixtures.json"), "r") as f:
+            self.fixtures = json.load(f)
+
+    def get_likely_asset(self, query: str):
+        models = [m for m in self.fixtures if m in self.all_models]
+        idx = [self.all_models.tolist().index(m) for m in models]
+        embds = np.array([self.all_embeddings[i] for i in idx])
+        embd = np.array(self.encoder.embed_query(query))
+        similarities = np.dot(embds, embd)
+        top = np.argsort(similarities)[-20:][::-1]
+        top_models = [models[i] for i in top]
+        top_similarities = similarities[top]
+        return top_models, top_similarities
+
+
 class CherryBlossomRetriever(SceneProgAssetRetrieverBase):
     def __init__(self):
         super().__init__()
@@ -897,6 +1169,7 @@ FUTURE_HSSD_ASSET_RETRIEVERS = [
     CabinetandShelfRetriever(),
     ClockRetriever(),
     MirrorRetriever(),
+    PresentationFixtureRetriever(),
     KitchenUnitRetriever(),
     WallArtRetriever(),
     TableTopDecorRetriever(),
@@ -946,6 +1219,10 @@ reasoning: ...
             response_params={"retriever": "str", "reasoning": "str"},
         )
 
+        self.last_candidates = []
+        self.last_sheet = None
+        self.last_reasoning = None
+
         self._cache_path = None
         self._cache = {}
         if self.seed is not None:
@@ -962,29 +1239,112 @@ reasoning: ...
         with open(self._cache_path, "w") as f:
             json.dump(self._cache, f, indent=2)
 
-    def __call__(self, query: str):
-        if self.seed is not None and query in self._cache:
-            path, scale = self._cache[query]
-            if os.path.exists(path):
-                print(f"Cache hit (seed={self.seed}): {query}")
-                return path, scale
-            print(f"Cache hit (seed={self.seed}) but file missing, re-generating: {query}")
+    @staticmethod
+    def _parse_cache_entry(entry):
+        """Support both the new dict form and the legacy [path, scale] list form."""
+        if isinstance(entry, dict):
+            return entry.get("chosen"), entry.get("candidates", []) or []
+        return entry, []   # legacy
 
+    def _route(self, query):
+        """LLM-route a query to a dataset retriever instance."""
         response = self.llm(query)
         try:
             retriever_name = response["retriever"]
         except:
             retriever_name = response.retriever
-
         if retriever_name not in self.retrievers:
             raise ValueError(f"Retriever '{retriever_name}' not found in available retrievers.")
+        return retriever_name, self.retrievers[retriever_name]
 
-        print("Using retriever:", retriever_name)
-        retriever = self.retrievers[retriever_name]
-        path, scale = retriever(query)
+    def _resolve_query(self, query, pin=None):
+        """Route + resolve a single query to a result dict, with NO shared mutable state.
 
+        Thread-safe: uses the retriever's pure ``resolve()`` when available (the FutureHSSD
+        family); for the few special retrievers without it, falls back to a direct call and
+        best-effort candidate capture (these are rare and not used concurrently in scenes).
+        """
+        name, retriever = self._route(query)
+        if hasattr(retriever, "resolve"):
+            d = retriever.resolve(query, pin)
+        else:
+            try:
+                path, scale = retriever(query, pin=pin) if pin is not None else retriever(query)
+            except TypeError:
+                path, scale = retriever(query)
+            d = {"path": path, "scale": scale, "model": None,
+                 "candidates": list(getattr(retriever, "last_candidates", []) or []),
+                 "sheet": getattr(retriever, "last_sheet", None),
+                 "reasoning": getattr(retriever, "last_reasoning", None)}
+        d["retriever"] = name
+        return d
+
+    def _cache_put(self, query, d):
         if self.seed is not None:
-            self._cache[query] = [path, scale]
+            self._cache[query] = {"chosen": [d["path"], d["scale"]], "candidates": d["candidates"]}
+
+    def __call__(self, query: str, pin: str = None, force: bool = False):
+        self.last_candidates = []
+        self.last_sheet = None
+        self.last_reasoning = None
+
+        # Cache (skip when pinning a specific asset or forcing a fresh re-pick).
+        if pin is None and not force and self.seed is not None and query in self._cache:
+            chosen, candidates = self._parse_cache_entry(self._cache[query])
+            if chosen and os.path.exists(chosen[0]):
+                print(f"Cache hit (seed={self.seed}): {query}")
+                self.last_candidates = candidates
+                return chosen[0], chosen[1]
+            print(f"Cache hit (seed={self.seed}) but file missing, re-generating: {query}")
+
+        d = self._resolve_query(query, pin)
+        print("Using retriever:", d["retriever"])
+        self.last_candidates = list(d["candidates"] or [])
+        self.last_sheet = d["sheet"]
+        self.last_reasoning = d["reasoning"]
+
+        self._cache_put(query, d)
+        if self.seed is not None:
             self._save_cache()
 
-        return path, scale
+        return d["path"], d["scale"]
+
+    def prefetch(self, queries, max_workers=8):
+        """Resolve many queries CONCURRENTLY and warm the seed cache.
+
+        Asset retrieval is network-bound (embedding + routing LLM + visual VLM per query),
+        so a scene's AddAsset calls otherwise pay that latency serially. Call this once with
+        all the scene's asset descriptions up front; subsequent AddAsset(...) calls then hit
+        the warm cache. No-op without a seed (nothing to persist). Returns the number of
+        queries newly resolved.
+        """
+        if self.seed is None:
+            return 0
+        todo, seen = [], set()
+        for q in queries:
+            if q in seen:
+                continue
+            seen.add(q)
+            if q in self._cache:
+                chosen, _ = self._parse_cache_entry(self._cache[q])
+                if chosen and os.path.exists(chosen[0]):
+                    continue
+            todo.append(q)
+        if not todo:
+            return 0
+
+        from concurrent.futures import ThreadPoolExecutor
+        results = {}
+        with ThreadPoolExecutor(max_workers=min(max_workers, len(todo))) as ex:
+            futs = {ex.submit(self._resolve_query, q): q for q in todo}
+            for fut in futs:
+                q = futs[fut]
+                try:
+                    results[q] = fut.result()
+                except Exception as e:
+                    print(f"[prefetch] {q!r} failed: {e}")
+        # Single-threaded cache write after all workers join (no lock needed).
+        for q, d in results.items():
+            self._cache_put(q, d)
+        self._save_cache()
+        return len(results)

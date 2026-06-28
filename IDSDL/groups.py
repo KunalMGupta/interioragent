@@ -19,6 +19,8 @@ class AnchorGroup(SceneProgObject):
         super().__init__(scene, name=name)
         self.anchor_info = None
         self.rug_multiplier = 1.15
+        self.rng = scene._make_rng() if scene is not None and hasattr(scene, "_make_rng") \
+            else np.random.default_rng()
 
     def set_anchor(self, anchor):
         self.anchor = anchor
@@ -356,6 +358,24 @@ class RelativeGroup(AnchorGroup):
         obj.set_rotation(0)
         self.add_child(obj)
 
+    def place_desk_chair(self, desk, chair, gap=False):
+        """Build a desk+seat unit with the correct pose, asset-independently.
+
+        Dataset desks are modeled with their working front (knee-hole/drawers) at +z, but a
+        seat on the desk's BACK needs that front to face it. So the rule for ANY desk-chair
+        arrangement (student / teacher / reception desk): anchor the desk, put the chair on
+        the back, then rotate the desk 180 so its front faces the chair. This is reliable
+        across desks and needs no per-asset front-cache entry. `gap=True` leaves circulation
+        space behind the desk instead of tucking the chair right up to it.
+        """
+        self.set_anchor(desk)
+        if gap:
+            self.place_on_back_further(chair)
+        else:
+            self.place_on_back_adjacent(chair)
+        self.rotate(desk, 180)
+        return desk
+
     @placemethod
     def place_on_left_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
@@ -429,10 +449,41 @@ class RelativeGroup(AnchorGroup):
         self.add_child(obj)
 
 class AroundGroup(AnchorGroup):
-    def __init__(self, scene, name=None, sparsity=0.0):
+    # Max perturbation at jitter=1.0: position offset as a fraction of the object's own
+    # size, and rotation in degrees. Kept modest so a real-world "lived-in" irregularity
+    # is added without breaking the arrangement (and the post-layout OverlapConstraint +
+    # grad solve still separate anything the jitter pushes into a neighbour).
+    JITTER_POS_FRACTION = 0.25
+    JITTER_ROT_DEG = 12.0
+
+    def __init__(self, scene, name=None, sparsity=0.0, jitter=0.0):
         super().__init__(scene, name=name)
         self.anchor_info = None
         self.sparsity = max(0.0, min(sparsity, 1.0))
+        self.jitter = max(0.0, min(jitter, 1.0))
+
+    def _jit_pos(self, obj):
+        """Random (dx, dz) world offset for `obj`, scaled by jitter and the object size."""
+        if self.jitter <= 0:
+            return 0.0, 0.0
+        w, _, d = obj.get_whd()
+        mag = self.jitter * self.JITTER_POS_FRACTION
+        return float(self.rng.uniform(-1, 1) * mag * w), float(self.rng.uniform(-1, 1) * mag * d)
+
+    def _jit_rot(self):
+        """Random rotation perturbation (degrees), scaled by jitter."""
+        if self.jitter <= 0:
+            return 0.0
+        return float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_ROT_DEG)
+
+    def _apply_jitter(self, obj):
+        """Nudge an already-placed object's local position and rotation by a jittered amount."""
+        if self.jitter <= 0:
+            return
+        dx, dz = self._jit_pos(obj)
+        t = obj.transform.translation
+        obj.set_location(t[0] + dx, t[1], t[2] + dz)
+        obj.set_rotation(float(obj.transform.rotation) + self._jit_rot())
 
     @placemethod
     def place_rectilinear(self, longer_side1=None, longer_side2=None, shorter_side1=None, shorter_side2=None):
@@ -497,6 +548,7 @@ class AroundGroup(AnchorGroup):
                 y = self.compute_obj_y(obj)
                 obj.set_location(x, y, z)
                 obj.set_rotation(self.anchor.get_rotation() - 180)
+                self._apply_jitter(obj)
                 self.add_child(obj)
 
         if len(longer_side2) > 0:
@@ -509,6 +561,7 @@ class AroundGroup(AnchorGroup):
                 y = self.compute_obj_y(obj)
                 obj.set_location(x, y, z)
                 obj.set_rotation(self.anchor.get_rotation())
+                self._apply_jitter(obj)
                 self.add_child(obj)
 
         if len(shorter_side1) > 0:
@@ -521,6 +574,7 @@ class AroundGroup(AnchorGroup):
                 y = self.compute_obj_y(obj)
                 obj.set_location(x, y, z)
                 obj.set_rotation(self.anchor.get_rotation() + 90)
+                self._apply_jitter(obj)
                 self.add_child(obj)
 
         if len(shorter_side2) > 0:
@@ -533,6 +587,7 @@ class AroundGroup(AnchorGroup):
                 y = self.compute_obj_y(obj)
                 obj.set_location(x, y, z)
                 obj.set_rotation(self.anchor.get_rotation() - 90)
+                self._apply_jitter(obj)
                 self.add_child(obj)
 
     @placemethod
@@ -576,6 +631,7 @@ class AroundGroup(AnchorGroup):
             z = z0 + radius * np.cos(np.radians(rot[i] + self.anchor.get_rotation()))
             obj.set_location(x, y, z)
             obj.face_towards(self.anchor)
+            self._apply_jitter(obj)
             self.add_child(obj)
 
     @placemethod
@@ -619,6 +675,7 @@ class AroundGroup(AnchorGroup):
             z = z0 + radius * np.cos(np.radians(rot[i] + self.anchor.get_rotation()))
             obj.set_location(x, y, z)
             obj.face_towards(self.anchor)
+            self._apply_jitter(obj)
             self.add_child(obj)
 
 class GridGroup(SceneProgObject):
@@ -626,6 +683,8 @@ class GridGroup(SceneProgObject):
         super().__init__(scene, name=name)
         self.sparsity = max(0.0, min(sparsity, 1.0))
         self.randomness = max(0.0, min(randomness, 1.0))
+        self.rng = scene._make_rng() if scene is not None and hasattr(scene, "_make_rng") \
+            else np.random.default_rng()
 
     def _place_row(self, objects=None, along='x', facing='z', x0=0, z0=0):
         objects = self.to_list([] if objects is None else objects)
@@ -637,7 +696,7 @@ class GridGroup(SceneProgObject):
         total_width = np.sum(widths)
         base_gap = self.sparsity * (total_width / N)
 
-        rng = np.random.default_rng()
+        rng = self.rng
         jitter_max = base_gap * self.randomness
 
         if N > 1:
@@ -776,7 +835,7 @@ class GridGroup(SceneProgObject):
         total_depth = np.sum(row_depths)
         base_gap = self.sparsity * (total_depth / len(object_rows))
 
-        rng = np.random.default_rng()
+        rng = self.rng
         jitter_max = base_gap * self.randomness
 
         if len(object_rows) > 1:
@@ -860,9 +919,9 @@ class GridGroup(SceneProgObject):
         for row in object_rows:
             rots = compute_rotations(angle, len(row))
             for (obj, dist), rot in zip(row, rots):
-                x = dist * np.sin(np.radians(rot)) + (np.random.random() - 0.5) * self.randomness * self.sparsity * obj.get_width()
+                x = dist * np.sin(np.radians(rot)) + (self.rng.random() - 0.5) * self.randomness * self.sparsity * obj.get_width()
                 y = self.compute_obj_y(obj)
-                z = -dist * np.cos(np.radians(rot)) + (np.random.random() - 0.5) * self.randomness * self.sparsity * obj.get_depth()
+                z = -dist * np.cos(np.radians(rot)) + (self.rng.random() - 0.5) * self.randomness * self.sparsity * obj.get_depth()
                 obj.set_location(x, y, z)
                 if towards is not None:
                     obj.face_towards(towards)
@@ -895,11 +954,30 @@ class RoomGroup(SceneProgObject):
         'place_on_front_left_corner', 'place_on_front_right_corner',
     })
 
-    def __init__(self, scene, name=None, modulate_scale=1.0,
+    # Which floor placements live in which (column, row) slot of the 5x5 layout grid.
+    # Used to jitter a floor object within the free space of its own slot (randomness>0).
+    # Wall-adjacent, corner, and wall-hung placements are intentionally excluded — moving
+    # those off their wall/corner would look wrong.
+    FLOOR_SLOTS = {
+        'place_on_center': (2, 2),
+        'place_on_back': (2, 1), 'place_on_front': (2, 3),
+        'place_on_left': (1, 2), 'place_on_right': (3, 2),
+        'place_on_back_left': (1, 1), 'place_on_back_right': (3, 1),
+        'place_on_front_left': (1, 3), 'place_on_front_right': (3, 3),
+    }
+
+    def __init__(self, scene, name=None, modulate_scale=1.0, randomness=0.0,
                  auto_render=True, render_dir=None,
                  render_resolution=(1280, 900), render_samples=48):
         super().__init__(scene, name=name)
         self.modulate_scale = modulate_scale
+        # Positional jitter (0..1) applied to free-standing floor placements within the
+        # slack of their layout slot, for a less rigidly-centered, more natural room. Pure
+        # translation (never rotation — that would break functional facing like a desk grid
+        # toward a wall); the post-layout Overlap/OutOfBounds grad solve still applies.
+        self.randomness = max(0.0, min(randomness, 1.0))
+        self.rng = scene._make_rng() if scene is not None and hasattr(scene, "_make_rng") \
+            else np.random.default_rng()
         self.wall_assets = {
             'back_wall': {'left': [], 'center': [], 'right': []},
             'left_wall': {'left': [], 'center': [], 'right': []},
@@ -1147,6 +1225,9 @@ class RoomGroup(SceneProgObject):
         # the interior floor slots; [0]/[4] are the wall rows/cols.
         self.col_centers = (np.cumsum(cw) - cw / 2.0).tolist()
         self.row_centers = (np.cumsum(rd) - rd / 2.0).tolist()
+        # Per-slot sizes (after modulate_scale) — used to bound floor jitter to its own slot.
+        self.col_widths = cw.tolist()
+        self.row_depths = rd.tolist()
 
     def facing_to_rotation(self, facing):
         if facing == 'front':
@@ -1865,6 +1946,30 @@ class RoomGroup(SceneProgObject):
         rot = round(rot / 90.0) * 90.0         # snap to the nearest 90 degrees
         obj.set_rotation(rot % 360.0)
 
+    def _apply_floor_jitter(self):
+        """Nudge each free-standing floor placement within the free space of its own slot.
+
+        Runs after the floor placements execute (so col/row centers and object sizes are
+        known) and before the gradient solve (which still resolves any overlap the jitter
+        introduces). Translation only — facing is preserved. A larger object in a tight slot
+        has little slack and so barely moves; a small object in a roomy slot moves more."""
+        if self.randomness <= 0:
+            return
+        for op in self.operations:
+            slot = self.FLOOR_SLOTS.get(op.name)
+            if slot is None or op.obj is None:
+                continue
+            ci, ri = slot
+            obj = op.obj
+            slack_x = max(0.0, self.col_widths[ci] - float(obj.get_width())) / 2.0
+            slack_z = max(0.0, self.row_depths[ri] - float(obj.get_depth())) / 2.0
+            if slack_x <= 0 and slack_z <= 0:
+                continue
+            t = obj.transform.translation
+            dx = float(self.rng.uniform(-1, 1)) * self.randomness * slack_x
+            dz = float(self.rng.uniform(-1, 1)) * self.randomness * slack_z
+            obj.set_location(t[0] + dx, t[1], t[2] + dz)
+
     def compile(self):
         self.reset_compile_state()
         self.clear_constraints()
@@ -1894,6 +1999,10 @@ class RoomGroup(SceneProgObject):
             if op.name in skip_for_now:
                 continue
             op.execute()
+
+        # Add positional jitter to free-standing floor placements (no-op when randomness=0),
+        # before the solve so any introduced overlap is resolved.
+        self._apply_floor_jitter()
 
         self.compile_children()
 

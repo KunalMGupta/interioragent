@@ -22,6 +22,10 @@ frames/
 *.blend
 *.blend1
 
+# Generated batch-review pages (regenerable via batchgen.py --collect; can be huge)
+batch_review*.html
+combined_review.html
+
 # Transient scripts emitted by sceneprogexec (random-digit-named, plus *_exec.py)
 /[0-9]*.py
 *_exec.py

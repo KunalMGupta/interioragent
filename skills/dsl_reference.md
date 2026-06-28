@@ -31,10 +31,21 @@ obj = scene.AddAsset("a modern gray sofa")               # natural-language retr
 obj = scene.AddAsset("a small end table", modulate_scale=0.3)   # scale the whole asset
 obj = scene.AddAsset("a bookshelf", width=1.2, depth=0.4)        # pin specific dims (meters)
 pair = 2 * scene.AddAsset("an accent chair")             # N*asset -> list of N copies
+obj = scene.AddAsset("a desk", asset_id="hssd/<id>")     # pin a specific asset (override)
 ```
 
-`AddAsset(description, modulate_scale=1.0, width=None, depth=None)`. The
-description is the retrieval query — be specific (style, material, color, type).
+`AddAsset(description, modulate_scale=1.0, width=None, depth=None, asset_id=None)`.
+The description is the retrieval query — be specific (style, material, color, type).
+
+**Agentic retrieval (visual).** Retrieval shortlists candidates by embedding similarity
+and a VLM picks the best by **looking** at each candidate's preview render (not just its
+text description) — this is what stops "a small desk lamp" coming back as a whole
+workstation. Every asset records its provenance: `obj.retrieval_query`,
+`obj.retrieval_candidates` (each `{model, path, scale, preview, desc, similarity, chosen}`),
+`obj.retrieval_model`. To **override** a pick: pass `asset_id="hssd/<id>"` (durable,
+recompile-safe) or `scene.reselect_asset(obj, i_or_model)` (post-hoc swap, then recompile).
+Inspect candidates with `python workbench.py inspect "<query>" [--render]` (the `--render`
+flag renders the top finalists in-engine for a closer look).
 
 ## Groups
 
@@ -58,20 +69,26 @@ diagonal `place_on_front_left/front_right/back_left/back_right` and their
 ### AroundGroup — arrange objects around a central anchor
 
 ```python
-with scene.AroundGroup() as g:
+with scene.AroundGroup(sparsity=0.2, jitter=0.4) as g:
     g.set_anchor(table)
     g.place_arc(2 * scene.AddAsset("an accent chair"))   # arc on one side
     # also: g.place_circle(objs), g.place_rectilinear(...)
 ```
-`AroundGroup(sparsity=0.0)`.
+`AroundGroup(sparsity=0.0, jitter=0.0)`. **`jitter` (0–1) adds real-world irregularity** —
+each seat is nudged off its perfect position (≤25% of its own size) and rotation (±12° at
+1.0). The anchor group's `OverlapConstraint` + grad solve still run afterward, so jitter
+never produces interpenetration. Use it so ringed seating (dining/meeting/cafe) reads as
+lived-in rather than CAD-perfect. Reproducible under a seeded scene (see Randomness below).
 
 ### GridGroup — regular rows/grids (deterministic; skips overlap optimization)
 
 ```python
-with scene.GridGroup() as g:
+with scene.GridGroup(sparsity=0.5, randomness=0.3) as g:
     g.place_grid(9 * desk_unit, cols=3)     # also place_row, place_rectilinear, place_arc
 ```
-`GridGroup(sparsity=0.0, randomness=0.0)`.
+`GridGroup(sparsity=0.0, randomness=0.0)`. `sparsity` sets the gap between items;
+**`randomness` (0–1) jitters those gaps** so rows aren't unnaturally even. (Now seeded —
+reproducible per scene seed.)
 
 ### Shared anchor-group helpers (Relative/Around)
 
@@ -110,8 +127,11 @@ from final positions. The `RotationConstraint` (VLM) flags mis-orientations — 
 it's a noisy hint, not an authority; **your eye is the arbiter** (see
 workflow/vlm_feedback.md).
 
-**Seat-behind-desk convention:** for a desk+seat unit, put the seat on the **back**
-of the desk (`place_on_back_adjacent`), so the unit's look-direction is correct.
+**Desk+chair rule — use `place_desk_chair(desk, chair)`** (RelativeGroup). It anchors the
+desk, puts the chair on the **back**, and **rotates the desk 180°** so its working front
+(knee-hole/drawers) faces the chair. Every dataset desk is modeled with its front at +z, so
+this fixed rotation gives the correct pose for *any* desk (student/teacher/reception) — no
+per-asset front cache needed. (`gap=True` leaves circulation space behind the desk.)
 
 **Asset front is unnormalized** — meshes have no canonical front, so some render
 rotated wrong even with correct `face()`. Fix an asset **once** (not per scene) with
@@ -121,7 +141,7 @@ workflow/constraints.md.
 ### RoomGroup — the room shell + wall/floor placement
 
 ```python
-with scene.RoomGroup() as room:                       # RoomGroup(modulate_scale=1.0, auto_render=True)
+with scene.RoomGroup(randomness=0.2) as room:         # RoomGroup(modulate_scale=1.0, randomness=0.0, auto_render=True)
     room.place_walls(floor_texture="wooden planks",
                      ceiling_texture="beige", wall_texture="beige")
     room.place_on_center(seating_area, facing="front") # floor placement, sizes the room
@@ -140,6 +160,24 @@ Floor placement: `place_on_center/back/front/left/right`, `*_left/right`, and
 `place_on_<wall>_wall_<pos>`. Wall-hung art: `place_on_wall_<wall>_<pos>`.
 Openings: `place_door(wall, position)`, `place_window_floor_to_ceiling`,
 `place_window_picture`, `place_window_standard(wall, position, curtain)`.
+
+## Randomness / realism (jitter)
+
+Perfectly-centered, perfectly-aligned layouts read as synthetic. Three opt-in knobs add
+controlled irregularity, all **reproducible**: a seeded scene (`SceneProgRoom(name, seed=...)`)
+gives every group its own RNG derived from the seed, so the same seed reproduces the same
+jittered layout; an unseeded scene re-rolls each run.
+
+| Group | Param | Effect |
+|-------|-------|--------|
+| `AroundGroup(jitter=0–1)` | per-seat | position offset (≤25% of the object's size) + rotation (±12° at 1.0) on `place_circle`/`place_arc`/`place_rectilinear` |
+| `RoomGroup(randomness=0–1)` | free-standing floor placements | position jitter within the **free space of each item's layout slot** (translation only — facing is preserved, so a desk grid still faces its wall) |
+| `GridGroup(randomness=0–1)` | row/grid gaps | jitters the inter-item gaps (needs `sparsity>0` to have gaps to jitter) |
+
+Safe by construction: AroundGroup and RoomGroup run their overlap/out-of-bounds gradient
+solve *after* the jitter, so nothing ends up interpenetrating or out of the room. GridGroup
+is deterministic (no solve), so keep its `randomness` modest. Good defaults: seating
+`jitter≈0.4`, rooms `randomness≈0.15–0.3`, grids `randomness≈0.2–0.4`.
 
 ## Constraints (see workflow/constraints.md for the full model)
 

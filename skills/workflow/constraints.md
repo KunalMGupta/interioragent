@@ -78,12 +78,15 @@ re-check sees the corrected orientation.
 
 Dataset assets carry **no canonical front** — each mesh is authored facing an
 arbitrary direction, while all the DSL rotation logic assumes front = +z. So some
-assets render rotated wrong even when your `face()`/`facing=` is correct (e.g. a
-desk whose working side ends up pointing away). This is **not** one bad asset; with
-a few distinct assets you'll hit it. `RotationConstraint` is a useful (if noisy)
-detector — it correctly flagged the reversed teacher desk with `rotate desk by 180`.
+assets render rotated wrong even when your `face()`/`facing=` is correct. `RotationConstraint`
+is a useful (if noisy) detector.
 
-Fix it **once per asset** with the front-correction cache, not per scene:
+> **Desks are solved structurally** — don't cache them. Every dataset desk is modeled
+> front-at-+z, and `place_desk_chair(desk, chair)` (RelativeGroup) rotates the desk 180°
+> against the seat, giving the correct pose for any desk. Use that, not a per-desk cache.
+
+For a genuinely reversed *non-desk* asset, fix it **once per asset** with the
+front-correction cache, not per scene:
 
 ```bash
 # find the asset id (mesh filename stem) — e.g. print obj.mesh_path — then:
@@ -95,7 +98,7 @@ The correction is keyed by asset id, applied at load time on the serialized
 rotation only (`SceneProgObject.get_state_info`), so the DSL geometry stays
 canonical and **every future scene using that mesh is fixed automatically**. Use a
 per-scene `room.rotate(obj, deg)` only for true one-offs; for a reversed *asset*,
-cache it. (Worked example: the classroom teacher desk, cached at 180.)
+cache it. (Desks are the exception — handle them with `place_desk_chair`, above.)
 
 The workbench surfaces `scene.vlm_feedback` after a run. See
 [vlm_feedback.md](vlm_feedback.md) for how to turn that text into edits.

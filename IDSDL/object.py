@@ -233,6 +233,11 @@ class SceneProgObject:
         self.mesh_path = None
         self.description = None
         self.ignore_overlap = False
+        # Retrieval provenance (set by Scene.AddAsset): the query, the candidates the
+        # visual picker considered, and the chosen model id — for inspection / override.
+        self.retrieval_query = None
+        self.retrieval_candidates = []
+        self.retrieval_model = None
         # Per-asset front-orientation correction (degrees), applied at serialization
         # only. Set from the front-correction cache when a mesh is loaded; see
         # IDSDL/front_cache.py and get_state_info().

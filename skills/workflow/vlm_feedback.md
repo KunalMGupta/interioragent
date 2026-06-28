@@ -65,11 +65,11 @@ weak smoke alarm, not an authority — your own look at the render is the arbite
 For orientation that *matters functionally*, don't rely on VLM feedback at all — make it
 correct by construction:
 
-1. **Seat-behind-desk convention.** For any desk+seat unit (student, teacher, reception,
-   office), place the seat on the **back** of the desk (`place_on_back_adjacent(chair)`),
-   never the front. The look direction is then chair→desk (the desk's front), so the unit
-   is internally consistent and orients correctly as a block. `place_on_*_front_*` puts the
-   seat in front and makes the occupant look *away* from where the unit points.
+1. **Desk+chair rule — `place_desk_chair(desk, chair)`.** For any desk+seat unit (student,
+   teacher, reception, office) it puts the seat on the **back** and rotates the desk 180°
+   so the desk's working front faces the chair. All dataset desks are modeled front-at-+z,
+   so this single rule gives the correct pose for every desk with no per-asset front cache.
+   (Don't hand-roll `place_on_back_adjacent` + a manual flip; use the helper.)
 2. **Face the wall, not the point, for required orientation.** When a group must face a
    certain way (a desk grid facing the teaching wall), use
    `room.face(group, toward="<wall>_wall")` — it snaps to the nearest 90°, so rows stay

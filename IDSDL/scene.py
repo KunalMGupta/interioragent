@@ -24,12 +24,28 @@ class SceneProgRoom:
         self.vlm_feedback = ""
         self.HEIGHT = 4
 
+        # Placement randomness (group jitter) is reproducible when the scene is
+        # seeded: each group draws its own RNG from the scene seed via _make_rng(),
+        # so the same seed reproduces the same jittered layout, and an unseeded
+        # scene gets fresh entropy each run. Groups are seeded in creation order.
+        self.seed = seed
+        self._rng_counter = 0
+
         # Unique per-run scratchpad under tmp/. Every intermediate (group
         # blends, wall meshes) and rendering (VLM views, RoomGroup interior
         # views) for this run is written here, so a run's outputs are isolated
         # and can be browsed afterwards to inspect quality.
         run_id = f"{time.strftime('%Y%m%d_%H%M%S')}_{os.getpid()}_{random.randint(0, 0xFFFF):04x}"
         self.run_dir = os.path.join("tmp", run_id)
+
+    def _make_rng(self):
+        """A per-group numpy RNG. Derived from the scene seed (reproducible) when set,
+        else fresh entropy. Advances a counter so distinct groups get distinct streams."""
+        if self.seed is None:
+            return np.random.default_rng()
+        rng = np.random.default_rng([int(self.seed), self._rng_counter])
+        self._rng_counter += 1
+        return rng
 
     def run_subdir(self, name=""):
         """Return (creating if needed) a subdirectory of this run's scratchpad."""
@@ -58,17 +74,59 @@ class SceneProgRoom:
         obj.description = description
         return obj
 
-    def AddAsset(self, description: str, modulate_scale: float = 1.0, width=None, depth=None):
-        path, scale = self.object_retriever(description)
+    def AddAsset(self, description: str, modulate_scale: float = 1.0, width=None, depth=None,
+                 asset_id: str = None):
+        # asset_id pins a specific dataset asset (e.g. "hssd/<id>"), bypassing the
+        # agentic visual selection — the durable, recompile-safe override.
+        path, scale = self.object_retriever(description, pin=asset_id)
         scale = scale * modulate_scale
 
         obj = self.add_asset(path, scale, description)
+
+        # Retrieval provenance: the query, the candidates the picker saw, and the choice.
+        obj.retrieval_query = description
+        obj.retrieval_candidates = list(getattr(self.object_retriever, "last_candidates", []) or [])
+        obj.retrieval_model = next(
+            (c["model"] for c in obj.retrieval_candidates if c.get("chosen")), None
+        )
 
         if width is not None:
             obj.scale_only_width(width)
         if depth is not None:
             obj.scale_only_depth(depth)
 
+        return obj
+
+    def prefetch_assets(self, queries, max_workers=8):
+        """Resolve a list of asset descriptions in parallel up front to warm the cache.
+
+        Retrieval is network-bound, so calling this once with all of a scene's queries
+        before the AddAsset calls turns N serial round-trips into one concurrent batch
+        (subsequent AddAsset(...) then hit the warm cache). Needs a seeded scene.
+        """
+        return self.object_retriever.prefetch(queries, max_workers=max_workers)
+
+    def reselect_asset(self, obj, choice):
+        """Swap obj to a different retrieval candidate (override the auto pick).
+
+        ``choice`` is an index into ``obj.retrieval_candidates`` or a model id. This is a
+        convenience post-hoc swap — recompile the owning group/scene afterward. For a
+        durable override prefer ``AddAsset(..., asset_id=...)``.
+        """
+        cands = getattr(obj, "retrieval_candidates", None) or []
+        if isinstance(choice, int):
+            cand = cands[choice]
+        else:
+            cand = next((c for c in cands if c["model"] == choice or choice in c["model"]), None)
+            if cand is None:
+                raise ValueError(f"no retrieval candidate matching {choice!r}")
+        obj.load(mesh_path=cand["path"])
+        obj.scale(cand["scale"])
+        if getattr(obj, "retrieval_query", None):
+            obj.description = obj.retrieval_query
+        obj.retrieval_model = cand["model"]
+        for c in cands:
+            c["chosen"] = (c["model"] == cand["model"])
         return obj
 
     # ----------------------------
@@ -131,8 +189,8 @@ class SceneProgRoom:
     def RelativeGroup(self):
         return RelativeGroup(self)
 
-    def AroundGroup(self, sparsity: float = 0.0):
-        return AroundGroup(self, sparsity=sparsity)
+    def AroundGroup(self, sparsity: float = 0.0, jitter: float = 0.0):
+        return AroundGroup(self, sparsity=sparsity, jitter=jitter)
 
     def GridGroup(self, sparsity: float = 0.0, randomness: float = 0.0):
         return GridGroup(self, sparsity=sparsity, randomness=randomness)
@@ -156,11 +214,13 @@ class SceneProgRoom:
     def RingsGroup(self, sparsity: float = 0.0):
         return RingsGroup(self, sparsity=sparsity)
 
-    def RoomGroup(self, modulate_scale: float = 1.0, auto_render: bool = True,
+    def RoomGroup(self, modulate_scale: float = 1.0, randomness: float = 0.0,
+                  auto_render: bool = True,
                   render_dir=None, render_resolution=(1280, 900), render_samples=48):
         return RoomGroup(
             self,
             modulate_scale=modulate_scale,
+            randomness=randomness,
             auto_render=auto_render,
             render_dir=render_dir,
             render_resolution=render_resolution,

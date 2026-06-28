@@ -18,6 +18,7 @@ get written back into these files so the next scene starts smarter.
 3. **[examples/](examples/)** — the closest matching scene type (living_room, classroom, kitchen, …). Copy its skeleton, don't start from scratch.
 4. **[workflow/coarse_to_fine.md](workflow/coarse_to_fine.md)** — the phase plan you will follow.
 5. **[workflow/constraints.md](workflow/constraints.md)** and **[workflow/vlm_feedback.md](workflow/vlm_feedback.md)** — keep open while optimizing.
+6. **[workflow/asset_selection.md](workflow/asset_selection.md)** — agentic retrieval: inspect/override picks + the baked-in selection rules (e.g. prefer simple flat-top desks).
 
 ## The workflow in one paragraph
 
@@ -39,6 +40,25 @@ PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python workbench.py run <prog
 The workbench prints the per-run scratchpad path, the collected VLM feedback,
 and a list of every render PNG produced — open those to judge quality. See
 [workflow/rendering.md](workflow/rendering.md).
+
+### Category scene library + batch review
+
+`scenes/<name>.py` holds a first-draft program for each room category (52 of them; see
+`scenes/NOTES.md` for the design rationale and the cross-cutting open questions). To build
+and review many at once — the parallel iteration loop — use the batch harness:
+
+```bash
+python batchgen.py living_room meeting_room bedroom      # a subset (work ~5 at a time)
+python batchgen.py --all --workers 3                     # everything
+```
+
+It builds each scene in its own subprocess (a few concurrently) and writes a self-contained
+`batch_review.html` (interior renders embedded + retrieval picks + each category's note from
+`scenes/notes/<name>.md`) you open locally — no server needed. Edit the scene programs / add
+assets+pools based on the review, then re-run (re-runs hit the seeded retrieval cache).
+
+**Realism jitter** (reproducible under the scene `seed`): `AroundGroup(jitter=…)`,
+`RoomGroup(randomness=…)`, `GridGroup(randomness=…)` — see dsl_reference.md → "Randomness".
 
 ## The three constraint kinds (know which is which)
 

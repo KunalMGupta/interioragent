@@ -1,0 +1,9 @@
+{
+ "custom/74bfa64b537b12de0771ee0cd79814f7e7446089": {
+  "description": "Three-panel green chalkboard with an aluminium frame.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.4
+ }
+}
