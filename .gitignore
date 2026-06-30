@@ -63,3 +63,6 @@ blender-*/
 
 # Linux: compiled ELF binary (not source-controlled)
 code
+
+# Manual smoke-test harness for vlm_placement (writes to the ignored tools/out scratch)
+tools/dsl_place_test.py
