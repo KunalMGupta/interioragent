@@ -1,0 +1,737 @@
+{
+ "hssd/0da92a74866b0bb0459528ad790edb7353a209a2": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink",
+   "countertop"
+  ],
+  "shape": "straight"
+ },
+ "future/6b911563-014d-48c0-8136-5e7b0bb4cc80": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "cooktop",
+   "range_hood"
+  ],
+  "shape": "straight"
+ },
+ "future/179c2d32-0b92-48be-8934-6778b08cc967": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "L"
+ },
+ "future/4253258a-c066-4ccd-a126-f67b1cead6a5": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink",
+   "fridge"
+  ],
+  "shape": "straight"
+ },
+ "future/d77a6f89-ad4b-41bc-9e12-43fe31eadb1c": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/ee23a6a0d9ad4d45e17415e2536105a5172dd7be": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "range_hood",
+   "sink",
+   "oven",
+   "microwave"
+  ],
+  "shape": "straight"
+ },
+ "future/250983b7-e2b8-4634-b742-f516fa74c197": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/49e0cccc-9527-4053-b432-77db34122a17": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/855314fd-fdd8-478f-ab76-e56d0e4ee0a2": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "dishwasher"
+  ],
+  "shape": "straight"
+ },
+ "future/3763015c-fd8e-4d85-a148-d4b3b6133f8c": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "sink",
+   "fridge"
+  ],
+  "shape": "straight"
+ },
+ "hssd/168286ceb4f9758dc69789c4d41b5238e0c2c817": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "wall_cabinets",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink",
+   "microwave"
+  ],
+  "shape": "straight"
+ },
+ "future/53945a4f-3eea-4b0d-861b-1fa3cecff815": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "L"
+ },
+ "future/3ea3bb48-ec9f-4325-bcfe-d338d6eb2549": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "L"
+ },
+ "future/0840e421-3ddd-468f-bb16-a95852cce3e0": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "sink",
+   "microwave"
+  ],
+  "shape": "L"
+ },
+ "future/b3e7e64f-417f-4da5-b4ce-cb2bfd06e039": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "microwave",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "L"
+ },
+ "future/c351ff62-9259-4433-bb0c-6a8171625749": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "range_hood"
+  ],
+  "shape": "L"
+ },
+ "future/3c2bf09e-eb79-4a8f-a3f4-36446e9ea656": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink",
+   "fridge",
+   "microwave",
+   "dishwasher"
+  ],
+  "shape": "U"
+ },
+ "hssd/7133a5dcd1629d9ad8ab6f52cb94019dd2ba09ca": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "sink",
+   "fridge",
+   "dishwasher"
+  ],
+  "shape": "straight"
+ },
+ "future/7f4cdaf8-255d-4660-b890-900a0e31a8f7": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink",
+   "fridge",
+   "dishwasher",
+   "microwave",
+   "island"
+  ],
+  "shape": "U"
+ },
+ "future/eebc631a-f760-4f61-a92d-1ffd069369ea": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "wall_cabinets",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/a93cadff07a074a9bd121bf6ef22e74572d08fd6": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "cooktop",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/fe03adc0-c09f-4c62-9579-c0ef21201ff5": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "L"
+ },
+ "hssd/ffdc87f5c66baa5e03861b5f8bcfb088da836bb0": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink",
+   "microwave"
+  ],
+  "shape": "straight"
+ },
+ "hssd/1b414727f2af7f6ba339777ef5be6fcec518daf6": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "microwave",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/b5a87a51-49d2-42fc-b68a-827c4c5bee1b": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "microwave",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/050f1c57-1195-44a5-bd98-83df80ce2268": {
+  "components": [
+   "dishwasher",
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/33354a78-c82e-4763-bd3b-37133f79c25e": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink",
+   "island"
+  ],
+  "shape": "L"
+ },
+ "future/79e009e0-1653-4c93-ba92-90f2ecafbb35": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/b9bf8389a25eecf33dccdcc60589943e94798e51": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "oven",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/9494221acb244f996e96d36178eb6d964c41dd6c": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "oven",
+   "cooktop",
+   "sink"
+  ]
+ },
+ "future/507d99d8-593d-4c5a-8c24-73c926255520": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven"
+  ],
+  "shape": "straight"
+ },
+ "future/92d23dc9-5259-4a6e-b97d-75241ae0bf51": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "range_hood"
+  ],
+  "shape": "straight"
+ },
+ "hssd/03ea6472f528d540163f2067c40e832054ed30ab": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/8985e8ea-2623-48dd-82a4-8a69f19995c2": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "U"
+ },
+ "hssd/eb5b7096fe0619a9831f98bacfbbe0a0130c4e8e": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "sink",
+   "cooktop"
+  ],
+  "shape": "straight"
+ },
+ "future/966e026d-c284-438e-99a1-2baba6379d3f": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "L"
+ },
+ "future/72c3986e-aad3-410b-a3a0-2226c9dc2e67": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/a314e34c-f2c4-4bd9-955a-d0d896fe276a": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/9db21998c823fe0f57702c27e946c248114e075f": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/effad41bc25621329753321234d486f782d6bc50": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "sink"
+  ],
+  "shape": "L"
+ },
+ "hssd/4e72153dde72fec8fbe798d7957d2baf86b0547b": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/96413bd1-b608-48f2-a4be-664bb993b6f1": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "microwave",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "L"
+ },
+ "future/5fcf7422-e4e9-4c18-b5ec-14dba33409c5": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "sink"
+  ],
+  "shape": "L"
+ },
+ "future/d5068e90-0636-46f3-9955-3881516bda23": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/e43ba7c0-7ac7-46f3-bbc1-342e3d58f97f": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/bde3fe2a-3fc9-408c-9ffd-726ac041305a": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "cooktop",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "L"
+ },
+ "hssd/737a79fca8034493d304924c4d4526f73e9b590a": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "oven",
+   "sink",
+   "microwave",
+   "dishwasher"
+  ],
+  "shape": "straight"
+ },
+ "hssd/66c31369764e529c59d1257905a165dfbca6ec4d": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "dishwasher",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/0df79a116fc0b650af57895b8c76d70b91dec6af": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "oven",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/2652a2e75adfb1e0fdcb635c0e24d6bbd8a74ca2": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "sink",
+   "cooktop"
+  ],
+  "shape": "U"
+ },
+ "future/c0078f9b-088a-4427-8c1f-c03f8a0c577f": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/b39d8f1b-9643-4562-b88e-a02c25953702": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "sink",
+   "dishwasher"
+  ],
+  "shape": "straight"
+ },
+ "hssd/514731fa03071a52318224f7be986fd25864a47f": {
+  "components": [
+   "base_cabinets",
+   "sink",
+   "countertop"
+  ],
+  "shape": "L"
+ },
+ "hssd/0ad85902da0211d4439630d8f217340abdcfff2d": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/4809bfb8c0ce5c5c876c47cbaffa4b8443e6ec1c": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "sink",
+   "oven",
+   "countertop"
+  ],
+  "shape": "straight"
+ },
+ "future/a3cead55-0587-48a6-ab1b-7ab38a1b590d": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "sink",
+   "island"
+  ],
+  "shape": "straight"
+ },
+ "hssd/d71af85f2f9dbc732b08fe4fa3291df1f9a8df44": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "range_hood",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/1295b1a036e8653bd73c59ad75080680c437c932": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/4a0dcc762f78bcca846fa2490b5fa65920408411": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "sink",
+   "cooktop",
+   "microwave"
+  ],
+  "shape": "straight"
+ },
+ "hssd/beec92d1124adb179e9ac35d3955061c93424367": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "oven",
+   "microwave",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/12231a98-7451-402a-9357-ef31f2bc2a08": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "future/4594404b-fa08-449b-8896-3eb2af84590e": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "cooktop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/86b4750a00e6d22fbcdb1923811346b822c73c15": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "sink"
+  ],
+  "shape": "straight"
+ },
+ "hssd/b13253a6054a680cba603ed5d4c12f081d38b098": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "sink",
+   "oven"
+  ],
+  "shape": "straight"
+ },
+ "future/c1468310-737e-46fb-b352-a72641cc34d5": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets"
+  ],
+  "shape": "straight"
+ },
+ "hssd/9849af0395972ff84e40f5c1a51db8a25e3ef6f7": {
+  "components": [
+   "base_cabinets",
+   "countertop",
+   "cooktop",
+   "sink",
+   "microwave"
+  ],
+  "shape": "straight"
+ },
+ "future/371a3087-44ac-45bb-ad3f-be352675f5d9": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "sink",
+   "countertop",
+   "cooktop"
+  ],
+  "shape": "straight"
+ },
+ "future/280cf3b2-690a-4d01-b2c1-949f25204c52": {
+  "components": [
+   "base_cabinets",
+   "wall_cabinets",
+   "countertop",
+   "oven",
+   "sink",
+   "cooktop"
+  ],
+  "shape": "straight"
+ }
+}

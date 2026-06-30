@@ -38,15 +38,32 @@ def main(argv=None) -> int:
                     help="output directory (default: tmp/plan_<slug>)")
     ap.add_argument("--top-k", type=int, default=3,
                     help="number of reference skills to retrieve (default: 3)")
+    ap.add_argument("--refine", action="store_true",
+                    help="refinement mode: generate an IMPROVED target from current renders "
+                         "(+ prior target + skills) instead of a fresh plan")
+    ap.add_argument("--renders", nargs="+", default=None,
+                    help="current scene render(s) for --refine (e.g. a collection collage)")
+    ap.add_argument("--prior", nargs="+", default=None,
+                    help="optional prior design target image(s) for --refine")
+    ap.add_argument("--instruction", default=None,
+                    help="optional refinement focus for --refine")
     args = ap.parse_args(argv)
 
     out = Path(args.out) if args.out else Path("tmp") / f"plan_{_slug(args.prompt)}"
     out.mkdir(parents=True, exist_ok=True)
 
     planner = InteriorPlanner(retrieval_top_k=args.top_k)
-    result = planner.generate(args.prompt)
+    if args.refine:
+        if not args.renders:
+            ap.error("--refine requires --renders (current scene render paths)")
+        result = planner.refine(args.renders, prior_paths=args.prior,
+                                instruction=args.instruction, prompt=args.prompt)
+        img_name = "refined_target.png"
+    else:
+        result = planner.generate(args.prompt)
+        img_name = "plan.png"
 
-    img_path = out / "plan.png"
+    img_path = out / img_name
     result.save(str(img_path))
     (out / "skill.txt").write_text(result.skill.strip() + "\n")
     (out / "retrieved.json").write_text(json.dumps(result.retrieved, indent=2))

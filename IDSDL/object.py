@@ -1030,6 +1030,9 @@ class SceneProgObject:
         locs[:, 0] += x0
         locs[:, 1] += z0
 
+        # Split a fixed illumination budget across the N pendants so adding more lights makes the
+        # room no brighter (just more fixtures), instead of N*500 W blowing the scene out to white.
+        per_light_energy = 500.0 / max(1, N)
         for i in range(min(N, len(locs))):
             x = locs[i, 0]
             z = locs[i, 1]
@@ -1039,6 +1042,7 @@ class SceneProgObject:
             # the light count and spread, would change the object's reported size).
             new_light.is_light = True
             new_light.ignore_overlap = True
+            new_light.light_energy = per_light_energy
             new_light.set_location(x, y, z)
             self.add_child(new_light)
             if self.scene is not None and hasattr(self.scene, "ceiling_lights"):
@@ -1149,9 +1153,12 @@ obj.scale = [{scale[0]}, {scale[2]}, {scale[1]}]
             if hasattr(self.scene, "ceiling_lights") and obj in self.scene.ceiling_lights:
                 w, h, d = obj.get_whd()
                 light_y = getattr(self.scene, "HEIGHT", 4.0)
+                # Per-fixture energy: add_lighting splits a fixed budget across N pendants so the
+                # room brightness doesn't scale with the light count (a swarm no longer blows out).
+                energy = float(getattr(obj, "light_energy", 500))
                 lines += f"""
 light_data = bpy.data.lights.new(name='{obj_name}_Light', type='AREA')
-light_data.energy = 500
+light_data.energy = {energy}
 light_data.shape = 'RECTANGLE'
 light_data.size = {w}
 light_data.size_y = {d}

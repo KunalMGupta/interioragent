@@ -83,6 +83,19 @@ worker.render_room("{path}", "{output_dir}")
 """
         self.run(script)
 
+    def render_views(self, path, specs):
+        """Render arbitrarily-framed views (per-group detail shots for a collection
+        collage). `specs`: list of {{out, cam, target, lens?}} dicts (framing done by
+        the caller). One scene load, N cameras."""
+        import json
+        script = f"""
+{self.script}
+import json
+specs = json.loads(r'''{json.dumps(specs)}''')
+worker.render_views("{path}", specs)
+"""
+        self.run(script)
+
 # renderer = SceneRenderer(resolution_x=512, resolution_y=512, samples=5)
 # renderer.render_from_corners("/Users/kunalgupta/Documents/opttool2.blend", ["/Users/kunalgupta/Documents/packages/sceneprogrenderer/output1.png", "/Users/kunalgupta/Documents/packages/sceneprogrenderer/output2.png", "/Users/kunalgupta/Documents/packages/sceneprogrenderer/output3.png", "/Users/kunalgupta/Documents/packages/sceneprogrenderer/output4.png"])
 # renderer.render_360("/Users/kunalgupta/Documents/opttool2.blend", "/Users/kunalgupta/Documents/packages/sceneprogrenderer/output.mp4")

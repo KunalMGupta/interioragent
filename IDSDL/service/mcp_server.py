@@ -253,6 +253,26 @@ def plan(prompt: str, top_k: int = 3) -> list:
 
 
 @mcp.tool()
+def plan_refine(prompt: str, renders: list, prior: list = None,
+                instruction: str = None, top_k: int = 3) -> list:
+    """Planner REFINEMENT: generate an IMPROVED visual target from the current scene's renders
+    (e.g. a render_collection collage in `renders`) plus the planner's prior target(s) in `prior`
+    and the retrieved skills. The composer critiques the build against intent, then image-conditions
+    a fresh 2x4 target exploring layout/styling improvements. Returns the revised brief + the new
+    target collage inline. ~tens of seconds (image generation)."""
+    with _quiet():
+        d = core.plan_refine(prompt, renders, prior=prior, instruction=instruction, top_k=top_k)
+    if not d["ok"]:
+        return [f"refine failed:\n{d['stderr_tail']}"]
+    txt = f"REFINE out_dir: {d['out_dir']}\n\n{d['skill']}"
+    out = [txt]
+    img = _img(d["refined_png"], max_px=1600, brighten=1.0)
+    if img:
+        out.append(img)
+    return out
+
+
+@mcp.tool()
 def run_scene(program_path: str) -> list:
     """Build + render a DSL scene program. SLOW (3-8 min, cold Blender). Returns the VLM feedback
     + asset picks + the interior room views inline (first few). Runs subprocess-isolated."""

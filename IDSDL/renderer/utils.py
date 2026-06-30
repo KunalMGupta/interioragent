@@ -781,6 +781,20 @@ class SceneRendererWorker:
         self.render_interior_corners(path, corner_paths)
         return wall_paths + corner_paths
 
+    def render_views(self, path, specs, hide_ceiling=True):
+        """Render a list of ARBITRARILY-FRAMED views from one loaded scene.
+
+        `specs` is a list of dicts ``{out, cam:[x,y,z], target:[x,y,z], lens?}`` — the
+        camera placement is computed by the caller (RoomGroup.render_collection frames
+        each one on a group/object AABB), so this just loads the scene once, hides the
+        ceiling, and places + renders each camera. Used for per-group detail collages.
+        """
+        cam_ob = self._setup_interior(path, hide_ceiling=hide_ceiling)[0] if hide_ceiling \
+            else self.init(path)
+        for s in specs:
+            cam_ob.data.lens = float(s.get("lens", 35.0))
+            self._render_interior_view(cam_ob, s["out"], tuple(s["cam"]), tuple(s["target"]))
+
 
 # ---------------------------------------------------------------------
 # OPTIONAL CLI ENTRY POINT

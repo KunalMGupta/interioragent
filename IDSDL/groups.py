@@ -2275,6 +2275,151 @@ class RoomGroup(SceneProgObject):
         plt.imsave(combined_path, combined)
         return combined_path
 
+    # -----------------------------------------------------------------
+    # COLLECTION COLLAGE
+    #
+    # A planner-style 2xN montage of the BUILT room: a tightly-framed detail
+    # shot of each item (a group or an object) + a few dollhouse overviews. Unlike
+    # the wide interior room_views, each tile is filled by its subject — the kind of
+    # "detail-focused" reference collage the planner consumes. Cameras are framed
+    # here (Python) from each item's world AABB; the renderer just places + shoots.
+    # -----------------------------------------------------------------
+
+    def _frame_box(self, C, S, room_center, lens, dir_override=None):
+        """Camera (location, target) that frames a Blender-space box (center C, size S)
+        from the room-interior side as a 3/4 view, pulled back to fit and raised a touch.
+
+        Always a diagonal (never head-on to a wall): a head-on shot at a window-cut wall
+        drops the subject into the void. We bias the inward direction with a lateral
+        component so the camera comes in at ~30 degrees off-axis.
+        """
+        import math
+        bx, by, bz = C
+        sx, sy, sz = S
+        W, D, H = 2 * room_center[0], -2 * room_center[1], 2 * room_center[2]
+        if dir_override is not None:
+            dx, dy = dir_override
+        else:
+            inx, iny = room_center[0] - bx, room_center[1] - by   # toward room interior
+            if math.hypot(inx, iny) < 1e-3:                       # central item
+                inx, iny = 0.4, -1.0
+            ninx = math.hypot(inx, iny)
+            inx, iny = inx / ninx, iny / ninx
+            # rotate ~30 deg toward whichever side has more room, for a 3/4 angle
+            side = 1.0 if (bx < room_center[0]) else -1.0
+            latx, laty = -iny * side, inx * side                  # perpendicular
+            dx, dy = inx + 0.6 * latx, iny + 0.6 * laty
+        n = math.hypot(dx, dy) or 1.0
+        ux, uy = dx / n, dy / n
+        hfov = 2.0 * math.atan(18.0 / float(lens))                # 36 mm sensor
+        extent = max(0.4, min(max(sx, sy, sz), 1.2 * max(W, D)))
+        d = 1.3 * extent / (2.0 * math.tan(hfov / 2.0)) + 0.4 * max(sx, sy)
+        cam = [bx + ux * d, by + uy * d, bz + 0.40 * extent]
+        m = 0.2                                                   # stay inside the shell
+        cam = [min(max(cam[0], m), W - m), min(max(cam[1], -D + m), -m), min(max(cam[2], m), H - m)]
+        target = [bx, by, bz + 0.05 * sz]
+        return [float(v) for v in cam], [float(v) for v in target]
+
+    def _collection_specs(self, items, run_dir, overviews, lens):
+        """Build the per-tile (label, render-spec) list: a framed detail shot per item,
+        then `overviews` dollhouse corners. DSL (x,y,z) maps to Blender (x, -z, y)."""
+        def _safe(s):
+            return "".join(c if c.isalnum() else "_" for c in str(s))[:40]
+        W = float(getattr(self, "WIDTH", 0) or 0)
+        D = float(getattr(self, "DEPTH", 0) or 0)
+        H = float(getattr(self, "HEIGHT", 3.0) or 3.0)
+        if W <= 0 or D <= 0:                            # fall back to the room's own AABB
+            amin, amax = self.get_aabb()
+            W = W or float(amax[0] - amin[0])
+            D = D or float(amax[2] - amin[2])
+        room_center = (W / 2.0, -D / 2.0, H / 2.0)
+        tiles = []
+        for entry in items:
+            label, item = entry[0], entry[1]
+            dir_override = entry[2] if len(entry) > 2 else None
+            amin, amax = item.get_aabb()                # DSL world AABB
+            C = ((amin[0] + amax[0]) / 2.0, -(amin[2] + amax[2]) / 2.0, (amin[1] + amax[1]) / 2.0)
+            S = (amax[0] - amin[0], amax[2] - amin[2], amax[1] - amin[1])
+            cam, target = self._frame_box([float(v) for v in C], [float(v) for v in S],
+                                          room_center, lens, dir_override)
+            tiles.append({"label": label, "spec": {
+                "out": os.path.join(run_dir, f"detail_{len(tiles)}_{_safe(label)}.png"),
+                "cam": cam, "target": target, "lens": lens}})
+        # dollhouse overviews from the top corners
+        inset, eye, tgtz = 0.9, 0.92 * H, 0.35 * H
+        cxb, cyb, hx, hy = W / 2.0, -D / 2.0, W / 2.0, D / 2.0
+        corners = [(cxb - hx * inset, cyb - hy * inset), (cxb + hx * inset, cyb + hy * inset),
+                   (cxb + hx * inset, cyb - hy * inset), (cxb - hx * inset, cyb + hy * inset)]
+        for i in range(min(overviews, len(corners))):
+            cx, cy = corners[i]
+            tiles.append({"label": f"overview {i + 1}", "spec": {
+                "out": os.path.join(run_dir, f"overview_{i}.png"),
+                "cam": [cx, cy, eye], "target": [cxb, cyb, tgtz], "lens": 22.0}})
+        try:                                            # diagnostics: dump the framing geometry
+            import json
+            with open(os.path.join(run_dir, "_specs.json"), "w") as f:
+                json.dump({"room": {"W": W, "D": D, "H": H, "center": list(room_center)},
+                           "tiles": tiles}, f, indent=1)
+        except Exception:
+            pass
+        return tiles
+
+    @staticmethod
+    def _build_collage(labeled_paths, out_path, cols=4, cell=(460, 300), pad=8, label_h=26):
+        """Montage (label, image_path) tiles into one 2xN editorial PNG (transparent
+        renders composited over a warm neutral, captioned)."""
+        from PIL import Image, ImageDraw, ImageFont
+        tiles = [lp for lp in labeled_paths if lp[1] and os.path.exists(lp[1])]
+        if not tiles:
+            return out_path
+        cols = min(cols, len(tiles))
+        rows = (len(tiles) + cols - 1) // cols
+        cw, ch = cell
+        W = cols * cw + (cols + 1) * pad
+        Ht = rows * (ch + label_h) + (rows + 1) * pad
+        canvas = Image.new("RGB", (W, Ht), (242, 240, 236))
+        draw = ImageDraw.Draw(canvas)
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 15)
+        except Exception:
+            font = ImageFont.load_default()
+        for k, (label, p) in enumerate(tiles):
+            r, c = divmod(k, cols)
+            x = pad + c * (cw + pad)
+            y = pad + r * (ch + label_h + pad)
+            im = Image.open(p).convert("RGBA")
+            im.thumbnail((cw, ch))
+            canvas.paste(im, (x + (cw - im.width) // 2, y + (ch - im.height) // 2), im)
+            draw.text((x + 4, y + ch + 5), str(label), fill=(60, 60, 60), font=font)
+        canvas.save(out_path, quality=90)
+        return out_path
+
+    def render_collection(self, items, out=None, overviews=2,
+                          resolution=(900, 600), samples=None, lens=38.0):
+        """Render a planner-style COLLECTION collage of the built room.
+
+        `items` is a list of ``(label, group_or_object[, (dx, dy)])`` — each gets a
+        camera framed tightly on its world AABB (optionally biased toward a horizontal
+        direction ``(dx, dy)`` in Blender XY); `overviews` dollhouse corner shots are
+        appended. Everything is montaged into one 2xN PNG at `out`. Returns the path.
+        Wrapped so a renderer hiccup never breaks scene assembly.
+        """
+        from IDSDL.renderer.renderer import SceneRenderer
+        run_dir = self._run_dir("collection")
+        out = out or os.path.join(run_dir, "collection.png")
+        try:
+            blend = self._build_blend()
+            tiles = self._collection_specs(items, run_dir, overviews, lens)
+            rx, ry = resolution
+            SceneRenderer(resolution_x=rx, resolution_y=ry,
+                          samples=samples if samples is not None else self.render_samples,
+                          verbose=True).render_views(blend, [t["spec"] for t in tiles])
+            self._build_collage([(t["label"], t["spec"]["out"]) for t in tiles], out)
+            print(f"[RoomGroup] collection collage -> '{out}' ({len(tiles)} tiles)")
+        except Exception as e:
+            print(f"[RoomGroup] collection render skipped ({type(e).__name__}: {e})")
+        return out
+
     def recenter(self):
         self.scene.bind(self)
         

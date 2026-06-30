@@ -260,6 +260,28 @@ def plan(prompt, top_k=3, out=None):
             "stderr_tail": "\n".join((p.stderr or "").splitlines()[-12:]) if p.returncode else ""}
 
 
+def plan_refine(prompt, renders, prior=None, instruction=None, top_k=3, out=None):
+    """Planner REFINEMENT — an improved target from current renders (+ prior target + skills).
+    Subprocess-isolated. Returns ``{prompt, out_dir, ok, refined_png, skill, retrieved}``."""
+    out = out or os.path.join(_TMP, f"refine_{_safe(prompt)}")
+    renders = list(renders) if isinstance(renders, (list, tuple)) else [renders]
+    args = [sys.executable, "-m", "planner_core", prompt, "--refine",
+            "--out", out, "--top-k", str(top_k), "--renders", *renders]
+    if prior:
+        prior = list(prior) if isinstance(prior, (list, tuple)) else [prior]
+        args += ["--prior", *prior]
+    if instruction:
+        args += ["--instruction", instruction]
+    env = {**os.environ, "PYTHONPATH": "/work"}
+    p = subprocess.run(args, cwd="/work", env=env, capture_output=True, text=True, timeout=900)
+    sp = os.path.join(out, "skill.txt"); rp = os.path.join(out, "retrieved.json")
+    return {"prompt": prompt, "out_dir": out, "ok": p.returncode == 0,
+            "refined_png": os.path.join(out, "refined_target.png"),
+            "skill": open(sp).read() if os.path.exists(sp) else "",
+            "retrieved": _json.load(open(rp)) if os.path.exists(rp) else [],
+            "stderr_tail": "\n".join((p.stderr or "").splitlines()[-12:]) if p.returncode else ""}
+
+
 def run_scene(program_path, timeout=2400):
     """Build+render a DSL scene program. Subprocess-isolated (a fresh scene/retriever + cold
     Blender, like batchgen). Returns the run's ``report`` dict + the room_views paths."""

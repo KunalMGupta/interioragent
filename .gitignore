@@ -66,3 +66,9 @@ code
 
 # Manual smoke-test harness for vlm_placement (writes to the ignored tools/out scratch)
 tools/dsl_place_test.py
+
+# Generated kitchen component tagger (regenerable via tools/build_kitchen_tagger.py)
+/kitchen_tagger.html
+
+# Generated scene-collection collage (regenerable via RoomGroup.render_collection)
+/kitchen_collection.png

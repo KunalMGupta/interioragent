@@ -274,6 +274,10 @@ class Window(SceneProgObjectWall):
 
         self.cut_wall(wall)
 
+        # A picture window is bare by default — only dress it if a curtain texture is given.
+        if not curtain_texture:
+            return self, None
+
         mesh = self.add_curtain(curtain_texture)
         mesh = self.scale(mesh, 0.8 * wall_width + 0.4, 1.1 * window_height)
         mesh = self.rotate(mesh, wall)
