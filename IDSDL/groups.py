@@ -86,8 +86,15 @@ class AnchorGroup(SceneProgObject):
 
     @placemethod
     def place_on_top(self, objs):
-        front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
         objs = self.to_list(objs)
+
+        # Primary: VLM-tournament placement (renders candidates, judges, applies the best).
+        # Falls back to the deterministic AABB layout below on any failure or if disabled.
+        from IDSDL import vlm_placement
+        if vlm_placement.place_smart(self, self.anchor, objs, "on_top", log=print):
+            return
+
+        front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
         N = len(objs)
 
         # Size each object to the anchor before placing it (proportions fix).
@@ -119,8 +126,48 @@ class AnchorGroup(SceneProgObject):
             self.add_child(obj)
 
     @placemethod
-    def place_rug(self, desc, size):
-        rug = self.scene.AddAsset(desc)
+    def place_inside(self, objs):
+        """Place objects INSIDE the anchor's body (e.g. cabinet/shelf interior).
+
+        Primary path is the VLM-tournament solver (mode='inside'); the fallback distributes
+        the objects across the anchor's interior at mid-height, sized like place_on_top.
+        """
+        objs = self.to_list(objs)
+
+        from IDSDL import vlm_placement
+        if vlm_placement.place_smart(self, self.anchor, objs, "inside", log=print):
+            return
+
+        # Fallback: AABB interior — fit each object, then line them up along the anchor's
+        # width at roughly mid-body height (no usable-surface info without rendering).
+        N = len(objs)
+        anchor_w, anchor_h, anchor_d = self.anchor.get_whd()
+        for obj in objs:
+            self._fit_on_top(obj, anchor_w, anchor_h, anchor_d, N)
+
+        aabb = self.anchor.get_aabb()
+        vmin, vmax = aabb[0], aabb[1]
+        mid_y = (vmin[1] + vmax[1]) / 2.0
+        left = np.array([vmin[0], 0, (vmin[2] + vmax[2]) / 2.0])
+        right = np.array([vmax[0], 0, (vmin[2] + vmax[2]) / 2.0])
+        vector = right - left
+        locs = [left + i * vector / (N + 1) for i in range(1, N + 1)]
+        for i, obj in enumerate(objs):
+            obj.set_location(locs[i][0], mid_y + self.compute_obj_y(obj), locs[i][2])
+            obj.ignore_overlap = True
+            self.add_child(obj)
+
+    @placemethod
+    def place_rug(self, desc, size, asset_id=None):
+        rug = self.scene.AddAsset(desc, asset_id=asset_id)
+        # Rugs must be modelled FLAT (thin in height). Many "bath mat" meshes are authored upright
+        # (thin in depth, ~0.4 m tall), and the export pipeline is yaw-only so we can't tilt them
+        # down — place_rug scales width+depth and the upright height survives as a giant slab.
+        # Warn loudly and pin a flat rug via asset_id= when this trips.
+        rw, rh, rd = (float(v) for v in rug.get_whd())
+        if rh > 0.1 * max(rw, rd):
+            print(f"[place_rug] WARNING: '{desc}' -> {getattr(rug, 'retrieval_model', '?')} is not "
+                  f"flat (h={rh:.3f} vs footprint {rw:.2f}x{rd:.2f}); pin a flat rug via asset_id=.")
         w, h, d = self.get_whd()
 
         size = 0.4 * (1 - size) + self.rug_multiplier * size
@@ -159,7 +206,7 @@ class AnchorGroup(SceneProgObject):
     def compile(self):
         self.reset_compile_state()
         self.clear_constraints()
-        delayed_names = {"place_on_top", "place_rug", "add_lighting"}
+        delayed_names = {"place_on_top", "place_inside", "place_rug", "add_lighting"}
 
         # Execute all main operations first
         for op in self.operations:
@@ -177,6 +224,10 @@ class AnchorGroup(SceneProgObject):
 
         # Execute delayed operations last
         op = self.get_operation("place_on_top")
+        if op is not None:
+            op.execute()
+
+        op = self.get_operation("place_inside")
         if op is not None:
             op.execute()
 
@@ -222,6 +273,7 @@ class RelativeGroup(AnchorGroup):
             'place_on_back_right_further',
             'place_on_back_left_further',
             'place_on_top',
+            'place_inside',
         ]
 
     def get_inner_aabb(self):
@@ -1311,86 +1363,86 @@ class RoomGroup(SceneProgObject):
         self.add_child(obj)
 
     @placemethod
-    def place_on_back_wall_left(self, obj, facing=None):
+    def place_on_back_wall_left(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[1], self.compute_obj_y(obj), delta_d)
+        obj.set_location(self.col_centers[1], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
-    def place_on_back_wall_center(self, obj, facing=None):
+    def place_on_back_wall_center(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[2], self.compute_obj_y(obj), delta_d)
+        obj.set_location(self.col_centers[2], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
-    def place_on_back_wall_right(self, obj, facing=None):
+    def place_on_back_wall_right(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[3], self.compute_obj_y(obj), delta_d)
+        obj.set_location(self.col_centers[3], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
-    def place_on_left_wall_right(self, obj, facing=None):
+    def place_on_left_wall_right(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(delta_w, self.compute_obj_y(obj), self.row_centers[1])
+        obj.set_location(delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[1])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
-    def place_on_left_wall_center(self, obj, facing=None):
+    def place_on_left_wall_center(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(delta_w, self.compute_obj_y(obj), self.row_centers[2])
+        obj.set_location(delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[2])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
-    def place_on_left_wall_left(self, obj, facing=None):
+    def place_on_left_wall_left(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(delta_w, self.compute_obj_y(obj), self.row_centers[3])
+        obj.set_location(delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[3])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
-    def place_on_right_wall_left(self, obj, facing=None):
+    def place_on_right_wall_left(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), self.row_centers[1])
+        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[1])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
-    def place_on_right_wall_center(self, obj, facing=None):
+    def place_on_right_wall_center(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), self.row_centers[2])
+        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[2])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
-    def place_on_right_wall_right(self, obj, facing=None):
+    def place_on_right_wall_right(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj), self.row_centers[3])
+        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[3])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
-    def place_on_front_wall_left(self, obj, facing=None):
+    def place_on_front_wall_left(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[3], self.compute_obj_y(obj), self.DEPTH - delta_d)
+        obj.set_location(self.col_centers[3], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
-    def place_on_front_wall_center(self, obj, facing=None):
+    def place_on_front_wall_center(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[2], self.compute_obj_y(obj), self.DEPTH - delta_d)
+        obj.set_location(self.col_centers[2], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
-    def place_on_front_wall_right(self, obj, facing=None):
+    def place_on_front_wall_right(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[1], self.compute_obj_y(obj), self.DEPTH - delta_d)
+        obj.set_location(self.col_centers[1], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 

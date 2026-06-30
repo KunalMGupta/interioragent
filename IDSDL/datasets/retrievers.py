@@ -910,6 +910,37 @@ Notably, it does not include a stool or chair, as these are considered furniture
         top_similarities = similarities[top_indices]
         return top_models, top_similarities
 
+class BathroomToiletSetRetriever(FutureHSSDAssetRetriever):
+    def __init__(self):
+        super().__init__()
+        self.name = "BathroomToiletSetRetriever"
+        self.description = f"""
+Retrieves toilets / water closets. In this dataset a toilet is ALWAYS a COMPLETE SET — the bowl
+together with its bundled peripherals (cistern, flush buttons/plate, toilet-paper holder, brush) —
+and is retrieved and placed as a single unit. Never use this to fetch a bare toilet seat or those
+toiletries individually; they only ever exist as part of the whole toilet set. The sets are uniform
+in size (curated pool), so a consistent scale applies.
+Only use this retriever when specifically looking for a toilet / WC.
+"""
+        self.examples = """
+1. A modern wall-hung toilet
+2. A white floor-standing toilet
+3. A compact back-to-wall toilet with a concealed cistern
+"""
+        with open(os.path.join(os.path.dirname(__file__), "assets/bathroom_toilet_set.json"), "r") as f:
+            self.toilet_sets = json.load(f)
+
+    def get_likely_asset(self, query: str) -> str:
+        toilet_idx = [self.all_models.tolist().index(model) for model in self.toilet_sets if model in self.all_models]
+        toilet_embds = np.array([self.all_embeddings[i] for i in toilet_idx])
+        embd = np.array(self.encoder.embed_query(query))
+        similarities = np.dot(toilet_embds, embd)
+        # Get top 5 most similar models
+        top_indices = np.argsort(similarities)[-5:][::-1]
+        top_models = [self.toilet_sets[i] for i in top_indices]
+        top_similarities = similarities[top_indices]
+        return top_models, top_similarities
+
 class ApplianceRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
         super().__init__()
@@ -971,15 +1002,15 @@ class BathroomFurnitureAndMiscellaneousRetriever(FutureHSSDAssetRetriever):
         super().__init__()
         self.name = "BathroomFurnitureAndMiscellaneousRetriever"
         self.description = f"""
-Retrieves bathroom furniture and miscellaneous items that are typically found in a bathroom such as cabinets, shelves, toilets, bathtubs, etc. 
-Note that vanities are not included in this retriever, as they are considered as complete sets and must be retrieved using the BathroomVanityUnitRetriever.
+Retrieves bathroom furniture and miscellaneous items that are typically found in a bathroom such as cabinets, shelves, bathtubs, showers, sinks, etc.
+Note that vanities and toilets are NOT included in this retriever, as they are complete sets: use the BathroomVanityUnitRetriever for vanities and the BathroomToiletSetRetriever for toilets / WCs.
 Only use this retriever when specifically looking for bathroom furniture and miscellaneous items.
 """
         self.examples = """
 1. A wooden bathroom cabinet
-2. A modern toilet
+2. A freestanding bathtub
 3. A standing shower
-4. A bathtub
+4. A pedestal sink
 """
         with open(os.path.join(os.path.dirname(__file__), "assets/bathroom.json"), "r") as f:
             self.bathroom = json.load(f)
@@ -1236,6 +1267,7 @@ FUTURE_HSSD_ASSET_RETRIEVERS = [
     ClothesRetriever(),
     BathroomVanityUnitRetriever(),
     DressingVanityUnitRetriever(),
+    BathroomToiletSetRetriever(),
     ApplianceRetriever(),
     GymEquipmentRetriever(),
     BathroomFurnitureAndMiscellaneousRetriever(),

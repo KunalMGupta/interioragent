@@ -1352,6 +1352,41 @@ def test_49():
     scene.export("results/test49_rings.blend")
 
 
+def test_50():
+    """MirrorStationGroup: mirror mounted on the wall above a counter, anchor facing it."""
+    header(50, "MirrorStationGroup mirror + counter + facing anchor")
+    scene = SceneProgRoom("test50", seed=SEED)
+    with scene.MirrorStationGroup() as st:
+        chair = scene.AddAsset("an upholstered accent chair")
+        st.set_anchor(chair)
+        counter = scene.AddAsset("a narrow wooden console table")
+        st.place_counter(counter)
+        mirror = scene.AddAsset("a round framed wall mirror")
+        st.place_mirror(mirror)
+    scene.bind(st)
+
+    az = float(chair.get_location()[2])
+    cz = float(counter.get_location()[2])
+    m_aabb = mirror.get_aabb()
+    mz = float(mirror.get_location()[2])
+    m_center_y = float((m_aabb[0, 1] + m_aabb[1, 1]) / 2)
+    m_bottom = float(m_aabb[0, 1])
+    counter_top = float(counter.get_aabb()[1, 1])
+    a_rot = float(chair.get_rotation()) % 360.0
+    m_rot = float(mirror.get_rotation()) % 360.0
+    print(f"  anchor z={az:.2f} counter z={cz:.2f} mirror z={mz:.2f}")
+    print(f"  mirror center_y={m_center_y:.2f} bottom={m_bottom:.2f} counter_top={counter_top:.2f}")
+    print(f"  anchor rot={a_rot:.0f} mirror rot={m_rot:.0f}")
+    assert m_center_y > 0.8, f"mirror not mounted off the floor: center_y={m_center_y:.2f}"
+    assert m_bottom > counter_top - 0.1, f"mirror not above the counter: {m_bottom:.2f} vs {counter_top:.2f}"
+    assert cz > az + 0.02, f"counter should be in front of the anchor (wall side): az={az:.2f} cz={cz:.2f}"
+    assert mz > az + 0.02, f"mirror should be behind the anchor (wall side): az={az:.2f} mz={mz:.2f}"
+    assert mz >= cz - 0.1, f"mirror should sit at/behind the counter: cz={cz:.2f} mz={mz:.2f}"
+    assert a_rot < 5 or a_rot > 355, f"anchor should face +z toward the mirror: rot={a_rot:.0f}"
+    assert abs(m_rot - 180.0) < 5, f"mirror should face back toward the anchor: rot={m_rot:.0f}"
+    scene.export("results/test50_mirror_station.blend")
+
+
 # ---------------------------------------------------------------------------
 # Registry + runner
 # ---------------------------------------------------------------------------
@@ -1411,6 +1446,7 @@ TESTS = {
     47: test_47,   # SymmetryGroup (flanking / on_each_side)
     48: test_48,   # FacingGroup (face_to_face)
     49: test_49,   # RingsGroup (concentric surround)
+    50: test_50,   # MirrorStationGroup (mirror + counter + facing anchor)
 }
 
 

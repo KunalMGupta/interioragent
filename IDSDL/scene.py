@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import random
 import numpy as np
@@ -8,10 +9,48 @@ from IDSDL.datasets.retrievers import SceneProgAssetRetriever
 from IDSDL.groups import *
 from IDSDL.groups_extra import (
     StackGroup, PyramidGroup, PileGroup, SymmetryGroup, FacingGroup, RingsGroup,
+    MirrorStationGroup,
 )
 
 
 class SceneProgRoom:
+    # Vanities are complete "set" assets (cabinet+sink+mirror) whose dataset scale metadata is
+    # unreliable. Each is hand-tagged in datasets/assets/vanity_types.json with a type that maps
+    # to a real width + mount; AddAsset applies this transparently (no helper/import at call sites).
+    _VANITY_SPEC = {
+        "floating":   {"w": 0.80, "mount": "wall",  "bottom": 0.40},
+        "single":     {"w": 0.70, "mount": "floor", "bottom": 0.0},
+        "double":     {"w": 1.50, "mount": "floor", "bottom": 0.0},
+        "extra_wide": {"w": 2.10, "mount": "floor", "bottom": 0.0},
+    }
+    _vanity_tags_cache = None
+
+    @classmethod
+    def _vanity_tags(cls):
+        if cls._vanity_tags_cache is None:
+            path = os.path.join(os.path.dirname(__file__), "datasets", "assets", "vanity_types.json")
+            try:
+                with open(path) as f:
+                    cls._vanity_tags_cache = json.load(f)
+            except FileNotFoundError:
+                cls._vanity_tags_cache = {}
+        return cls._vanity_tags_cache
+
+    def _apply_vanity_metadata(self, obj):
+        """If `obj` is a hand-tagged vanity, size it to its real width (UNIFORM scale, so the mesh's
+        proportions are preserved) and stash its mount height on the object, so wall placement floats
+        wall-hung/floating vanities and floor-rests the rest. Transparent: callers just AddAsset a
+        vanity and place it — no separate module, no `bottom=`."""
+        tag = self._vanity_tags().get(getattr(obj, "retrieval_model", None))
+        if not tag:
+            return
+        spec = self._VANITY_SPEC.get(tag.get("type"), self._VANITY_SPEC["double"])
+        w = tag.get("width_m") or spec["w"]
+        w0, h0, d0 = obj.get_width(), obj.get_height(), obj.get_depth()
+        f = w / max(w0, 1e-6)
+        obj.scale_only_width(w0 * f); obj.scale_only_height(h0 * f); obj.scale_only_depth(d0 * f)
+        obj.mount_bottom = spec["bottom"]
+
     def __init__(self, name, seed=None):
         self.name = name
         self.objects = []
@@ -89,6 +128,9 @@ class SceneProgRoom:
         obj.retrieval_model = next(
             (c["model"] for c in obj.retrieval_candidates if c.get("chosen")), None
         )
+
+        # set assets with type-driven sizing/mount (vanities) are handled transparently here
+        self._apply_vanity_metadata(obj)
 
         if width is not None:
             obj.scale_only_width(width)
@@ -213,6 +255,9 @@ class SceneProgRoom:
 
     def RingsGroup(self, sparsity: float = 0.0):
         return RingsGroup(self, sparsity=sparsity)
+
+    def MirrorStationGroup(self, max_top=None):
+        return MirrorStationGroup(self, max_top=max_top)
 
     def RoomGroup(self, modulate_scale: float = 1.0, randomness: float = 0.0,
                   auto_render: bool = True,

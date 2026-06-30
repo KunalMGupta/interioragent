@@ -99,13 +99,26 @@ g.add_lighting("a chandelier", density=0) # ceiling light(s); density=0 -> singl
 ```
 These three run *last* in compile (after layout), so they sit correctly.
 
-`place_on_top` rows the object(s) across the anchor's top (resting on it) and
-**proportions** each one to the anchor first: a mis-scaled retrieval (e.g. a "small
-desk lamp" that comes back huge) is uniformly shrunk to satisfy hard caps: footprint
-≤ a share of the anchor top (`ON_TOP_FOOTPRINT_FRACTION`, 0.5, split across N), height
-≤ **0.4× the anchor height** (`ON_TOP_HEIGHT_FRACTION`), and the **combined anchor+object
-stack ≤ 3.5 m** (`ON_TOP_MAX_COMBINED_HEIGHT`; binds for tall anchors). Deterministic,
-never up-scaled — no VLM needed. All three are `AnchorGroup` class constants.
+`place_on_top` (and `place_inside`, for cabinet/shelf interiors) seat the object(s) on
+the anchor. Each has **two paths**:
+
+- **Primary — VLM-tournament placement** (`IDSDL/vlm_placement.py`): renders candidate
+  arrangements of the items on/in the anchor and runs a VLM value-iteration tournament
+  (`tools/planar_regions.py:solve_placement`) to pick the best, then applies the winning
+  transforms. Catches surface structure the AABB path can't (a real top vs. a raised lip,
+  a shelf bay vs. solid body). **Heavy** — needs Blender + GPU + `OPENAI_API_KEY`; disable
+  globally with `IDSDL_SMART_PLACEMENT=0`. Any failure (no API key, anchor isn't a single
+  mesh, items lack `mesh_path`) silently falls through to:
+- **Fallback — deterministic AABB layout**: rows the items across the anchor's top (or
+  interior mid-height) and **proportions** each to the anchor first — a mis-scaled
+  retrieval (a "small desk lamp" that comes back huge) is uniformly shrunk to satisfy hard
+  caps: footprint ≤ a share of the anchor top (`ON_TOP_FOOTPRINT_FRACTION`, 0.5, split
+  across N), height ≤ **0.4× the anchor height** (`ON_TOP_HEIGHT_FRACTION`), and the
+  **combined anchor+object stack ≤ 3.5 m** (`ON_TOP_MAX_COMBINED_HEIGHT`). Never up-scaled;
+  the three caps are `AnchorGroup` class constants.
+
+Both paths flag the items `ignore_overlap` and add them as children — the DSL call site is
+identical either way.
 
 **Post-placement orientation (opt-in).** Placement bakes a fixed rotation into
 each object, which is often wrong for orientation-sensitive cases. Available on

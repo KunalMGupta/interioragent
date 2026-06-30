@@ -529,10 +529,21 @@ def extra_rings():
     return scene
 
 
+def extra_mirror_station():
+    scene = SceneProgRoom("extra_mirror_station", seed=SEED)
+    with scene.MirrorStationGroup() as st:
+        st.set_anchor(scene.AddAsset("a salon styling chair"))
+        st.place_counter(scene.AddAsset("a narrow wooden console table"))
+        st.place_mirror(scene.AddAsset("an arched gold-framed wall mirror"))
+    scene.bind(st)
+    return scene
+
+
 FIGURES = {
     # new motif groups
     "extra_stack": extra_stack, "extra_pyramid": extra_pyramid, "extra_pile": extra_pile,
     "extra_symmetry": extra_symmetry, "extra_facing": extra_facing, "extra_rings": extra_rings,
+    "extra_mirror_station": extra_mirror_station,
     # registration
     "reg_single": reg_single, "reg_scaling": reg_scaling,
     "reg_copies": reg_copies, "reg_rotation": reg_rotation,

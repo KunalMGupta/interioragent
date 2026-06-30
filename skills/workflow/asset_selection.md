@@ -5,6 +5,32 @@ looking at each candidate's preview render** (not just its text description). Th
 stops "a small desk lamp" returning a workstation. See [dsl_reference.md](../dsl_reference.md)
 for the API.
 
+## Scene kickoff: assets BEFORE placements (do this first, every new scene)
+
+Most of a believable scene is having the right *meshes* available. Settle the asset library for
+the category **before** you write a single placement — placement work on a thin asset set just
+produces a tidy arrangement of wrong objects. The repeatable process (proven on the hair salon):
+
+1. **Map out every asset the scene could reasonably want.** Brainstorm 50–100 candidate items
+   for the category (a salon: styling chairs, backwash units, mirrors, trolleys, reception desk,
+   retail shelf, dryers, towels, products, waiting seating, …). Breadth first; prune later.
+2. **Catalogue what we already have.** Query each against the dataset and **`browse`** the
+   results — see what genuinely exists vs. what's missing or weak. Build a **specialized category
+   retriever pool** from the good hits (over-generate → curate by eye; see "Building / curating a
+   category pool" below). A scene category almost always earns its own pool.
+3. **Identify the 5–10 *high-impact missing* assets — and have the user source them.** Don't try
+   to force the dataset to cover everything. Pick the **small number of key meshes that unblock
+   the scene** (the ones with no acceptable substitute — e.g. a real backwash unit, a barber
+   styling chair, a neon sign). Ask the user to download high-quality free `.glb`s online, fix
+   orientation/scale, and hand them over to **ingest** (`python -m IDSDL.ingest <zip>`; see below).
+   Five well-chosen ingested assets beat fifty mediocre dataset picks.
+4. **Only now design the placements.** With the library solid, lay out the scene. If an
+   *arrangement relationship* isn't expressible in the DSL, consider a new placement group
+   (`skills/add-placement-group/SKILL.md` → "Step 0: do you actually need one?"); otherwise use
+   existing groups creatively.
+
+Worked end-to-end in [../examples/hair_salon.md](../examples/hair_salon.md).
+
 ## Inspect & override (the feedback loop)
 - **See a pick:** `python workbench.py inspect "<query>"` → prints the contact-sheet path
   (open it), the `VLM decision` (`chose #N: <reason>`), and the ranked candidates with
@@ -65,6 +91,26 @@ If a *type* of object keeps coming back wrong, suspect a **pool gap**: `browse` 
 vs the actual routed pick will reveal it; the fix is a new/expanded category pool, not a
 better prompt. (Dataset is thin on some: ~2 podiums, ~2 lab benches.)
 
+## "Set assets" — bundled categories (vanities, toilets)
+Some categories are **complete sets** in the mesh and must be retrieved + placed as ONE unit, never
+as separable parts: a vanity = cabinet+sink+counter; a toilet = bowl+cistern+flush-buttons+TP-holder.
+Don't query for a bare seat / sink / toiletries — they only exist inside the set. Each earns a
+**curated pool + specialized retriever** (`BathroomVanityUnitRetriever` / `BathroomToiletSetRetriever`):
+gallery the whole category, curate the good complete sets, save as a pool json, add a retriever class
+(mirror an existing one), register it in `FUTURE_HSSD_ASSET_RETRIEVERS`, and **remove that category
+from the generic retriever's description/examples** so the LLM router sends it to the specialist.
+
+Two scaling rules for these (and bathroom fixtures generally — their `scale` metadata is unreliable):
+- **Resize by UNIFORM width-only** (set target width, scale all axes by the same factor) so the mesh's
+  own proportions are preserved — never scale axes independently (it distorts sinks/drawers). Note
+  `obj.scale(w)` mis-fires on pre-scaled assets; use a captured-whd uniform factor (`_fit_width`).
+- Some sets bundle peripherals that inflate the bbox (toilet TP-holder/cistern) so the visible piece
+  reads small → scale up ~1.5×. If a category is **uniform in size** (toilets), one consistent scale
+  covers all → no per-asset tagging; if sizes/placement vary (vanities), hand-TAG them
+  (`tools/build_vanity_tagger.py` → `vanity_types.json`, applied transparently by `AddAsset` via
+  `SceneProgRoom._apply_vanity_metadata`). Floating/wall-hung sets
+  mount via the `bottom=` kwarg now on every `place_on_*_wall_*` method.
+
 ## Ingesting new assets (grow the library)
 Drop in `.glb` files from anywhere and make them first-class retrieval assets:
 ```bash
@@ -73,7 +119,16 @@ python -m IDSDL.ingest <zip-of-glbs> [--category <pool>] [--manifest manifest.js
 **Contract: supply the glbs correctly scaled and oriented** — Y up, front facing +Z, width
 along X, real-world metres. The tool does **not** re-orient or re-unit meshes (a render-based
 VLM can describe but can't reliably fix arbitrary mesh geometry; mis-oriented assets won't
-place right even with correct metadata). Per glb it generates a stable `custom/<sha1>` id, a
+place right even with correct metadata).
+
+> **Ingest centers the mesh (don't fight it, but know why).** Ingest now recenters each glb's
+> bounding box to the origin on copy (`_copy_centered` in `IDSDL/ingest.py`). This matters: the
+> runtime floor-aligns by aabb *bottom*, but some room-level passes assume the mesh **origin sits
+> at its bbox center** — a mesh authored with an off-center origin lands **sunk into or floating
+> above the floor** (the salon barber chair was −0.186 m / +0.186 m by placement path; exactly its
+> mesh's off-center y × scale). Centering on ingest removes the ambiguity. If you hit a
+> sink/float clip on an *already-ingested* asset, recenter its glb in place:
+> `m=trimesh.load(p,force='mesh',process=False); m.apply_translation(-(m.bounds[0]+m.bounds[1])/2); m.export(p)`. Per glb it generates a stable `custom/<sha1>` id, a
 Blender preview render, metadata (a VLM captions the preview → `description`/`placement`/
 `freetop`/`on_top_or_inside` and the `scale` = real-world width), and an embedding; it
 registers them in `IDSDL/datasets/custom/{models,images}/` + `custom.json` + `custom.npz`. The

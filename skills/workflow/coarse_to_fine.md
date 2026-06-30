@@ -26,15 +26,30 @@ Open `plan.png`, read `skill.txt`. Extract a concrete shopping list:
 Check `retrieved.json` — which reference skills fired tells you whether the
 prompt is well-covered by the library.
 
-## Phase 1 — floor anchors
+## Phase 1 — major assets (layout + proportions)
 
-Place only the dominant floor furniture. Group them with Relative/Around/Grid as
-the layout demands, then wrap in a `RoomGroup` and place the assembled group(s)
-on the floor so the room sizes itself.
+Place only the **biggest pieces** — the hero anchor(s) and the long furniture
+runs. Group each cluster with the **correct placement group** for its
+relationship (don't reach for `RelativeGroup` if the motif is unrepresentable —
+see `../add-placement-group/SKILL.md`), then wrap everything in a `RoomGroup` and
+place the assembled groups so the room sizes itself.
 
 Goal of this phase: **correct layout and correct proportions.** Nothing else.
 
+**Asset distribution drives the room shape — place long strips on the long edges.**
+The `RoomGroup` sizes each wall from what you hang on it, so *which walls you load*
+determines whether the room comes out wide, square, or deep. Decide the target
+shape from the room type, then load accordingly:
+- A **wide, shallow** room (salon, gym, retail) ⇒ put the **long runs** (a styling
+  row, a bench of lockers, a counter line) on the **two long walls**, and keep the
+  **two short walls light** (a single cabinet, the backwash unit, the door/window).
+- A **square** room ⇒ balance the load across all four walls.
+- Place the **largest assets first** as those long strips; the big rocks set the
+  footprint and everything later fits inside it. A long strip stranded on a short
+  wall, or a heavy asset on every wall, fights the proportions you want.
+
 Check:
+- Room **shape** matches intent (long runs landed on the long walls, short walls light).
 - Layout reads correctly from the interior renders (circulation, facing, grouping).
 - `RoomProportionsConstraint` / `ObjectProportionsConstraint` feedback — act on
   rescales now, while there's little else to disturb.

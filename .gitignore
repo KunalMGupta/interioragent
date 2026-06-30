@@ -35,6 +35,14 @@ frames/
 *.blend
 *.blend1
 
+# Smart-placement / annotator scratch:
+#  - tools/out/        : VLM placement-tournament renders (.blend/.glb/.png, multi-GB)
+#  - annotator.html    : self-contained zone annotator, regenerable via tools/build_annotator_html.py
+#  - placement_zones.json: local zone store, auto-created by IDSDL.placement_zones on first write
+tools/out/
+/annotator.html
+IDSDL/datasets/placement_zones.json
+
 # Generated batch-review pages (regenerable via batchgen.py --collect; can be huge)
 batch_review*.html
 combined_review.html

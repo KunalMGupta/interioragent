@@ -1070,10 +1070,54 @@ class WallOverlapConstraint(ConstraintBase):
 
         return "\n".join(feedback), status
 
+    def _aabb_overlap(self, a, b, margin=0.005):
+        """True if a and b actually intersect in all 3 axes (beyond a small margin). The margin is
+        small (5mm) on purpose: two wall-flush items overlap only ~1cm along the wall-normal axis,
+        so a large margin silently misses real interpenetration (a wall mirror inside a toilet)."""
+        try:
+            amin, amax = a.get_aabb()
+            bmin, bmax = b.get_aabb()
+        except Exception:
+            return False
+        return all(float(amin[i]) < float(bmax[i]) - margin and
+                   float(bmin[i]) < float(amax[i]) - margin for i in range(3))
+
+    def check_geometric_overlap(self):
+        """Beyond slot-bucket conflicts, flag wall-mounted items whose AABB actually intersects
+        another placed object (e.g. a wall mirror overlapping the vanity below/beside it). The
+        slot check can't see this: floor wall-furniture isn't bucketed, and adjacent slots can
+        still collide. Returns a list of human-readable overlap warnings."""
+        wall_objs = [o for wall in self.group.wall_assets.values()
+                     for slot in wall.values() for o in slot]
+        others = list(getattr(self.group, "children", []))
+        warnings, seen = [], set()
+        for w in wall_objs:
+            if getattr(w, "ignore_overlap", False):
+                continue
+            for o in others:
+                if o is w or getattr(o, "ignore_overlap", False):
+                    continue
+                key = tuple(sorted((id(w), id(o))))
+                if key in seen:
+                    continue
+                if self._aabb_overlap(w, o):
+                    seen.add(key)
+                    warnings.append(
+                        f"wall-mounted '{self._describe_obj(w)}' geometrically overlaps "
+                        f"'{self._describe_obj(o)}'")
+        return warnings
+
     def compute_gradients(self):
         feedback, status = self.check_overlap_wall()
-        if not status:
+        geom = self.check_geometric_overlap()
+        for g in geom:
+            print(f"[WallOverlapConstraint] WARNING (geometric overlap): {g}")
+        if not status and not geom:
             return "no wall overlap"
+        if geom:
+            feedback = (feedback + "\n" if feedback else "") + \
+                       "Actual (AABB) overlaps involving wall-mounted items:\n" + "\n".join(geom)
+            status = True
 
         current_placement = f"""
 back_wall: left -> {self._describe_bucket('back_wall', 'left')}

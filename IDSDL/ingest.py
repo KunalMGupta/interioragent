@@ -126,11 +126,28 @@ def _worker_scene():
     return _tls.scene
 
 
+def _copy_centered(src, dst):
+    """Copy a supplied .glb into the library with its bounding box centered at the origin.
+
+    The runtime floor-aligns by aabb bottom but some room-level passes assume the mesh origin
+    sits at its bbox center; a mesh authored with an off-center origin therefore lands sunk into
+    or floating above the floor. Centering on ingest removes that ambiguity (translation only —
+    the supplied Y-up / front-+Z / metric scale are preserved). Falls back to a verbatim copy if
+    the mesh can't be processed."""
+    try:
+        import trimesh
+        m = trimesh.load(src, force="mesh", process=False)
+        m.apply_translation(-(m.bounds[0] + m.bounds[1]) / 2.0)
+        m.export(dst)
+    except Exception:
+        shutil.copy(src, dst)
+
+
 def _process_one(glb, fname, sha, vlm, encoder, manifest):
     """Full per-asset pipeline (render → caption → scale → embed). Pure w.r.t. shared state:
     returns a result tuple; the caller registers + saves under a lock. Runs in a worker."""
     mid = f"custom/{sha}"
-    shutil.copy(glb, os.path.join(MODELS_DIR, sha + ".glb"))
+    _copy_centered(glb, os.path.join(MODELS_DIR, sha + ".glb"))
     preview = os.path.join(IMAGES_DIR, sha + ".png")
     try:
         _render_preview(_worker_scene(), glb, preview)
