@@ -106,9 +106,20 @@ the anchor. Each has **two paths**:
   arrangements of the items on/in the anchor and runs a VLM value-iteration tournament
   (`tools/planar_regions.py:solve_placement`) to pick the best, then applies the winning
   transforms. Catches surface structure the AABB path can't (a real top vs. a raised lip,
-  a shelf bay vs. solid body). **Heavy** — needs Blender + GPU + `OPENAI_API_KEY`; disable
-  globally with `IDSDL_SMART_PLACEMENT=0`. Any failure (no API key, anchor isn't a single
-  mesh, items lack `mesh_path`) silently falls through to:
+  a shelf bay vs. solid body).
+  - **Surface (`on_top`)**: only the real TOP is used — `top_surfaces()` returns the *highest
+    substantial* horizontal region (≥ 50% of the max region area), **not** the largest-area
+    one. (`detect_horizontal_regions` sorts by area, and a nightstand/dresser's biggest region
+    is often a low internal shelf — picking it sinks the item into the body.)
+  - **Sizing**: each item is height-fit to a fraction of the base height chosen by an LLM given
+    the **real base + item dimensions** (not just text), then an **N-aware** footprint cap (a
+    single item is barely capped; N items share the surface width). So decor is realistic — a
+    lamp on a short nightstand stays ~0.5–0.7 m, not shrunk to a sliver.
+  - **Heavy** — needs Blender + GPU + `OPENAI_API_KEY`. Any failure (no key, anchor isn't a
+    single mesh, items lack `mesh_path`) silently falls through to:
+  - **HARD RULE — never disable the tournament for speed.** `IDSDL_SMART_PLACEMENT=0` exists
+    ONLY for environments genuinely lacking Blender/GPU/API; it is *not* a render-time
+    optimization. `place_on_top` being heavy is core DSL behaviour — accept the slower render.
 - **Fallback — deterministic AABB layout**: rows the items across the anchor's top (or
   interior mid-height) and **proportions** each to the anchor first — a mis-scaled
   retrieval (a "small desk lamp" that comes back huge) is uniformly shrunk to satisfy hard

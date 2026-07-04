@@ -17,9 +17,10 @@ get written back into these files so the next scene starts smarter.
 2. **[dsl_reference.md](dsl_reference.md)** — the API: how to actually write the program.
 3. **[examples/](examples/)** — the closest matching scene type (living_room, classroom, kitchen, hair_salon, …). Copy its skeleton, don't start from scratch.
 4. **[workflow/coarse_to_fine.md](workflow/coarse_to_fine.md)** — the phase plan you will follow.
-5. **[workflow/constraints.md](workflow/constraints.md)** and **[workflow/vlm_feedback.md](workflow/vlm_feedback.md)** — keep open while optimizing.
-6. **[workflow/asset_selection.md](workflow/asset_selection.md)** — **start here for a new scene**: the asset-first kickoff (map → catalogue → curate a pool → ingest 5–10 high-impact missing assets), then agentic retrieval: inspect/override picks + the baked-in selection rules.
-7. **[add-placement-group/SKILL.md](add-placement-group/SKILL.md)** — only if an *arrangement relationship* isn't expressible in the DSL. Read "Step 0: do you actually need one?" first.
+5. **[workflow/design_principles.md](workflow/design_principles.md)** — composition defaults to apply while placing (seating always gets a table; a seat's task light lives in the seat's group; build a symmetric/repeated unit once and duplicate with `N * unit`).
+6. **[workflow/constraints.md](workflow/constraints.md)** and **[workflow/vlm_feedback.md](workflow/vlm_feedback.md)** — keep open while optimizing.
+7. **[workflow/asset_selection.md](workflow/asset_selection.md)** — **start here for a new scene**: the asset-first kickoff (map → catalogue → curate a pool → ingest 5–10 high-impact missing assets), then agentic retrieval: inspect/override picks + the baked-in selection rules.
+8. **[add-placement-group/SKILL.md](add-placement-group/SKILL.md)** — only if an *arrangement relationship* isn't expressible in the DSL. Read "Step 0: do you actually need one?" first.
 
 ## The workflow in one paragraph
 
