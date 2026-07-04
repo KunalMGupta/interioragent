@@ -144,6 +144,23 @@ def detect_horizontal_regions(mesh, up=(0, 1, 0), normal_tol=0.9, min_area=0.01,
     return sorted(merged, key=lambda x: -x["area"])
 
 
+def top_surfaces(regions, area_frac=0.5, band=0.02):
+    """The usable TOP surface(s) for place_on_top: the HIGHEST *substantial* region(s).
+
+    detect_horizontal_regions sorts by AREA, but the largest region is NOT necessarily the top —
+    a nightstand/dresser often has a big internal or lower shelf with more area than its real top,
+    and picking that sinks on-top items into the body. So: keep regions with >= `area_frac` of the
+    max area (usable, not slivers), then take the highest of those plus any coplanar within `band`
+    metres. Returns [] for empty input.
+    """
+    if not regions:
+        return []
+    max_area = max(r["area"] for r in regions)
+    substantial = [r for r in regions if r["area"] >= area_frac * max_area]
+    top_y = max(r["y"] for r in substantial)
+    return [r for r in substantial if top_y - r["y"] <= band]
+
+
 def _fallback_face_clusters(mesh, up, normal_tol, min_area, height_tol):
     """When a mesh has no clean facets, bin up-facing faces by height."""
     dots = mesh.face_normals @ up
@@ -254,14 +271,19 @@ def _parse_fracs(resp, n, max_frac):
     return [max(0.05, min(max_frac, (0.25 if f is None else f))) for f in fracs]
 
 
-def llm_height_fractions(base_desc, items, max_frac=1.2, use_llm=True):
+def llm_height_fractions(base_desc, items, max_frac=1.2, use_llm=True,
+                         base_dims=None, item_dims=None):
     """Ask an LLM for each on-top item's height as a fraction of the base height.
 
     Mirrors ObjectProportionsConstraint's free-text approach: one call sees every item so
     it can reason about RELATIVE heights (a lamp taller than a clock). The LLM is told to
     reason from real-world proportions and bias to the upper, realistic end (decor on a low
     base is often as tall as the base or taller), capped at max_frac of the base height.
-    ``items`` is a list of (model_id, description). Returns one fraction each.
+    ``items`` is a list of (model_id, description). ``base_dims`` is the base mesh's
+    (width, depth, height) in metres and ``item_dims`` an optional list of each item's
+    NATURAL (width, depth, height) — giving the LLM real dimensions (not just text) so it
+    reasons about true relative size (e.g. a lamp on a short nightstand is still ~0.5-0.7 m).
+    Returns one fraction each.
     """
     n = len(items)
     if not use_llm or n == 0:
@@ -276,6 +298,12 @@ usually substantial, not tiny. On a LOW base (a coffee table, cabinet, sideboard
 lamp, vase, or potted plant is frequently about as tall as the base itself, sometimes
 taller; a centerpiece is a good chunk of the base height. Do not underestimate.
 
+A SMALL base does NOT imply small decor. A nightstand or side table is only ~0.5-0.6 m tall,
+but a table lamp on it is still ~0.5-0.7 m — i.e. a fraction near or ABOVE 1.0. Use the real
+DIMENSIONS provided (width x depth x height, in metres, for the base and for each item's natural
+size) to judge true relative size, not just the names; let a wide/deep base footprint tell you the
+piece is substantial.
+
 Rules:
 - Fractions must be between 0.1 and {max_frac:.2f} (a value near 1.0 means about as tall as the base).
 - Preserve realistic RELATIVE order: a lamp / vase / plant is taller than a bowl, tureen, or clock.
@@ -283,9 +311,14 @@ Rules:
 - Output exactly one line per object, in order, formatted as: <index>: <fraction>
 - Output nothing else."""
     llm = LLM(system_desc=sys)
-    listing = "\n".join(f"{i}: {d}" for i, (_, d) in enumerate(items))
-    prompt = (f"BASE object: {base_desc}\nObjects to place on top (index: description):\n"
-              f"{listing}\n\nGive the height fraction for each index.")
+    base_line = base_desc + (f"  [size ~ {base_dims[0]:.2f}w x {base_dims[1]:.2f}d x {base_dims[2]:.2f}h m]"
+                             if base_dims else "")
+    rows = []
+    for i, (_, d) in enumerate(items):
+        nd = item_dims[i] if (item_dims and i < len(item_dims) and item_dims[i]) else None
+        rows.append(f"{i}: {d}" + (f"  [natural ~ {nd[0]:.2f}x{nd[1]:.2f}x{nd[2]:.2f} m]" if nd else ""))
+    prompt = (f"BASE object: {base_line}\nObjects to place on top (index: description):\n"
+              f"{chr(10).join(rows)}\n\nGive the height fraction for each index.")
     return _parse_fracs(llm(prompt), n, max_frac)
 
 
@@ -304,20 +337,27 @@ def resize_and_place_on_top(base_path, base_desc, item_models, max_frac=1.2,
     Hb = float(bhi[1] - blo[1])
     N = len(item_models)
 
-    # Largest planar region = the usable top surface; size + place items against it.
+    # The usable TOP surface (highest substantial region, NOT the largest — which can be a lower
+    # shelf) is where on-top items rest; size + place items against it.
     regions = detect_horizontal_regions(base)
-    if regions:
-        top = max(regions, key=lambda r: r["area"])
+    tops = top_surfaces(regions)
+    if tops:
+        top = max(tops, key=lambda r: r["area"])
         rlo, rhi = top["bbox"]
         regW, regD, surf_y = float(rhi[0] - rlo[0]), float(rhi[2] - rlo[2]), float(top["y"])
         x0, x1, zc = float(rlo[0]), float(rhi[0]), float((rlo[2] + rhi[2]) / 2)
     else:
         regW, regD, surf_y = float(bhi[0] - blo[0]), float(bhi[2] - blo[2]), float(bhi[1])
         x0, x1, zc = float(blo[0]), float(bhi[0]), float((blo[2] + bhi[2]) / 2)
-    cap_w, cap_d = region_frac * regW, region_frac * regD
+    # items sit in a ROW across the width → each shares ~1/N of the width but may use most of the
+    # depth. A single item (N=1) is barely capped, which fixes tiny lamps/decor on small surfaces.
+    cap_w, cap_d = (regW / max(N, 1)) * 0.85, regD * 0.85
 
     descs = [describe(m) or os.path.basename(model_to_path(m)) for m in item_models]
-    fracs = llm_height_fractions(base_desc, list(zip(item_models, descs)), max_frac, use_llm)
+    base_dims = (float(bhi[0] - blo[0]), float(bhi[2] - blo[2]), Hb)
+    item_dims = [item_footprint(model_to_path(m)) for m in item_models]
+    fracs = llm_height_fractions(base_desc, list(zip(item_models, descs)), max_frac, use_llm,
+                                 base_dims=base_dims, item_dims=item_dims)
 
     scene = trimesh.load(base_path)
     if not isinstance(scene, trimesh.Scene):
@@ -369,17 +409,23 @@ def resized_items(base_path, base_desc, item_models, max_frac=1.2, region_frac=1
     base = load_mesh(base_path)
     blo, bhi = base.bounds
     Hb = float(bhi[1] - blo[1])
+    N = len(item_models)
     regions = detect_horizontal_regions(base)
     if regions:
         top = max(regions, key=lambda r: r["area"])
         rlo, rhi = top["bbox"]
-        cap_w, cap_d = region_frac * float(rhi[0] - rlo[0]), region_frac * float(rhi[2] - rlo[2])
+        regW, regD = float(rhi[0] - rlo[0]), float(rhi[2] - rlo[2])
     else:
-        cap_w, cap_d = region_frac * float(bhi[0] - blo[0]), region_frac * float(bhi[2] - blo[2])
+        regW, regD = float(bhi[0] - blo[0]), float(bhi[2] - blo[2])
+    # N-aware footprint cap (see resize_and_place_on_top): single items aren't over-shrunk.
+    cap_w, cap_d = (regW / max(N, 1)) * 0.85, regD * 0.85
 
     if descs is None:
         descs = [describe(m) or os.path.basename(model_to_path(m)) for m in item_models]
-    fracs = llm_height_fractions(base_desc, list(zip(item_models, descs)), max_frac, use_llm)
+    base_dims = (float(bhi[0] - blo[0]), float(bhi[2] - blo[2]), Hb)
+    item_dims = [item_footprint(model_to_path(m)) for m in item_models]
+    fracs = llm_height_fractions(base_desc, list(zip(item_models, descs)), max_frac, use_llm,
+                                 base_dims=base_dims, item_dims=item_dims)
 
     items = []
     for model, desc, frac in zip(item_models, descs, fracs):
@@ -635,11 +681,15 @@ def generate_and_select(base_path, base_desc, item_models, mode="on_top", k=10,
 
     regions, items = resized_items(base_path, base_desc, item_models, max_frac=max_frac,
                                    use_llm=use_llm, descs=item_descs)
+    if mode == "on_top":
+        # only generate candidates on the real TOP surface(s) — not a larger internal/lower shelf,
+        # which would sink the item into the base (the largest-area region is often NOT the top).
+        regions = top_surfaces(regions) or regions
     n_items = len(items)
     largest = max(max(it["w"], it["d"]) for it in items)
     tile = judge_tile_size(regions, largest, n_items)
     tiles = region_tiles(regions, tile)
-    n_top = sum(1 for t in tiles if t["region"] == 0)  # regions sorted by area, 0 = top
+    n_top = len(tiles) if mode == "on_top" else sum(1 for t in tiles if t["region"] == 0)
     values = [1.0] * len(tiles)
     rng = random.Random(seed)
     with open(os.path.join(out_dir, "_glb2blend.py"), "w") as f:

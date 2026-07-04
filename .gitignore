@@ -72,3 +72,6 @@ tools/dsl_place_test.py
 
 # Generated scene-collection collage (regenerable via RoomGroup.render_collection)
 /kitchen_collection.png
+
+# Manual isolated repro for place_on_top surface/sizing (scratch, like dsl_place_test.py)
+tools/lamp_ontop_test.py
