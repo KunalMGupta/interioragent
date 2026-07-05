@@ -1180,6 +1180,53 @@ any object described in a hair-salon / barbershop / beauty-salon context.
         return [m for m, _ in ranked], np.array([s for _, s in ranked])
 
 
+class DesktopWorkstationRetriever(FutureHSSDAssetRetriever):
+    """Curated pool of items that sit ON a desk / computer workstation — the on-top layer for a
+    `WorkstationGroup`: computer monitors and all-in-one desktop computers (which bundle the
+    keyboard+mouse), laptops, desk/task lamps, pen cups and desk organizers, small desk plants /
+    succulents, books, papers, picture frames, desk phones, mugs. Keeps a "computer monitor" or
+    "desk lamp" query inside believable desktop-scale items instead of returning a whole office
+    desk, a floor lamp, or unrelated decor. (Note: the dataset has essentially no standalone
+    keyboard/mouse mesh — they come bundled inside an all-in-one/desktop-computer set, so query
+    for "a desktop computer" to get the monitor+keyboard+mouse as one piece.)"""
+    def __init__(self):
+        super().__init__()
+        self.name = "DesktopWorkstationRetriever"
+        self.description = """
+Retrieves small items that are placed ON a DESK / computer WORKSTATION surface (the desktop
+layer of an office desk, reception counter, study desk or classroom desk): computer MONITORS
+and all-in-one DESKTOP COMPUTERS (iMac-style, which include the keyboard + mouse), LAPTOPS,
+DESK LAMPS / task lamps, PEN CUPS and desk ORGANIZER trays, small DESK PLANTS / succulents,
+stacks of BOOKS / papers / notebooks, PICTURE FRAMES, desk PHONES, mugs and other small desk
+accessories. Use this retriever for any object that belongs on top of a working desk. Do NOT
+use it for the desk itself (that is the default FutureHSSDAssetRetriever), for wall art
+(WallArtRetriever), or for a floor lamp / floor plant.
+"""
+        self.examples = """
+1. A computer monitor on a stand
+2. An all-in-one desktop computer
+3. A laptop
+4. An articulated desk lamp
+5. A pen cup with pens
+6. A small potted succulent for a desk
+7. A stack of books
+8. A desk organizer tray
+"""
+        with open(os.path.join(os.path.dirname(__file__), "assets/desktop_workstation.json"), "r") as f:
+            self.pool = json.load(f)
+
+    def get_likely_asset(self, query: str):
+        models = [m for m in self.pool if m in self.all_models]
+        idx = [self.all_models.tolist().index(m) for m in models]
+        embds = np.array([self.all_embeddings[i] for i in idx])
+        embd = np.array(self.encoder.embed_query(query))
+        similarities = np.dot(embds, embd)
+        top = np.argsort(similarities)[-20:][::-1]
+        top_models = [models[i] for i in top]
+        top_similarities = similarities[top]
+        return top_models, top_similarities
+
+
 class CherryBlossomRetriever(SceneProgAssetRetrieverBase):
     def __init__(self):
         super().__init__()
@@ -1274,6 +1321,7 @@ FUTURE_HSSD_ASSET_RETRIEVERS = [
     CountersRetriever(),
     GameEquipmentRetriever(),
     HairSalonRetriever(),
+    DesktopWorkstationRetriever(),
     CherryBlossomRetriever(),
     SceneMotifCoderObject(),
 ]

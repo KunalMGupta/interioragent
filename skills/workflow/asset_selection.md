@@ -91,6 +91,17 @@ If a *type* of object keeps coming back wrong, suspect a **pool gap**: `browse` 
 vs the actual routed pick will reveal it; the fix is a new/expanded category pool, not a
 better prompt. (Dataset is thin on some: ~2 podiums, ~2 lab benches.)
 
+**`DesktopWorkstationRetriever`** (pool `assets/desktop_workstation.json`) is the on-top layer for
+a desk/computer workstation: computer monitors and **all-in-one desktop sets** (an iMac-style mesh
+bundles the keyboard+mouse — the dataset has essentially no standalone keyboard/mouse, so query
+"a desktop computer" to get all three), laptops, desk/task lamps, pen cups and organizers, small
+desk plants, books, frames, desk phones. Built with the `candidates desktop → clean → pool` flow
+(`CANDIDATE_PROMPTS["desktop"]` over-generates; a conservative description filter drops desk/chair
+combos and speakers/mics that "desk lamp"/"monitor stand" queries drag in). Pair it with
+`WorkstationGroup` (see `../add-placement-group/SKILL.md` and `../examples/dental_office.md`). Note
+it overlaps `TableTopDecorRetriever` (generic table decor) — the router prefers this one for
+desk/computer queries because its description names the workstation items explicitly.
+
 ## "Set assets" — bundled categories (vanities, toilets)
 Some categories are **complete sets** in the mesh and must be retrieved + placed as ONE unit, never
 as separable parts: a vanity = cabinet+sink+counter; a toilet = bowl+cistern+flush-buttons+TP-holder.

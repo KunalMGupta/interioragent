@@ -15,7 +15,7 @@ get written back into these files so the next scene starts smarter.
 
 1. **This file** — workflow + constraint model (below).
 2. **[dsl_reference.md](dsl_reference.md)** — the API: how to actually write the program.
-3. **[examples/](examples/)** — the closest matching scene type (living_room, classroom, kitchen, hair_salon, …). Copy its skeleton, don't start from scratch.
+3. **[examples/](examples/)** — the closest matching scene type (living_room, classroom, kitchen, hair_salon, dental_office, …). Copy its skeleton, don't start from scratch. (dental_office is the reference for a **single-room build hung on one ingested "unit/set" hero asset**.)
 4. **[workflow/coarse_to_fine.md](workflow/coarse_to_fine.md)** — the phase plan you will follow.
 5. **[workflow/design_principles.md](workflow/design_principles.md)** — composition defaults to apply while placing (seating always gets a table; a seat's task light lives in the seat's group; build a symmetric/repeated unit once and duplicate with `N * unit`).
 6. **[workflow/constraints.md](workflow/constraints.md)** and **[workflow/vlm_feedback.md](workflow/vlm_feedback.md)** — keep open while optimizing.

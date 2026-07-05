@@ -39,6 +39,27 @@ that no existing group expresses** — not for a one-off layout you can hand-pla
 If the answer is "no new group," stop here and use an existing one creatively. See the worked
 example in `skills/examples/hair_salon.md`.
 
+> **Second worked precedent — `WorkstationGroup`** (desk + operator chair + monitor/computer +
+> distributed desk accessories). The generalizable motif is **"an anchor with a seat in front and
+> a set of items arranged ON its top surface at exact, semantic positions"** — a
+> desk-with-a-screen-and-clutter that recurs in offices, reception counters, study desks and
+> classroom desks. What it adds over a bare `place_on_top`: a **paired operator seat placed on the
+> floor in front of the desk facing it** (a named desk↔chair relationship), plus the *pairing of a
+> desk anchor with the right retriever pool* — the group is the reusable unit. **Crucial
+> lesson (learned the hard way):** the on-top items MUST be seated with the DSL's own
+> **`place_on_top`**, never a hand-computed `y = desk_height`. Seating at the desk's *aabb top*
+> floats the monitor whenever that isn't the writing surface (a hutch desk, or a bbox inflated by
+> baked-in props) — v1 did exactly this and the monitor/pen-cup/plant floated in mid-air while the
+> lamp (which happened to be a desk prop) sat right. `place_on_top` uses the highest *substantial*
+> surface (VLM tournament, AABB fallback) so items rest on the real desktop. It is reliable with
+> **only a few items**, so the group **caps the desktop at 3** (computer + two accessories) and
+> drops extras with a warning. Slots: `place_chair`, `place_computer` (faced at the operator after
+> seating), `place_accessories([...])`; still warns if the desk is a tall hutch (prefer a flat one).
+> It is paired with a retrieval mechanism, the **`DesktopWorkstationRetriever`** (curated pool
+> `assets/desktop_workstation.json`), which supplies the on-top layer — monitors / all-in-one
+> desktop **sets** (the dataset has no standalone keyboard/mouse; they come bundled in an iMac-style
+> set), desk lamps, pen cups, desk plants, books, frames. Worked in `skills/examples/dental_office.md`.
+
 ## Golden rules (do not break these)
 
 1. **Never edit core files' logic.** `IDSDL/groups.py`, `IDSDL/object.py`, `IDSDL/constraints.py`

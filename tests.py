@@ -1387,6 +1387,46 @@ def test_50():
     scene.export("results/test50_mirror_station.blend")
 
 
+def test_51():
+    """WorkstationGroup: desk anchor, chair on the floor in front facing it, and the computer +
+    accessories seated ON the real desktop surface via place_on_top (NOT floating on the aabb top).
+    The seating-height + chair asserts are what the group guarantees; place_on_top owns the
+    on-surface arrangement, so we do not assert exact item x/z or the computer's yaw."""
+    header(51, "WorkstationGroup desk + chair + on-top (place_on_top) seating")
+    scene = SceneProgRoom("test51", seed=SEED)
+    FLAT_DESK = "hssd/a42e2ef37ca205ecb1927bde89c6b618ddcda71b"   # flat 0.72 m desk (deterministic)
+    with scene.WorkstationGroup() as ws:
+        desk = scene.AddAsset("a simple flat wooden office desk", asset_id=FLAT_DESK)
+        ws.set_anchor(desk)
+        chair = ws.place_chair(scene.AddAsset("an ergonomic office chair"))
+        comp = ws.place_computer(scene.AddAsset("an all-in-one desktop computer"))
+        acc = ws.place_accessories([scene.AddAsset("an articulated desk lamp"),
+                                    scene.AddAsset("a pen cup with pens")])
+    scene.bind(ws)
+
+    d_aabb = desk.get_aabb()
+    desk_top = float(d_aabb[1, 1])
+    desk_bot = float(d_aabb[0, 1])
+    dz = float(desk.get_location()[2])
+    chz = float(chair.get_location()[2])
+    chair_bot = float(chair.get_aabb()[0, 1])
+    ch_rot = float(chair.get_rotation()) % 360.0
+    print(f"  desk top={desk_top:.2f} bottom={desk_bot:.2f} z={dz:.2f}   chair z={chz:.2f} "
+          f"bottom={chair_bot:.2f} rot={ch_rot:.0f}")
+
+    assert desk_top < 1.05, f"pinned desk should be a flat seated desk: top={desk_top:.2f}"
+    # Every desktop item must REST ON the desk surface (bottom ~ desk top), not float above it.
+    for label, o in [("computer", comp), ("lamp", acc[0]), ("pen cup", acc[1])]:
+        b = float(o.get_aabb()[0, 1])
+        print(f"  {label} bottom={b:.2f} (desk top={desk_top:.2f})")
+        assert desk_top - 0.05 < b < desk_top + 0.08, \
+            f"{label} should rest on the desk surface, not float: bottom={b:.2f} vs top={desk_top:.2f}"
+    assert abs(chair_bot - desk_bot) < 0.06, f"chair should stand on the floor: {chair_bot:.2f} vs {desk_bot:.2f}"
+    assert chz > dz + 0.02, f"chair should be in front (+z) of the desk: dz={dz:.2f} chz={chz:.2f}"
+    assert abs(ch_rot - 180.0) < 5, f"chair should face the desk (rot 180): {ch_rot:.0f}"
+    scene.export("results/test51_workstation.blend")
+
+
 # ---------------------------------------------------------------------------
 # Registry + runner
 # ---------------------------------------------------------------------------
@@ -1447,6 +1487,7 @@ TESTS = {
     48: test_48,   # FacingGroup (face_to_face)
     49: test_49,   # RingsGroup (concentric surround)
     50: test_50,   # MirrorStationGroup (mirror + counter + facing anchor)
+    51: test_51,   # WorkstationGroup (desk + chair + computer + accessories)
 }
 
 

@@ -404,6 +404,30 @@ CANDIDATE_PROMPTS = {
         "a framed wall art print", "a set of framed pictures", "a pendant ceiling light",
         "a modern chandelier", "a wall-mounted menu price board", "a neon wall sign", "a round wall clock",
     ],
+    "desktop": [
+        # --- monitors / screens / computers (the workstation hero surface item) ---
+        "a computer monitor", "a flat screen computer monitor", "a widescreen desktop monitor",
+        "a monitor on a stand", "a dual monitor setup", "an all-in-one desktop computer",
+        "an iMac style computer", "a desktop PC tower", "a laptop computer", "an open laptop",
+        "a small computer monitor", "a curved gaming monitor", "a computer display screen",
+        # --- keyboard / mouse / input ---
+        "a computer keyboard", "a keyboard and mouse", "a computer mouse", "a wireless keyboard",
+        "a mechanical keyboard", "a mouse and mouse pad", "a keyboard on a desk",
+        # --- desk / task lighting ---
+        "a desk lamp", "a task desk lamp", "an articulated desk lamp", "a modern desk lamp",
+        "a small table lamp", "a banker's desk lamp", "an LED desk lamp",
+        # --- desk organizers / stationery ---
+        "a pen holder", "a desk pen cup", "a desk organizer", "a desk organizer tray",
+        "a pencil cup with pens", "a stack of papers", "a stack of books on a desk",
+        "a stack of notebooks", "a stapler", "a desk file tray", "a paper tray organizer",
+        "a small clock on a desk", "a desk calendar", "a sticky note pad",
+        # --- desk decor / personal items ---
+        "a small potted succulent", "a small desk plant", "a small potted plant for a desk",
+        "a picture frame", "a small photo frame", "a coffee mug", "a pen cup with a plant",
+        "a desk telephone", "an office telephone", "a small trophy", "a desk pencil sharpener",
+        # --- office peripherals ---
+        "a desktop printer", "a small office printer", "a desk speaker", "a webcam",
+    ],
     "presentation": [
         # chalk / black boards
         "a large green chalkboard", "a black chalkboard with a wooden frame", "a classroom blackboard",

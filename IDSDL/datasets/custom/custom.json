@@ -33,5 +33,19 @@
   "freetop": false,
   "on_top_or_inside": false,
   "scale": 0.65
+ },
+ "custom/64a7f627dc9e7a246ebfef4bc10fb15c27be636f": {
+  "description": "Orange upholstered dental chair with a white metal frame and integrated overhead light and monitor arm.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.4
+ },
+ "custom/9f2a77c71313fa1f84c233717e70ca8371383174": {
+  "description": "A tall black server rack and network equipment cabinet, a floor-standing data-center rack filled with rack-mounted servers, switches, patch panels and cabling.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.8
  }
 }

@@ -9,7 +9,7 @@ from IDSDL.datasets.retrievers import SceneProgAssetRetriever
 from IDSDL.groups import *
 from IDSDL.groups_extra import (
     StackGroup, PyramidGroup, PileGroup, SymmetryGroup, FacingGroup, RingsGroup,
-    MirrorStationGroup,
+    MirrorStationGroup, WorkstationGroup,
 )
 
 
@@ -258,6 +258,9 @@ class SceneProgRoom:
 
     def MirrorStationGroup(self, max_top=None):
         return MirrorStationGroup(self, max_top=max_top)
+
+    def WorkstationGroup(self):
+        return WorkstationGroup(self)
 
     def RoomGroup(self, modulate_scale: float = 1.0, randomness: float = 0.0,
                   auto_render: bool = True,

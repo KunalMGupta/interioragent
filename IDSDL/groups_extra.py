@@ -14,6 +14,8 @@ Motifs implemented (gaps relative to the HSM motif taxonomy):
     SymmetryGroup  - mirrored / flanking pairs (motif: on_each_side)
     FacingGroup    - two rows facing an anchor (motif: face_to_face)
     RingsGroup     - concentric surround rings (motif: multi-ring surround)
+    MirrorStationGroup - wall mirror + facing floor item + counter/shelf (salon/gym/vanity)
+    WorkstationGroup   - desk + operator chair + computer/monitor + distributed desk accessories
 """
 import numpy as np
 
@@ -389,4 +391,111 @@ class MirrorStationGroup(AnchorGroup):
 
     def compile(self):
         self._layout()
+        return super().compile()
+
+
+class WorkstationGroup(AnchorGroup):
+    """A desk workstation: a desk (anchor) on the floor, an operator chair in front of it, and a
+    computer + a few small desk accessories seated ON the desktop. A general, reusable motif for an
+    office desk, a reception counter, a study desk or a classroom desk -- anywhere a "seat + screen
+    + desk clutter" unit is wanted.
+
+    Built in a local frame whose +Z is the *operator* side: the desk's working front (knee-hole,
+    modelled at +Z on dataset desks) faces the operator, so the chair sits at +Z facing back. Drop
+    the finished unit into a room like any group -- e.g.
+    ``room.place_on_back_left_corner(ws, facing="front")`` -- and it carries its layout rigidly.
+
+    **On-top seating uses the DSL's own ``place_on_top``** (VLM-tournament placement onto the real
+    top *surface*, with the deterministic AABB fallback), NOT a hand-computed y. This is the whole
+    point: seating items at the desk's aabb *top* floats them whenever that isn't the writing
+    surface (a hutch/back-unit desk, or a bbox inflated by baked-in props). ``place_on_top`` finds
+    the highest substantial surface instead. It works best with **a few** items, so the desktop is
+    capped at ``MAX_DESKTOP_ITEMS`` (3) -- pass the computer + your two best accessories; more are
+    dropped with a warning. Pair it with the ``DesktopWorkstationRetriever`` for the on-top items::
+
+        with scene.WorkstationGroup() as ws:
+            ws.set_anchor(scene.AddAsset("a simple flat wooden office desk"))
+            ws.place_chair(scene.AddAsset("an ergonomic office chair"))
+            ws.place_computer(scene.AddAsset("an all-in-one desktop computer"))
+            ws.place_accessories([scene.AddAsset("an articulated desk lamp"),
+                                  scene.AddAsset("a small potted succulent for a desk")])
+    """
+
+    CHAIR_GAP = 0.10          # desk front face -> chair (tucked but not interpenetrating)
+    MAX_DESKTOP_ITEMS = 3     # place_on_top is reliable with only a few items; keep the desk clean
+
+    def __init__(self, scene, name=None):
+        super().__init__(scene, name=name)
+        # Deterministic seat + delegated on-top placement: skip the per-instance VLM proportion
+        # render (waste, and it would re-render N identical desks in a row). place_on_top runs its
+        # own VLM pass; the room-level VLM still vets the whole scene.
+        self.vlm_solver = None
+        self._chair = None
+        self._chair_gap = False
+        self._computer = None    # the primary screen, turned to face the operator after seating
+        self._desktop = []       # computer + accessories, in priority order, seated via place_on_top
+
+    # ---- slot setters: just record; positioned in compile() ----
+    def place_chair(self, chair, gap=False):
+        """The operator seat (optional). Sits in front of the desk facing it; ``gap=True`` leaves
+        extra circulation space behind the desk instead of tucking the chair right up to it."""
+        self._chair = chair
+        self._chair_gap = gap
+        self.add_child(chair)
+        return chair
+
+    def place_computer(self, computer):
+        """The screen (optional): a monitor or an all-in-one desktop. Seated first (highest
+        priority in the <=3 desktop budget) and turned to face the operator after placement."""
+        items = self.to_list(computer)
+        if items:
+            self._computer = items[0]
+        self._desktop = items + self._desktop
+        return computer
+
+    def place_accessories(self, objs):
+        """Small desk-top items (optional): lamp, pen cup, plant, papers, frame, phone. Seated on
+        the real desktop surface by place_on_top, after the computer, within the <=3 budget."""
+        self._desktop = self._desktop + self.to_list(objs)
+        return objs
+
+    def compile(self):
+        if self.anchor is None:
+            raise ValueError("WorkstationGroup needs set_anchor(<desk>) before compile.")
+
+        cx, _, cz = (float(v) for v in self.anchor.get_location())
+        wa, ha, da = (float(v) for v in self.anchor.get_whd())
+
+        # A flat seated desk is best (place_on_top's VLM path handles a hutch, but its AABB fallback
+        # would seat on the hutch top). Warn + recommend pinning a ~0.75 m flat desk.
+        if ha > 1.05:
+            print(f"[WorkstationGroup] WARNING: desk '{getattr(self.anchor, 'retrieval_model', '?')}' "
+                  f"is {ha:.2f} m tall — likely a hutch/standing desk. Prefer a flat (~0.75 m) desk "
+                  f"(pin via asset_id=) so on-top items seat on the writing surface.")
+
+        # operator chair on the floor in front (+Z), facing the desk (rotation 180) -- floor items
+        # never float, so this stays a simple deterministic placement.
+        if self._chair is not None:
+            ch = self._chair
+            _, _, dch = (float(v) for v in ch.get_whd())
+            gap = self.CHAIR_GAP + (0.25 if self._chair_gap else 0.0)
+            ch.set_rotation(180.0)
+            ch.set_location(cx, self.compute_obj_y(ch), cz + da / 2.0 + gap + dch / 2.0)
+            ch.ignore_overlap = True
+
+        # desktop items: delegate to place_on_top so they seat on the REAL surface (no floating),
+        # capped to a few. Records a delayed op that AnchorGroup.compile() executes after layout.
+        items = self._desktop
+        if len(items) > self.MAX_DESKTOP_ITEMS:
+            print(f"[WorkstationGroup] {len(items)} desktop items requested; place_on_top is "
+                  f"reliable with <= {self.MAX_DESKTOP_ITEMS}. Seating the first "
+                  f"{self.MAX_DESKTOP_ITEMS}, dropping the rest.")
+            items = items[:self.MAX_DESKTOP_ITEMS]
+        if items:
+            self.place_on_top(items)
+            # turn the screen to face the operator (the chair) once positions have settled; this
+            # opt-in rotation is applied at the end of compile, after place_on_top.
+            if self._computer in items:
+                self.face(self._computer, toward=self._chair if self._chair is not None else self.anchor)
+
         return super().compile()
