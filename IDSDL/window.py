@@ -243,6 +243,10 @@ class Window(SceneProgObjectWall):
         self.mesh = self.translate(self.mesh, pos)
         self.mesh.export(self.mesh_path)
 
+        # A floor-to-ceiling window is bare glass by default — only dress it if a curtain is given.
+        if not curtain_texture:
+            return self, None
+
         mesh = self.add_curtain(curtain_texture)
         mesh = self.scale(mesh, 0.98 * wall_width, 0.98 * wall_height)
         mesh = self.rotate(mesh, wall)

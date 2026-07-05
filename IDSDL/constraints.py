@@ -324,7 +324,8 @@ class ClearanceConstraint(ConstraintBase):
         self.distance = float(distance)
         self.omit_objs = [] if omit_objs is None else omit_objs
 
-        assert dir in ["front", "sides", "all"], "Type must be 'front', 'sides', or 'all'"
+        assert dir in ["front", "sides", "all", "front_back", "front_sides"], \
+            "Type must be 'front', 'sides', 'all', 'front_back', or 'front_sides'"
         self.dir = dir
 
         super().__init__(group)
@@ -332,7 +333,7 @@ class ClearanceConstraint(ConstraintBase):
     def compute_gradients(self):
         raytracer = Raytracer2D(self.group)
 
-        if self.dir == "front" or self.dir == "all":
+        if self.dir in ("front", "all", "front_back", "front_sides"):
             if self.is_aligned_zpos(self.obj):
                 dist, nearest_obj = raytracer.compute_free_space(self.obj, "z+")
                 if dist < self.distance and nearest_obj is not None:
@@ -361,7 +362,7 @@ class ClearanceConstraint(ConstraintBase):
                     self.obj.grad += np.array([delta / 2, 0, 0], dtype=np.float32) * self.weight
                     nearest_obj.grad += np.array([-delta / 2, 0, 0], dtype=np.float32) * self.weight
 
-        if self.dir == "sides" or self.dir == "all":
+        if self.dir in ("sides", "all", "front_sides"):
             if self.is_aligned_zpos(self.obj) or self.is_aligned_zneg(self.obj):
                 dist, nearest_obj = raytracer.compute_free_space(self.obj, "x+")
                 if dist < self.distance and nearest_obj is not None:
@@ -388,7 +389,7 @@ class ClearanceConstraint(ConstraintBase):
                     self.obj.grad += np.array([0, 0, delta / 2], dtype=np.float32) * self.weight
                     nearest_obj.grad += np.array([0, 0, -delta / 2], dtype=np.float32) * self.weight
 
-        if self.dir == "all":
+        if self.dir in ("all", "front_back"):
             if self.is_aligned_zpos(self.obj):
                 dist, nearest_obj = raytracer.compute_free_space(self.obj, "z-")
                 if dist < self.distance and nearest_obj is not None:

@@ -1020,9 +1020,14 @@ class RoomGroup(SceneProgObject):
 
     def __init__(self, scene, name=None, modulate_scale=1.0, randomness=0.0,
                  auto_render=True, render_dir=None,
-                 render_resolution=(1280, 900), render_samples=48):
+                 render_resolution=(1280, 900), render_samples=48, max_height=3.0):
         super().__init__(scene, name=name)
         self.modulate_scale = modulate_scale
+        # Ceiling height is normally clamped to 3.0 m. For rooms with tall contents (a gym's
+        # power racks / machines, a warehouse), raise this cap so the room can grow with its
+        # tallest floor object instead of the ceiling cutting through it. Default 3.0 keeps
+        # every existing scene identical (clip(_, 3.0, 3.0) == 3.0).
+        self.max_height = float(max(max_height, 3.0))
         # Positional jitter (0..1) applied to free-standing floor placements within the
         # slack of their layout slot, for a less rigidly-centered, more natural room. Pure
         # translation (never rotation — that would break functional facing like a desk grid
@@ -1268,7 +1273,8 @@ class RoomGroup(SceneProgObject):
         rd = np.asarray(row_depths, dtype=float) * self.modulate_scale
         self.WIDTH = float(np.sum(cw))
         self.DEPTH = float(np.sum(rd))
-        self.HEIGHT = np.min((np.max([heights + 2.0, 3.0]), 3.0))
+        # grow with the tallest floor object (+ headroom), clamped to [3.0, max_height]
+        self.HEIGHT = float(np.clip(heights + 2.0, 3.0, self.max_height))
         # Cumulative center of each of the 5 columns / 5 rows. Placements land at
         # the center of their *sized* slot via these tables instead of fixed
         # W/4,W/2,3W/4 (and D/...) fractions — fractions assume evenly-sized rows,
@@ -1880,6 +1886,21 @@ class RoomGroup(SceneProgObject):
             self.scene.wall_objects.append(curtain)
 
     @placemethod
+    def place_mirror_full_wall(self, wall):
+        """Cover an entire wall with one floor-to-ceiling mirror (a real Cycles reflection).
+
+        Unlike a retrieved wall-mirror prop this spans the whole wall as a single reflective
+        surface, and unlike a window it leaves the wall intact (a mirror hangs on the wall).
+        Occupies all three slots of that wall, so mount nothing else on it."""
+        from mirror import Mirror
+        mirror = Mirror(self.WIDTH, self.HEIGHT, self.DEPTH)
+        wall_ = self._wall_name_to_wall(wall)
+        mirror.add_mirror_floor_to_ceiling(wall_)
+
+        self._register_wall_occupancy(wall, ["left", "center", "right"], mirror)
+        self.scene.wall_objects.append(mirror)
+
+    @placemethod
     def place_window_picture(self, wall, curtain=None):
         from window import Window
         window = Window(self.WIDTH, self.HEIGHT, self.DEPTH)
@@ -2134,6 +2155,40 @@ class RoomGroup(SceneProgObject):
             self.grad_solver._snap_overlaps()
             self.grad_solver._clamp_to_bounds()
 
+    def _warn_over_height(self, tol=0.02):
+        """Warn at compile time about any placed object whose top pokes through the ceiling.
+
+        The room auto-sizes its WIDTH/DEPTH from the furniture footprint, but its HEIGHT is
+        only grown to the tallest *floor* object (clamped to [3.0, max_height]). Wall-mounted
+        art/fixtures are positioned relative to their support (e.g. a clock stacked above a
+        locker bank) and their scale tracks the wall width, so in a wide room a big wall item
+        can end up above HEIGHT and clip through the ceiling — which no constraint catches.
+        There is no auto-fix (raising the ceiling changes the whole room), so we surface it:
+        print a warning and record it in scene.vlm_feedback so the workbench report shows it.
+        Fix by shrinking the offending asset (modulate_scale/width) or raising the ceiling with
+        RoomGroup(max_height=...)."""
+        offenders = []
+        for obj in list(getattr(self.scene, "objects", [])):
+            try:
+                top = float(obj.get_aabb()[1, 1])
+            except Exception:
+                continue
+            if top > self.HEIGHT + tol:
+                offenders.append((getattr(obj, "name", "?"),
+                                  getattr(obj, "retrieval_query", "") or "", top))
+        if not offenders:
+            return
+        need = max(t for _, _, t in offenders)
+        lines = [f"[RoomGroup] WARNING: {len(offenders)} object(s) exceed the room height "
+                 f"(HEIGHT={self.HEIGHT:.2f} m). They will clip through the ceiling."]
+        for name, q, top in sorted(offenders, key=lambda o: -o[2]):
+            lines.append(f"    - {name} '{q[:40]}' top={top:.2f} m (over by {top - self.HEIGHT:+.2f} m)")
+        lines.append(f"    Fix: shrink the asset (modulate_scale/width) or raise the ceiling with "
+                     f"RoomGroup(max_height={need + 0.2:.1f}).")
+        msg = "\n".join(lines)
+        print(msg)
+        self.scene.vlm_feedback += ("\n" if self.scene.vlm_feedback else "") + msg
+
     def compile(self):
         self.reset_compile_state()
         self.clear_constraints()
@@ -2195,6 +2250,9 @@ class RoomGroup(SceneProgObject):
         self.scene.WIDTH = self.WIDTH
         self.scene.DEPTH = self.DEPTH
         self.scene.HEIGHT = self.HEIGHT
+
+        # Flag anything whose top pokes through the ceiling (see _warn_over_height).
+        self._warn_over_height()
 
         # Apply opt-in rotation overrides after layout/wall placement settle, so the
         # VLM rotation check below judges the corrected orientation.

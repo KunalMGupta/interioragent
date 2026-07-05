@@ -261,7 +261,8 @@ class SceneProgRoom:
 
     def RoomGroup(self, modulate_scale: float = 1.0, randomness: float = 0.0,
                   auto_render: bool = True,
-                  render_dir=None, render_resolution=(1280, 900), render_samples=48):
+                  render_dir=None, render_resolution=(1280, 900), render_samples=48,
+                  max_height: float = 3.0):
         return RoomGroup(
             self,
             modulate_scale=modulate_scale,
@@ -270,6 +271,7 @@ class SceneProgRoom:
             render_dir=render_dir,
             render_resolution=render_resolution,
             render_samples=render_samples,
+            max_height=max_height,
         )
 
     def SentenceASCIIGenerator(self):

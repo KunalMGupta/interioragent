@@ -318,7 +318,9 @@ class SceneProgObject:
             hook(self)
 
     def add_clearance(self, obj, distance=0.5, dir="front", omit_objs=None):
-        """Keep `distance` m clear in front of / around `obj` (dir: front|sides|all)."""
+        """Keep `distance` m clear around `obj`. dir: front (facing dir), sides (the two
+        perpendicular sides), all (front+back+sides), front_back (front+back only, e.g. an
+        equipment row's aisles), front_sides (front+left+right, e.g. a machine or a desk)."""
         return self.add_constraint_hook(
             lambda g: g.ClearanceConstraint(obj, distance=distance, dir=dir, omit_objs=omit_objs)
         )
