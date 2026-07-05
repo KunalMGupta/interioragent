@@ -94,6 +94,22 @@ with scene.RoomGroup() as room:
 - Rough distances: wardrobe/closet **0.8–1.0 m**, kitchen appliances **0.9 m** (appliance
   + a person), dresser/low cabinet **0.6 m**, desk knee space **0.5 m**.
 - `dir="sides"` / `dir="all"` exist but are rarely needed — reach for `front` first.
+
+> **Clearance is a SOFT gradient — it can be overpowered; for a *guaranteed* gap between two
+> specific pieces, use geometry instead.** `ClearanceConstraint` pushes the object and the nearest
+> object apart, but competes with every other gradient (especially the `OverlapConstraint` of things
+> right next to the target). When another object is jammed against the piece you're clearing, the two
+> forces reach a weak equilibrium and the gap comes out far short of `distance`. Worked example (bar,
+> 2026-07-05): `add_clearance(backbar, distance=0.5, dir="front")` to open a bartender aisle between the
+> back-bar and the counter delivered only **~0.16 m** (verified by reading `get_aabb()` z-spans on an
+> `auto_render=False` build) because the **stool row** overlapping the front of the counter pushed back;
+> raising `distance` just fought the same tug-of-war. **Fix:** compose the two pieces in ONE rigid group
+> with an explicit-gap placement — `RelativeGroup.place_on_back(backbar)` bakes a fixed `FRONT_BACK_GAP`
+> (0.45 m) the solver can't collapse, then place the whole station. Rule of thumb: **clearance for
+> "keep floor roughly open" (doors, standing room); geometric composition for "these two must sit N m
+> apart."** (Latent quirk: for an axis-aligned object both `is_aligned_zpos` and `is_aligned_zneg`
+> return true, so the constraint's `if/elif` never reaches the `zneg` branch — an object rotated 180°
+> clears the wrong side.)
 - The clearance **moves the blocker, not the cabinet**: the cabinet is wall-anchored and
   effectively pinned; the floor item in front gets pushed away. If two cabinets face each
   other across a narrow room the solve can fight itself — widen the room (`modulate_scale`)

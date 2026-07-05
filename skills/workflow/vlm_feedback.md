@@ -103,3 +103,19 @@ rotation issue you can *see*; the VLM rotation text is just a hint.
   recompile the chairs angled in (proper conversation U) and `RotationConstraint`
   returned `no rotation`. Lesson: `*_further`/side placements orient sideways by
   default — face seating at the cluster anchor explicitly.
+- **[bar/lounge, lighting]** `add_lighting("a row of warm pendant lights", density=0.4)` over the bar
+  produced a **cloud of ~30 globes**. Cause: the retrieved mesh for a *plural* query was already a
+  cluster of globes, and `add_lighting` copies that mesh `N = 1 + (max_lights-1)*density` times. → Fix
+  in two parts: (1) query a **SINGULAR** fixture ("a warm brass globe pendant light") so each copy is one
+  globe; (2) **lower density** (0.5→0.2) — the count spreads across the *group footprint*, and an
+  anchor group that includes the stool depth fans the globes forward into the room, so a low count keeps
+  a tight cluster over the counter. Result: a clean ~4-6-globe row. General rule now in
+  ../dsl_reference.md/examples: **for a countable row of pendants, query the fixture singular and keep
+  density low; a plural query = a pre-clustered mesh = a cloud.** (`best_grid` squares the count, so a
+  perfect 1×N row isn't achievable via density alone — low count is the only lever without a code change.)
+- **[bar/lounge, room size]** RoomProportions drifted `0.9 → 0.8 → 0.95` across the three phases. Held
+  the size in phases 1–2, applied `RoomGroup(modulate_scale=0.85)` in the final phase (chose 0.85 over
+  the suggested 0.8 — a bar wants open circulation), re-check returned 0.95 ≈ converged. Same rule as
+  living_room. And the recurring **"rotate velvet tub chair to face the coffee table"** on a `place_circle(2)`
+  2-top was **declined as noise** — the render showed correct across-table seating (RotationConstraint =
+  weak smoke alarm).
