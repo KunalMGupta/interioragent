@@ -31,6 +31,28 @@ produces a tidy arrangement of wrong objects. The repeatable process (proven on 
 
 Worked end-to-end in [../examples/hair_salon.md](../examples/hair_salon.md).
 
+## Batch retrieval stress test (do this right after the asset map)
+Before writing any placement, **route the whole candidate list at once and audit it** — a cheap way
+to answer "are most of the assets actually available?" up front (a library asked exactly this). Loop
+the warm router over ~40 queries and print `sim | query | chosen-desc`; the descriptions alone tell
+you what genuinely exists vs. what routes to the wrong thing. Warm the singletons ONCE per process so
+all 40 share the 687 MB embedding load:
+```python
+from IDSDL.service import core as svc
+svc.warm()
+for q in QUERIES:                       # your 40 candidate object descriptions
+    d = svc.retrieve(q)                 # routes + visual-picks, no seeded-cache pollution
+    c = next((c for c in d["candidates"] if c["chosen"]), (d["candidates"] or [{}])[0])
+    print(f"{c.get('similarity',0):.3f}  {q:<48}  {c.get('desc','')[:60]}")
+```
+It runs serially behind the router lock (~15 s/query → ~10 min for 40) — kick it off in the
+background. Then, for the handful that came back wrong or low-sim, do a **second pass**: reword the
+query (describe the object + material, not the room) and copy the chosen model's preview
+(`svc.candidate_preview(model)`) to eyeball it. Read the previews as images before pinning. Worked
+end-to-end in [../examples/library.md](../examples/library.md) (32/40 on-target; the 5 gaps were all
+rewordings or skippable props, no ingest). This is the fast, thorough alternative to inspecting one
+query at a time.
+
 ## Inspect & override (the feedback loop)
 - **See a pick:** `python workbench.py inspect "<query>"` → prints the contact-sheet path
   (open it), the `VLM decision` (`chose #N: <reason>`), and the ranked candidates with
