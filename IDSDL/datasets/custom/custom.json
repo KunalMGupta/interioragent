@@ -47,5 +47,166 @@
   "freetop": false,
   "on_top_or_inside": false,
   "scale": 0.8
+ },
+ "custom/13678e75f918187fd80281ce9461cc8fc24186b4": {
+  "description": "Green chalkboard with a dark wooden frame.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.5
+ },
+ "custom/19f70dba87ed2135bc33b107c942016dd7c2ab71": {
+  "description": "Rustic dark brown wooden wagon cart with an open top and wheels.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/71bda402b67456713f4f06f422bb8bb8ce1455da": {
+  "description": "Industrial grey metal wire shelving unit with five tiers.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/58ad2b42c254545ddef252936c3890e988dc3697": {
+  "description": "Rusty industrial factory boiler unit with two stacked round metal tanks on a steel frame.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/c15875b2fa17d39cf85efc946180dd49427a7244": {
+  "description": "Orange industrial forklift with black steel mast and forks.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.3
+ },
+ "custom/96aaadef0ac4e06d76a4d130abc55f166d7db7c7": {
+  "description": "Industrial steel forklift with black frame, orange forks and grey cab.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.3
+ },
+ "custom/ebe6d0a7f2bacdb4ed39b6b43617fbb34ee7933e": {
+  "description": "Orange industrial gas cylinder canister with a grey collar.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.35
+ },
+ "custom/7896c26afd9695a1e125809519d9590479377983": {
+  "description": "Grey plastic multimedia projector with a black lens ring.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.5
+ },
+ "custom/839035b56a479597e781b09eaf1578ebe25cb9cf": {
+  "description": "Small grey kei truck, a cab-over mini pickup with an open cab door.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 1.5
+ },
+ "custom/c169ca1ddead54f66ed5a2278f8dcd232d58ba20": {
+  "description": "Large black ribbed plastic water storage tank with a screw-cap lid.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.8
+ },
+ "custom/3d013e88f2977a1a98d3dd73cecf0d1cb3c3ad9f": {
+  "description": "Orange plastic traffic cone with white reflective bands.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.3
+ },
+ "custom/5c1edac8c0baf18250423ea7f5bc61ba38db887a": {
+  "description": "Rusty green vintage cab-over flatbed truck.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/ed63a6c63388ea06487deddf24b5526c3a859ccb": {
+  "description": "Grey ceiling-mounted projection screen with an aluminum top bar.",
+  "placement": "ceiling",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.5
+ },
+ "custom/049182127609e8712ab86df11e06180a626afe87": {
+  "description": "White retractable projection screen with an aluminium housing and a grey projector mounted in front.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/6a9a8519c436366eb369f4cf3448ea18636d1d87": {
+  "description": "Freestanding black chalkboard on a brown wooden frame with a metal stand.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/503e6ded76d3541bb85e06c20765ae30a3269216": {
+  "description": "White ceiling-mounted digital video projector on a black drop-pole mount.",
+  "placement": "ceiling",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.4
+ },
+ "custom/77209bcbf628ab88f537f7b1983e42ba1cde49fb": {
+  "description": "Grey corrugated metal roller shutter door with a rusty valance box, a shop or loading-dock shutter.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.6
+ },
+ "custom/ac9be2e873be38bccad6a1c058a4280847f37647": {
+  "description": "Industrial orange metal pallet jack with a black handle and grey forks.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.8
+ },
+ "custom/06463870baa87e6e753b983a48dee9aeae3e2859": {
+  "description": "Large dark wood-framed chalkboard with a black writing surface and a bottom ledge.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.6
+ },
+ "custom/574d85991b53e5bb44fbc58914626d950c5a4d1d": {
+  "description": "Black matte plastic projector with an exposed lens.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.4
+ },
+ "custom/e750dc69c392d8205805e7a0653c276f5ee5dd49": {
+  "description": "Green emergency exit sign with a brushed aluminium frame.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.6
+ },
+ "custom/5db6653f74cfbc0c026cefb35ca80f6c6fbed4f3": {
+  "description": "Grey semi-truck box trailer / shipping-container body on landing-gear legs.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.5
+ },
+ "custom/eb9d3e7bc84027186dadc23ce1dcd332429eed11": {
+  "description": "Natural wooden shipping and storage crate with a rustic finish.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.0
  }
 }
