@@ -48,11 +48,18 @@ goes flush on the **back** short wall; the door on the **front** short wall. Roo
 
 ## Phase 2 — surface & floor details (the bar becomes a bar; lighting)
 Rebuild the bar as a `RelativeGroup` anchored on the counter so the props travel with it:
-`place_on_top(4 * bottle)`, three stools across the front (`place_on_front_left/front/front_right`),
-and `add_lighting("warm recessed ambient ceiling downlights", density=0.02)` for room fill. Place
-the whole group with `room.place_on_back_wall_center(bar, facing="front")` — the counter sits flush
-to the wall, the stools + bottles project into the room. Upgraded the chandelier query to
+`place_on_top(4 * bottle)`, a **single row of stools** in front, and
+`add_lighting("warm recessed ambient ceiling downlights", density=0.02)` for room fill. Place the
+whole group with `room.place_on_back_wall_center(bar, facing="front")` — the counter sits flush to
+the wall, the stools + bottles project into the room. Upgraded the chandelier query to
 `"an ornate gold and crystal chandelier"` for a warmer, more opulent fixture.
+
+> **Stools = one nested row, not `place_on_front_left/front/front_right`.** The three per-corner
+> verbs split the stools to the two *ends* of the counter (one on each side) — reads wrong for a
+> bar. Instead build the stools as their own `GridGroup.place_row(3 * stool)` and drop that row in
+> with `bar.place_on_front(stool_row)`: one contiguous, evenly-spaced line of stools along the
+> counter front, all facing it. (General: to line N children up in front of an anchor, place a
+> `GridGroup` row, don't enumerate corner verbs.)
 
 > **Gotcha — no `place_on_top` decor without a real mesh.** `hub.place_on_top("a stack of colorful
 > casino poker chips")` retrieved a **children's book display rack** (chips/cards/chip-trays don't

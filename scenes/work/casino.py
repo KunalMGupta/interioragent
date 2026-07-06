@@ -45,12 +45,13 @@ with scene.GridGroup(sparsity=0.35, randomness=0.12) as slots_right:
     slots_right.place_row(right_slots)
 
 # ============================ BACK short wall: the BAR (secondary anchor) ============================
-# Ph2: counter -> a real bar. Bottles on the top, stools facing it, warm ambient fill light from here.
+# Ph2: counter -> a real bar. Bottles on the top, a single row of stools along the front, warm fill.
+with scene.GridGroup(sparsity=0.5, randomness=0.1) as stool_row:            # 3 stools lined up in ONE row
+    stool_row.place_row(3 * scene.AddAsset("a bar stool with a red cushioned seat"))
 with scene.RelativeGroup() as bar:
     bar.set_anchor(scene.AddAsset("a long bar counter", asset_id=_BAR))
     bar.place_on_top(4 * scene.AddAsset("a tall liquor bottle"))
-    stools = 3 * scene.AddAsset("a bar stool with a red cushioned seat")
-    bar.place_on_front_left(stools[0]); bar.place_on_front(stools[1]); bar.place_on_front_right(stools[2])
+    bar.place_on_front(stool_row)                                          # the whole row in front of the counter
     bar.add_lighting("warm recessed ambient ceiling downlights", density=0.02)   # ambient fill for the room
 
 # ============================ ROOM ============================
