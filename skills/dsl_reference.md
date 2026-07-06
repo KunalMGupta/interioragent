@@ -185,6 +185,17 @@ Floor placement: `place_on_center/back/front/left/right`, `*_left/right`, and
 Openings: `place_door(wall, position)`, `place_window_floor_to_ceiling`,
 `place_window_picture`, `place_window_standard(wall, position, curtain)`.
 
+**`facing` — leave it OFF for wall furniture (the default already faces the room).** `facing` names
+the direction the asset points. For `place_on_<wall>_wall_*`, **omitting `facing`** applies the
+correct default from `fill_facing_heuristic`: a wall asset faces the **opposite** direction — *into
+the room* (back-wall→`front`, front-wall→`back`, left-wall→`right`, right-wall→`left`), so its access
+side (locker doors, sink, cubby openings) is reachable. **Do NOT pass `facing=<the wall's own name>`**
+(`place_on_left_wall_center(v, facing="left")`) — that turns the asset to face the wall it stands
+against and denies access (the locker-room bug: the VLM flagged "rotate vanity to face center").
+Override `facing` only for a genuinely non-default pose. (Asset mesh fronts are *unnormalized*, so if
+one still renders backwards under the default, fix it once with the front cache — see below — not with
+a per-scene facing hack.)
+
 ## Randomness / realism (jitter)
 
 Perfectly-centered, perfectly-aligned layouts read as synthetic. Three opt-in knobs add
