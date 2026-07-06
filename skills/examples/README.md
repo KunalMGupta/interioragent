@@ -12,6 +12,7 @@ pattern we've already solved.
 | [dental_office.md](dental_office.md) | dental operatory | **Set-piece hero** — hang the whole room on one ingested "unit/set" asset |
 | [bathroom.md](bathroom.md) | spa master bath | Set-assets + width-only scaling + overlap handling for bundled sets |
 | [executive_office.md](executive_office.md) | executive office | **Single room, zoned** — a storage backbone splits work vs. lounge zones |
+| [lobby.md](lobby.md) | corporate lobby | **Reception anchor + waiting lounge** — `AroundGroup.place_rectilinear` cluster; retrieval stress-test + reception-desk ingest; `add_lighting` count math |
 | [computer_room.md](computer_room.md) | computer lab | **Repeated-unit grid** — a `WorkstationGroup` tiled across the floor |
 | [locker_room.md](locker_room.md) | locker room | **Long rows** flush-on-wall or down the centre (never `place_on_<side>`) |
 | [warehouse.md](warehouse.md) | industrial storage | Racking **rows in room-thirds** to carve forklift aisles |
@@ -20,6 +21,8 @@ pattern we've already solved.
 | [game_room.md](game_room.md) | rec lounge | **Hero-in-the-middle** — the hero's clearance sizes the room; zones ring it |
 | [hair_salon.md](hair_salon.md) | hair salon | **Motif-group build** — `MirrorStationGroup` styling row; canonical coarse-to-fine |
 | [bar.md](bar.md) | cocktail bar | Focused cluster — a straight bar-line + back-bar; compact-group lighting |
+| [library.md](library.md) | reading hall | **Symmetric corridor** — twin shelf rows on the long walls + a centre reading-table column; retrieval stress-test kickoff; `add_lighting` size↔count coupling |
+| [retail_store.md](retail_store.md) | apparel boutique | **Central spine + perimeter loop** — twin double-sided rails frame a display table; branded service wall; front-window mannequins. Opens with a retrieval **stress test**; lighting-density-vs-floor-area + storefront-void lessons |
 | [bedroom.md](bedroom.md) | master bedroom | Core residential — **symmetric hero** (bed) + a self-contained reading-nook sub-group |
 | [children_room.md](children_room.md) | kids bedroom | Three small zones; `place_inside` tile-fit |
 
