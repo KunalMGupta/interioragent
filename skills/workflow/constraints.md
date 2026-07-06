@@ -139,6 +139,18 @@ by pushing **other floor objects** out of the trapezoid between them. To use it 
 Canonical good use: `sofa` on one wall, `media_console` opposite, both centred on the same
 column → `room.add_visibility(sofa, media_console)` keeps the coffee table out of the line.
 
+### place_inside / place_on_top tile clamp — items can't exceed their cell
+
+The smart-placement solver (`tools/planar_regions.py`) tiles each detected surface/interior region
+into cells and drops one item per cell. It sizes each item by **height** (LLM relative-height) with a
+footprint cap taken against the **largest** region — which for a multi-compartment piece (a cubby, a
+bookcase) is far bigger than the small cell an item actually lands in, so items **overflowed** their
+compartments (the children's-room baskets bulged out of the cubbies). Fixed: `build_candidate` now
+**uniformly clamps every item's WxD to its assigned tile** (`TILE_FOOTPRINT_FRAC = 0.9`, a margin so
+it doesn't touch the cell walls) before placing it. It's a no-op for a normal tabletop (tile ≥ item),
+and applies to both `place_inside` and `place_on_top`. If a `place_inside` item still looks too big,
+suspect region detection (compartments merged into one region), not the sizing.
+
 ## 3. VLM constraints — auto-run, but only produce text
 
 `VLM` type. They render the group, ask an LLM to judge it, and **append the

@@ -65,6 +65,10 @@ PALETTE = [
     [230, 126, 34, 130], [149, 165, 166, 130],
 ]
 
+# When an item is placed on a tile, its footprint is uniformly shrunk to at most this fraction of
+# the tile's WxD, leaving a margin so it doesn't touch the cell walls (see build_candidate).
+TILE_FOOTPRINT_FRAC = 0.9
+
 
 def model_to_path(model):
     """Resolve a 'future/<id>' or 'hssd/<id>' model id (or a raw path) to a GLB path."""
@@ -152,13 +156,25 @@ def top_surfaces(regions, area_frac=0.5, band=0.02):
     and picking that sinks on-top items into the body. So: keep regions with >= `area_frac` of the
     max area (usable, not slivers), then take the highest of those plus any coplanar within `band`
     metres. Returns [] for empty input.
+
+    Coplanar-within-`band` regions are the SAME physical surface (a thin tabletop whose underside
+    carries upward-facing normals, or a slightly recessed inset), so we **snap them all to the
+    highest plane** (`top_y`). Otherwise the caller (region_tiles/build_candidate) seats items at
+    each region's own y and an item landing on the lower coplanar face sinks up to `band` metres
+    into the top — the exact "monitor sunk into the desk" bug on desks modelled with a 2 cm-thick top.
     """
     if not regions:
         return []
     max_area = max(r["area"] for r in regions)
     substantial = [r for r in regions if r["area"] >= area_frac * max_area]
     top_y = max(r["y"] for r in substantial)
-    return [r for r in substantial if top_y - r["y"] <= band]
+    out = []
+    for r in substantial:
+        if top_y - r["y"] <= band:
+            r = dict(r)
+            r["y"] = top_y          # snap the near-coplanar band to the true top plane
+            out.append(r)
+    return out
 
 
 def _fallback_face_clusters(mesh, up, normal_tol, min_area, height_tol):
@@ -515,6 +531,20 @@ def build_candidate(base_path, items, chosen_tiles, rng, return_placements=False
         mesh = it["mesh"].copy()
         yaw = rng.uniform(0, 2 * math.pi)
         mesh.apply_transform(trimesh.transformations.rotation_matrix(yaw, [0, 1, 0]))
+        # Clamp the item's footprint to its assigned tile: an item's WxD must never exceed the
+        # identified tile (compartment/cell) size, or it overflows the cubby/shelf it sits in.
+        # resized_items caps footprint against the LARGEST region, which for a multi-compartment
+        # cabinet is far bigger than the small cell an item actually lands on. We measure the
+        # rotated footprint (so it's aligned with the tile axes) and shrink UNIFORMLY to fit,
+        # keeping TILE_FOOTPRINT_FRAC as a margin so items don't touch the cell walls. For a
+        # normal tabletop (tile >= item) this is a no-op.
+        lo, hi = mesh.bounds
+        iw, idd = float(hi[0] - lo[0]), float(hi[2] - lo[2])
+        fit = min(1.0,
+                  (t["w"] * TILE_FOOTPRINT_FRAC) / iw if iw > 1e-9 else 1.0,
+                  (t["d"] * TILE_FOOTPRINT_FRAC) / idd if idd > 1e-9 else 1.0)
+        if fit < 1.0:
+            mesh.apply_scale(fit)
         lo, hi = mesh.bounds
         cx, cz = (lo[0] + hi[0]) / 2, (lo[2] + hi[2]) / 2
         ox = rng.uniform(-1, 1) * max(0.0, (t["w"] - (hi[0] - lo[0])) / 2) * 0.7

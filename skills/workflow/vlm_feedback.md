@@ -190,3 +190,53 @@ rotation issue you can *see*; the VLM rotation text is just a hint.
   `width=1.85` so it comes in at real scale instead of toy-sized; `place_on_center(car, facing="front")`
   then oriented it correctly with no front-cache. Lesson: for any uncurated hero (vehicles), pin the id
   AND pin a real-world dimension — retrieval scale alone can't be trusted for a gap category.
+- **[children_room v1, room size]** `RoomProportions` `0.83` → `0.85` → `0.92` → `0.9` across phases.
+  → Held early, applied `RoomGroup(modulate_scale=0.80)` in the final phase **and added a bean-bag** to
+  fill the open play floor (better than over-shrinking a kids room that wants play space). Converged
+  ~0.9, accepted. Same "render wins early; size last" rule, plus: fill floor before shrinking further.
+- **[children_room v1, bad scale metadata]** A "large yellow bean bag" loaded at **0.15 m** (native
+  mesh 0.92 m — the retriever `scale` is ~6x off) and rendered as a tiny blob. → `modulate_scale=5.0`
+  (uniform). `width=` alone scales only X and **squashes it flat** — for a bad-scale asset use uniform
+  `modulate_scale`, not a single-axis `width=`.
+- **[children_room v1, wheeled "art"]** A "planets/stars" wall-art pick was a **wheeled easel/display**
+  (0.26 m deep) that read as a standing frame on the wall. → Swapped for a genuinely FLAT canvas
+  (`d ≈ 0.005 m`). Lesson: for `place_on_wall_*`, check the asset **depth** — a deep mesh is a stand/
+  easel, not a print; pin a thin canvas and pre-scale it small.
+- **[children_room v1, place_inside overflow]** Cubby baskets **overflowed** their compartments — the
+  smart-placement footprint cap sized items vs. the *largest* region, not the cell they land in. →
+  Code fix (`tools/planar_regions.py:build_candidate` now clamps each item's WxD to its tile,
+  `TILE_FOOTPRINT_FRAC=0.9`). After: baskets sit inside the cubbies. See ../workflow/constraints.md.
+- **[children_room v1, rotation]** `rotate desk by 180 / rotate chair to face the desk / rotate
+  nightstand` emitted on a layout that reads correct in every render. → **Declined all** —
+  `place_desk_chair` makes the desk pose correct by construction; the check is a weak smoke alarm.
+- **[executive_office v1, LIGHTING — the big one]** `add_lighting("a brass sputnik chandelier …")`
+  rendered as **giant white emissive globes hanging at head height in the middle of the room** AND
+  **blew the whole scene out to pure white**. Cause (see `IDSDL/object.py::add_lighting`): the helper
+  **caps a fixture's HEIGHT at 1.5 m but pins its origin at the ceiling**, so a *tall* fixture (a
+  chandelier/pendant with long drop) hangs ~1.5 m down into the room; and its glowing globe *meshes*
+  emit on top of the 500 W point-light budget → overexposure. → **Use a COMPACT flush fixture** (`"a
+  flat round LED flush mount ceiling light"`): short, so it sits flush at the ceiling, and little
+  emissive area, so the fixed budget lights evenly without blowing out. The **desk task lamp** carries
+  the decorative/warm-light layer instead. Lesson (generalizable): **`add_lighting` wants a FLAT/FLUSH
+  fixture, never a tall hanging chandelier — pick the fixture by its geometry (short + small emissive
+  area), not by how pretty the catalog render is.** Complements the bar-scene "singular pendant + low
+  density" rule. Also: **`density` is fixture COUNT, not brightness** (total wattage is fixed) — high
+  density tiles the ceiling and, seen edge-on at the top of a frame, reads as a dithered black/white
+  band; keep density ~0.2 for one calm room.
+- **[executive_office v1, window = black void]** Same renderer limit as dental: any opening (window or
+  floor-to-ceiling) shows a **black night void** (no exterior environment), and curtains render as
+  parted opaque drapes with the void between them. → Used a **STANDARD (small) punched window**, not a
+  wide `place_window_picture` — a smaller pane keeps the void modest — with light sheer curtains to
+  frame it. Balanced (non-blown) room lighting also helps: the void only screamed when the walls were
+  overexposed white. Lesson: **prefer `place_window_standard` over `place_window_picture` unless you
+  truly want a wall of black; the void reads as "evening" once the room isn't blown out.**
+- **[executive_office v1, WorkstationGroup facing — reconfirmed]** For a single executive desk I wanted
+  the boss seated *behind* the desk facing the room/window (power layout). Operator side = local **+Z**
+  and the chair faces the desk, so `room.place_on_center(station, facing="back")` (rotate the group
+  180°) seats the executive on the bookcase side facing front. Verified by eye. Same "+Z operator,
+  face the group at the OPPOSITE wall" rule as the computer_room grid.
+- **[executive_office v1, converged rescale]** `RoomProportions` walked `0.8 (no change other view)` →
+  `0.9` as I shrank `modulate_scale` 1.0 → 0.9 → 0.85. A vote that **decays toward neutral** as you act
+  = converging; stopped at 0.85 on a well-proportioned render rather than chasing 0.8 forever. Also
+  declined the perennial "rotate sofa to face the round [side] table" — a wall-backed lounge sofa
+  should not pivot to face its own end table (noise, like the dental unit rotation).
