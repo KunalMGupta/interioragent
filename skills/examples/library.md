@@ -65,7 +65,7 @@ def reading_unit():
         u.set_anchor(scene.AddAsset("a long walnut rectangular reading table", asset_id=_TABLE))
         u.place_rectilinear(longer_side1=3 * scene.AddAsset("a wooden library chair with a cushioned seat", asset_id=_CHAIR),
                             longer_side2=3 * scene.AddAsset("a wooden library chair with a cushioned seat", asset_id=_CHAIR))
-        u.place_on_top(2 * scene.AddAsset("a green glass bankers desk lamp", asset_id=_LAMP, modulate_scale=0.4))  # SMALL
+        u.place_on_top(2 * scene.AddAsset("a green glass bankers desk lamp", asset_id=_LAMP, modulate_scale=0.3))  # SMALL (0.3)
         u.place_rug("a traditional patterned green and cream wool rug", size=0.9)
     return u
 with scene.GridGroup(sparsity=0.4, randomness=0.1) as reading_hall:
@@ -88,7 +88,7 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.12) as room:           # 0
     room.place_on_right_wall_center(shelves_right)
     room.place_on_back_left_corner(nook, facing="front")   # nook faces the ROOM, not its side table
     room.place_on_back_right_corner(scene.AddAsset("a tall potted plant with lush green leaves"))
-    room.place_on_front_wall_center(scene.AddAsset("a curved wooden reception front desk", asset_id=_REFDESK))
+    room.place_on_front(reference, facing="front")         # reference desk+chair OFF the wall (see below)
     room.place_on_front_wall_left(scene.AddAsset("a dark wooden card catalog cabinet with many small drawers", asset_id=_CATALOG))
     room.place_on_right(book_cart)                          # fill the browsing aisle
     room.place_door("front_wall", position="right")
@@ -96,7 +96,19 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.12) as room:           # 0
     room.add_lighting("a warm fabric drum pendant ceiling light", density=0.025, modulate_scale=0.4)  # see coupling note
     room.place_on_wall_front_center(scene.AddAsset("a framed classical oil painting portrait in a gold frame"))
     room.place_on_wall_front_left(scene.AddAsset("a large round wall clock with roman numerals"))
+    # a few library-themed artworks on the back wall (pre-scale via width= so the mount clears the ceiling)
+    room.place_on_wall_back_left(scene.AddAsset("a framed vintage botanical illustration print in a gold frame", width=0.7))
+    room.place_on_wall_back_right(scene.AddAsset("a framed antique world map in a wooden frame", width=0.8))
 scene.export("library.blend")
+```
+
+where the off-wall reference station is:
+```python
+_ref_desk  = scene.AddAsset("a curved wooden reception front desk", asset_id=_REFDESK, modulate_scale=1.2)
+_ref_chair = scene.AddAsset("a brown leather office desk chair")
+with scene.RelativeGroup() as reference:
+    reference.place_desk_chair(_ref_desk, _ref_chair, gap=True)   # desk + librarian's chair behind it
+    reference.face(_ref_chair, toward=_ref_desk)                  # chair turns to the desk
 ```
 
 ## VLM / layout feedback we hit and how we resolved it
@@ -116,6 +128,23 @@ scene.export("library.blend")
   **declined** as noise: a reading-nook armchair faces the ROOM, and a slim floor lamp is ~symmetric
   (same call as the executive_office "rotate sofa to face its own end table").
 - **"rescale hardcover books by 0.6"** → applied `modulate_scale=0.6` on the nook's book stack.
+
+### Follow-up feedback round (user notes)
+- **"lamps too big"** → dropped the banker's lamp `modulate_scale` 0.4 → **0.3** (sits right on a table).
+- **"the reference desk is flush to the wall — give it space; add a desk + chair; make it 1.2×."**
+  Rebuilt the flush `place_on_front_wall_center(desk)` as an **off-wall desk+chair station**:
+  `RelativeGroup.place_desk_chair(desk, chair, gap=True)` (the correct group — anchors the desk, seats
+  the librarian on its back, `gap=True` leaves staff circulation), placed as a **floor** group with
+  `room.place_on_front(reference, facing="front")` so the desk stands proud of the wall with the chair
+  tucked behind it. `modulate_scale=1.2` on the desk. **Facing gotcha:** `place_desk_chair` rotates the
+  desk to face the chair, so `facing="back"` pointed the patron panel at the WALL; `facing="front"`
+  turns the serving side to the room. Add `reference.face(chair, toward=desk)` so the chair faces the
+  desk. The VLM then repeats **"rotate reception desk 180 to face the chair"** — **decline it**: this is
+  the *reception exception* — a service counter faces the patrons (the room), not its own staff chair.
+- **"add a few library-themed paintings"** → hung a **botanical print** + an **antique world map** on the
+  back wall (`place_on_wall_back_left/right`), pre-scaled with `width=` so the mount clears the ceiling
+  ([[wall-art-mount-height]]). The long walls are full-height bookcases with no headroom for art, so
+  wall art lives only on the two short walls (back = botanical/map, front = portrait/clock).
 
 ## What worked / gotchas (summary)
 - **Symmetric corridor = twin `place_row` shelf runs on the LONG walls, omit `facing`.** Loading both

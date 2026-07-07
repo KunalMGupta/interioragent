@@ -41,8 +41,8 @@ def reading_unit():
         u.set_anchor(scene.AddAsset("a long walnut rectangular reading table", asset_id=_TABLE))
         u.place_rectilinear(longer_side1=3 * scene.AddAsset("a wooden library chair with a cushioned seat", asset_id=_CHAIR),
                             longer_side2=3 * scene.AddAsset("a wooden library chair with a cushioned seat", asset_id=_CHAIR))
-        # banker's lamps read SMALL (~0.4 m) — place_on_top oversizes them to chair-scale otherwise
-        u.place_on_top(2 * scene.AddAsset("a green glass bankers desk lamp", asset_id=_LAMP, modulate_scale=0.4))
+        # banker's lamps read SMALL — place_on_top oversizes them to chair-scale; 0.3 sits right on a table
+        u.place_on_top(2 * scene.AddAsset("a green glass bankers desk lamp", asset_id=_LAMP, modulate_scale=0.3))
         u.place_rug("a traditional patterned green and cream wool rug", size=0.9)
     return u
 
@@ -68,6 +68,16 @@ with scene.RelativeGroup() as nook:
     nook.place_on_back_left(scene.AddAsset("a slender brass floor reading lamp", asset_id=_FLOOR))  # its task light
     nook.place_rug("a small patterned wool rug", size=0.7)
 
+# ============================ FRONT: the librarian REFERENCE station (desk + chair, off the wall) ============================
+# place_desk_chair = the correct group for a manned desk: anchors the desk, seats the librarian on its
+# BACK, rotates the desk so its front faces the room, and gap=True keeps staff circulation behind it.
+# Placed as a FLOOR group (not flush) so the desk stands proud of the wall with the chair in the gap.
+_ref_desk  = scene.AddAsset("a curved wooden reception front desk", asset_id=_REFDESK, modulate_scale=1.2)  # 1.2x bigger
+_ref_chair = scene.AddAsset("a brown leather office desk chair")
+with scene.RelativeGroup() as reference:
+    reference.place_desk_chair(_ref_desk, _ref_chair, gap=True)
+    reference.face(_ref_chair, toward=_ref_desk)                              # librarian's chair turns to the desk
+
 # a rolling book cart to fill the browsing aisle (audited: white 3-tier iron rolling cart)
 book_cart = scene.AddAsset("a rolling library book cart trolley on wheels")
 
@@ -87,8 +97,9 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.12) as room:
     # own side table -- the "rotate armchair to face the table" VLM vote is declined as noise)
     room.place_on_back_left_corner(nook, facing="front")
     room.place_on_back_right_corner(scene.AddAsset("a tall potted plant with lush green leaves"))
-    # FRONT short wall = librarian reference desk + card catalog (entrance anchor); door on the right
-    room.place_on_front_wall_center(scene.AddAsset("a curved wooden reception front desk", asset_id=_REFDESK))
+    # FRONT = the reference station stands OFF the wall (desk faces the room, librarian's chair behind);
+    # card catalog flush on the wall behind it; door on the right.
+    room.place_on_front(reference, facing="front")   # patron side of the desk faces the room (chair tucks toward the wall)
     room.place_on_front_wall_left(scene.AddAsset("a dark wooden card catalog cabinet with many small drawers", asset_id=_CATALOG))
     room.place_on_right(book_cart)                                             # fill the browsing aisle
     room.place_door("front_wall", position="right")
@@ -104,5 +115,9 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.12) as room:
     # gilded/academic wall decor over the low entrance supports (keeps art clear of the ceiling)
     room.place_on_wall_front_center(scene.AddAsset("a framed classical oil painting portrait in a gold frame"))
     room.place_on_wall_front_left(scene.AddAsset("a large round wall clock with roman numerals"))
+    # a few library-themed framed artworks on the back wall (pre-scaled via width= so the mount height
+    # clears the ceiling; the long walls are full-height bookcases with no headroom for art)
+    room.place_on_wall_back_left(scene.AddAsset("a framed vintage botanical illustration print in a gold frame", width=0.7))
+    room.place_on_wall_back_right(scene.AddAsset("a framed antique world map in a wooden frame", width=0.8))
 
 scene.export("library.blend")
