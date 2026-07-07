@@ -1397,8 +1397,10 @@ class GradSolver:
         return objects, actions, dists
 
     def _snap_overlaps(self):
-        """Deterministic pass: push any still-overlapping pair apart by their penetration depth."""
+        """Deterministic pass: push any still-overlapping pair apart by their penetration depth.
+        Returns True if it moved anything (so a caller can tell whether it did work)."""
         objs = self.objects
+        moved = False
         for _ in range(20):
             any_overlap = False
             for i in range(len(objs)):
@@ -1412,6 +1414,7 @@ class GradSolver:
                     if ox <= 0 or oz <= 0:
                         continue
                     any_overlap = True
+                    moved = True
                     if ox <= oz:
                         d = ox / 2 + 1e-3
                         sign = 1.0 if o1.get_location()[0] < o2.get_location()[0] else -1.0
@@ -1424,6 +1427,7 @@ class GradSolver:
                         o2.translate(0, 0, sign * d)
             if not any_overlap:
                 break
+        return moved
 
     def _clamp_to_bounds(self):
         """Hard-clamp any objects still outside room boundaries after gradient optimization.
@@ -1433,11 +1437,12 @@ class GradSolver:
         This pass guarantees correctness regardless of solver convergence.
         """
         if not hasattr(self.group, "WIDTH") or not hasattr(self.group, "DEPTH"):
-            return
+            return False
 
         WIDTH = float(self.group.WIDTH)
         DEPTH = float(self.group.DEPTH)
 
+        moved = False
         for obj in self.objects:
             if getattr(obj, "ignore_overlap", False):
                 continue
@@ -1460,6 +1465,42 @@ class GradSolver:
 
             if abs(dx) > 1e-6 or abs(dz) > 1e-6:
                 obj.translate(dx, 0, dz)
+                moved = True
+        return moved
+
+    def _settle(self, rounds=12):
+        """Reconcile the two deterministic guarantees — no overlaps AND in-bounds — which
+        fight each other in a tight room: separating a pair can push one object out of bounds,
+        and clamping it back in can shove it into a neighbour. Running snap ONCE then clamp ONCE
+        (the old order) can therefore END on an overlap that nothing re-separates — the source of
+        two dining tables interpenetrating in a small room. Instead alternate: snap to no-overlap,
+        clamp; if the clamp moved anything, re-snap and repeat. Converges to a state that is both
+        overlap-free and in-bounds whenever the room is large enough to hold the furniture; in a
+        genuinely too-small (infeasible) room it exits after `rounds` and leaves a residual overlap
+        for `overlap_pairs()` / RoomGroup._warn_overlaps to surface."""
+        self._snap_overlaps()
+        for _ in range(rounds):
+            if not self._clamp_to_bounds():
+                break          # clamp was a no-op -> the last snap's overlap-free state is in-bounds
+            self._snap_overlaps()
+        # Always end IN-BOUNDS. In a feasible room the loop already converged and this is a no-op; in
+        # an infeasible (too-small) room it forces the residual infeasibility to show up as an OVERLAP
+        # (which _warn_overlaps reports) rather than an object left poking out of the room.
+        self._clamp_to_bounds()
+
+    def overlap_pairs(self, min_penetration=0.02):
+        """Residual overlapping (obj1, obj2, ox, oz) pairs among the current objects, ignoring
+        pairs flagged ignore_overlap and penetrations below `min_penetration` m on either axis."""
+        objs = [o for o in self.objects if not getattr(o, "ignore_overlap", False)]
+        pairs = []
+        for i in range(len(objs)):
+            for j in range(i + 1, len(objs)):
+                a1, a2 = objs[i].get_aabb(), objs[j].get_aabb()
+                ox = float(min(a1[1, 0], a2[1, 0]) - max(a1[0, 0], a2[0, 0]))
+                oz = float(min(a1[1, 2], a2[1, 2]) - max(a1[0, 2], a2[0, 2]))
+                if ox > min_penetration and oz > min_penetration:
+                    pairs.append((objs[i], objs[j], ox, oz))
+        return pairs
 
     def __call__(self):
         if len(self.objects) == 0:
@@ -1480,8 +1521,9 @@ class GradSolver:
                 action = action * self.lr
                 obj.translate(action[0], action[1], action[2])
 
-        self._snap_overlaps()
-        self._clamp_to_bounds()
+        # Reconcile no-overlap AND in-bounds together (see _settle) — running snap then a single
+        # clamp can re-introduce an overlap the clamp created and nothing undoes.
+        self._settle()
 
 
 

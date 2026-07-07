@@ -1314,6 +1314,28 @@ class RoomGroup(SceneProgObject):
                 occupied_area += op.obj.get_area()
         return occupied_area / total_area
 
+    def _wall_furniture_y(self, obj, bottom, span):
+        """Y-location for a floor/wall-mounted furniture piece, clamped to stay INSIDE
+        the room. A piece placed with a ``bottom`` lift (a shelf mounted up the wall) or
+        an oversized retrieved mesh could otherwise poke through the ceiling or run past
+        the wall ends into a corner (the object extent is never checked against the room
+        by the raw placement). Uniformly scale it down so (a) its along-wall footprint
+        fits the wall ``span`` and (b) its lifted top clears the ceiling. Corrective only
+        — it fires nothing for pieces that already fit, so existing scenes are unchanged.
+        """
+        b = bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)
+        margin = 0.1
+        # (a) along-wall footprint (the piece's width runs along the wall) <= wall span
+        foot = obj.get_width()
+        if foot > span - 2 * margin and foot > 1e-6:
+            obj.scale(obj.get_width() * (span - 2 * margin) / foot)
+        # (b) the lifted top must clear the ceiling
+        h = obj.get_height()
+        max_h = self.HEIGHT - b - margin
+        if h > max_h and max_h > 1e-6:
+            obj.scale(obj.get_width() * max_h / h)
+        return self.compute_obj_y(obj) + b
+
     @placemethod
     def place_on_center(self, obj, facing=None):
         obj.set_location(self.col_centers[2], self.compute_obj_y(obj), self.row_centers[2])
@@ -1371,84 +1393,84 @@ class RoomGroup(SceneProgObject):
     @placemethod
     def place_on_back_wall_left(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[1], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), delta_d)
+        obj.set_location(self.col_centers[1], self._wall_furniture_y(obj, bottom, self.WIDTH), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_wall_center(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[2], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), delta_d)
+        obj.set_location(self.col_centers[2], self._wall_furniture_y(obj, bottom, self.WIDTH), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_wall_right(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[3], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), delta_d)
+        obj.set_location(self.col_centers[3], self._wall_furniture_y(obj, bottom, self.WIDTH), delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_left_wall_right(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[1])
+        obj.set_location(delta_w, self._wall_furniture_y(obj, bottom, self.DEPTH), self.row_centers[1])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_left_wall_center(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[2])
+        obj.set_location(delta_w, self._wall_furniture_y(obj, bottom, self.DEPTH), self.row_centers[2])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_left_wall_left(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[3])
+        obj.set_location(delta_w, self._wall_furniture_y(obj, bottom, self.DEPTH), self.row_centers[3])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_right_wall_left(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[1])
+        obj.set_location(self.WIDTH - delta_w, self._wall_furniture_y(obj, bottom, self.DEPTH), self.row_centers[1])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_right_wall_center(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[2])
+        obj.set_location(self.WIDTH - delta_w, self._wall_furniture_y(obj, bottom, self.DEPTH), self.row_centers[2])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_right_wall_right(self, obj, facing=None, bottom=None):
         delta_w, _ = self.wall_deltas(obj, facing)
-        obj.set_location(self.WIDTH - delta_w, self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.row_centers[3])
+        obj.set_location(self.WIDTH - delta_w, self._wall_furniture_y(obj, bottom, self.DEPTH), self.row_centers[3])
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_wall_left(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[3], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.DEPTH - delta_d)
+        obj.set_location(self.col_centers[3], self._wall_furniture_y(obj, bottom, self.WIDTH), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_wall_center(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[2], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.DEPTH - delta_d)
+        obj.set_location(self.col_centers[2], self._wall_furniture_y(obj, bottom, self.WIDTH), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_wall_right(self, obj, facing=None, bottom=None):
         _, delta_d = self.wall_deltas(obj, facing)
-        obj.set_location(self.col_centers[1], self.compute_obj_y(obj) + (bottom if bottom is not None else getattr(obj, "mount_bottom", 0.0)), self.DEPTH - delta_d)
+        obj.set_location(self.col_centers[1], self._wall_furniture_y(obj, bottom, self.WIDTH), self.DEPTH - delta_d)
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
@@ -2150,10 +2172,10 @@ class RoomGroup(SceneProgObject):
                         if xmax > self.WIDTH - clear:
                             c.translate((self.WIDTH - clear) - xmax, 0, 0); moved = True
         if moved:
-            # repair any overlaps / OOB the push introduced (reuses the solver's deterministic passes)
+            # repair any overlaps / OOB the push introduced (reuses the solver's deterministic passes,
+            # alternating them so a bounds-clamp can't leave a re-introduced overlap — see _settle)
             self.grad_solver.objects = self.children
-            self.grad_solver._snap_overlaps()
-            self.grad_solver._clamp_to_bounds()
+            self.grad_solver._settle()
 
     def _warn_over_height(self, tol=0.02):
         """Warn at compile time about any placed object whose top pokes through the ceiling.
@@ -2185,6 +2207,46 @@ class RoomGroup(SceneProgObject):
             lines.append(f"    - {name} '{q[:40]}' top={top:.2f} m (over by {top - self.HEIGHT:+.2f} m)")
         lines.append(f"    Fix: shrink the asset (modulate_scale/width) or raise the ceiling with "
                      f"RoomGroup(max_height={need + 0.2:.1f}).")
+        msg = "\n".join(lines)
+        print(msg)
+        self.scene.vlm_feedback += ("\n" if self.scene.vlm_feedback else "") + msg
+
+    def _warn_overlaps(self, min_penetration=0.05):
+        """Final guarantee CHECK: after the whole room is assembled, verify no two floor objects
+        still interpenetrate. The gradient solve + _settle resolve overlaps whenever the room is
+        big enough; a residual overlap almost always means the room is TOO SMALL — the furniture
+        footprints don't fit, so separating one pair only forces another together and the clamp
+        can't win. There is no safe auto-fix (growing the room silently would fight the author's
+        modulate_scale), so we surface it: print + record in scene.vlm_feedback, routed alongside
+        the RoomProportions signal so the workbench report shows it. Fix by enlarging the room
+        (raise modulate_scale / RoomGroup size) or removing/shrinking some furniture."""
+        solver = getattr(self, "grad_solver", None)
+        if solver is None:
+            return
+        solver.objects = [c for c in self.children
+                          if not getattr(c, "is_proxy", False)
+                          and not getattr(c, "is_light", False)]
+        pairs = solver.overlap_pairs(min_penetration=min_penetration)
+        if not pairs:
+            return
+
+        def _q(o):
+            return (getattr(o, "retrieval_query", None) or getattr(o, "name", None)
+                    or o.__class__.__name__)
+
+        occ = None
+        try:
+            occ = self.compute_occupancy_ratio()
+        except Exception:
+            pass
+        lines = [f"[RoomGroup] WARNING: {len(pairs)} pair(s) of floor objects still OVERLAP after the "
+                 f"solve — the room is likely TOO SMALL to hold this furniture"
+                 + (f" (occupancy ratio {occ:.2f})." if occ is not None else ".")]
+        for o1, o2, ox, oz in sorted(pairs, key=lambda p: -(p[2] * p[3])):
+            lines.append(f"    - '{_q(o1)[:36]}' X '{_q(o2)[:36]}' "
+                         f"(penetration {ox:.2f}x{oz:.2f} m)")
+        lines.append("    Fix: enlarge the room (raise RoomGroup(modulate_scale=...) or reduce its "
+                     "contents); overlaps here mean the gradient solve could not separate them.")
         msg = "\n".join(lines)
         print(msg)
         self.scene.vlm_feedback += ("\n" if self.scene.vlm_feedback else "") + msg
@@ -2253,6 +2315,10 @@ class RoomGroup(SceneProgObject):
 
         # Flag anything whose top pokes through the ceiling (see _warn_over_height).
         self._warn_over_height()
+
+        # Final overlap guarantee-check: flag any floor objects that still interpenetrate
+        # (almost always = the room is too small for its furniture). See _warn_overlaps.
+        self._warn_overlaps()
 
         # Apply opt-in rotation overrides after layout/wall placement settle, so the
         # VLM rotation check below judges the corrected orientation.

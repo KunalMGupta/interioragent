@@ -21,6 +21,7 @@ pattern we've already solved.
 | [game_room.md](game_room.md) | rec lounge | **Hero-in-the-middle** — the hero's clearance sizes the room; zones ring it |
 | [hair_salon.md](hair_salon.md) | hair salon | **Motif-group build** — `MirrorStationGroup` styling row; canonical coarse-to-fine |
 | [bar.md](bar.md) | cocktail bar | Focused cluster — a straight bar-line + back-bar; compact-group lighting |
+| [restaurant.md](restaurant.md) | bistro dining room | **Zoned single room** — bar wall + banquette wall + a field of 2-top clusters; opens with a retrieval STRESS TEST; cafe-SET retrieval trap |
 | [library.md](library.md) | reading hall | **Symmetric corridor** — twin shelf rows on the long walls + a centre reading-table column; retrieval stress-test kickoff; `add_lighting` size↔count coupling |
 | [retail_store.md](retail_store.md) | apparel boutique | **Central spine + perimeter loop** — twin double-sided rails frame a display table; branded service wall; front-window mannequins. Opens with a retrieval **stress test**; lighting-density-vs-floor-area + storefront-void lessons |
 | [bedroom.md](bedroom.md) | master bedroom | Core residential — **symmetric hero** (bed) + a self-contained reading-nook sub-group |

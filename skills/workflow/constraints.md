@@ -17,7 +17,21 @@ them and never tune them.
 
 Trust these. If two things overlap in the render anyway, the cause is usually
 upstream (bad placement verb, an item that's a wall-object, or a group that
-didn't recompile) — not the solver.
+didn't recompile) — **or the room is simply too small** (see the overlap guarantee below).
+
+### The overlap+bounds guarantee (`_settle`) and the too-small-room warning
+After the gradient solve, the `GradSolver` runs two deterministic repair passes: `_snap_overlaps`
+(push interpenetrating pairs apart) and `_clamp_to_bounds` (pull out-of-bounds items back in). These
+two **fight each other** in a tight room — separating a pair can shove one object out of the room, and
+clamping it back in can push it into a neighbour. Running snap-once-then-clamp-once could therefore
+*end on an overlap the clamp had just created* (this actually shipped two dining tables interpenetrating).
+Fixed: `GradSolver._settle()` **alternates** snap↔clamp until both hold (and always ends with a clamp,
+so the final layout is guaranteed in-bounds). In a room big enough for its furniture this converges to
+zero overlaps; in a genuinely **too-small** room it can't, and `RoomGroup._warn_overlaps()` (a final
+post-compile check, mirroring `_warn_over_height`) prints + records in `scene.vlm_feedback`:
+`[RoomGroup] WARNING: N pair(s) of floor objects still OVERLAP … the room is likely TOO SMALL`. A
+residual overlap is almost always a size problem — **fix it by enlarging the room** (raise
+`RoomGroup(modulate_scale=…)`) or removing/shrinking furniture, not by fighting the solver.
 
 ### Door clearance is automatic — you do nothing
 

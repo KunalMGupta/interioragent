@@ -51,7 +51,18 @@ query (describe the object + material, not the room) and copy the chosen model's
 (`svc.candidate_preview(model)`) to eyeball it. Read the previews as images before pinning. Worked
 end-to-end in [../examples/library.md](../examples/library.md) (32/40 on-target; the 5 gaps were all
 rewordings or skippable props, no ingest). This is the fast, thorough alternative to inspecting one
-query at a time.
+query at a time. (`scene.prefetch_assets(QUERIES)` then `AddAsset` per query, reading
+`obj.retrieval_candidates`, is an equivalent one-scene variant — restaurant, 47/47.)
+
+Three failure modes the audit catches that a similarity number ALONE won't (read the `desc`/preview):
+- **Off-theme at a decent score** — a restaurant "dessert case" came back a branded ice-cream freezer
+  at 0.57. Skip or reword; don't ship it.
+- **A weak KEY asset is usually POOL-ROUTING, not recall** — reword to name the class the right
+  retriever owns: restaurant back-bar "…shelving unit…" (generic shelving, 0.49) → "a tall back bar
+  CABINET with shelves of liquor bottles" → `CabinetandShelfRetriever`, a real hutch (0.62).
+- **The SET trap** — a generic "a small round dining table" / "a cafe table" often returns a table with
+  chairs BAKED into the mesh; if a group supplies its own seating that double-seats it. Pin a BARE piece
+  or add "no chairs". (Inverse of the [[set-assets-and-scaling]] idea — here the set is what to avoid.)
 
 ## Inspect & override (the feedback loop)
 - **See a pick:** `python workbench.py inspect "<query>"` → prints the contact-sheet path
