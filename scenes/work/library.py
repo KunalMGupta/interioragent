@@ -68,15 +68,18 @@ with scene.RelativeGroup() as nook:
     nook.place_on_back_left(scene.AddAsset("a slender brass floor reading lamp", asset_id=_FLOOR))  # its task light
     nook.place_rug("a small patterned wool rug", size=0.7)
 
-# ============================ FRONT: the librarian REFERENCE station (desk + chair, off the wall) ============================
-# place_desk_chair = the correct group for a manned desk: anchors the desk, seats the librarian on its
-# BACK, rotates the desk so its front faces the room, and gap=True keeps staff circulation behind it.
-# Placed as a FLOOR group (not flush) so the desk stands proud of the wall with the chair in the gap.
-_ref_desk  = scene.AddAsset("a curved wooden reception front desk", asset_id=_REFDESK, modulate_scale=1.2)  # 1.2x bigger
-_ref_chair = scene.AddAsset("a brown leather office desk chair")
-with scene.RelativeGroup() as reference:
-    reference.place_desk_chair(_ref_desk, _ref_chair, gap=True)
-    reference.face(_ref_chair, toward=_ref_desk)                              # librarian's chair turns to the desk
+# ============================ FRONT: the librarian REFERENCE station ============================
+# A reference/reception desk is an INVERTED workstation (lobby.md): the display counter faces the
+# patrons, the librarian + chair sit BEHIND. Build it as a WorkstationGroup with desk.set_rotation(180)
+# to flip the counter to the patron side and make the staff side the operator (+Z); place it on a floor
+# THIRD (not flush on the wall) so the librarian has real space behind the desk.
+_ref_desk = scene.AddAsset("a curved wooden reception front desk", asset_id=_REFDESK, modulate_scale=1.2)  # 1.2x bigger
+_ref_desk.set_rotation(180)
+with scene.WorkstationGroup() as reference:
+    reference.set_anchor(_ref_desk)
+    reference.place_chair(scene.AddAsset("a brown leather office task chair on casters"), gap=True)
+    reference.place_accessories([scene.AddAsset("a green glass bankers desk lamp", asset_id=_LAMP, modulate_scale=0.3),
+                                 scene.AddAsset("a stack of hardcover books", modulate_scale=0.45)])
 
 # a rolling book cart to fill the browsing aisle (audited: white 3-tier iron rolling cart)
 book_cart = scene.AddAsset("a rolling library book cart trolley on wheels")
@@ -97,9 +100,11 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.12) as room:
     # own side table -- the "rotate armchair to face the table" VLM vote is declined as noise)
     room.place_on_back_left_corner(nook, facing="front")
     room.place_on_back_right_corner(scene.AddAsset("a tall potted plant with lush green leaves"))
-    # FRONT = the reference station stands OFF the wall (desk faces the room, librarian's chair behind);
-    # card catalog flush on the wall behind it; door on the right.
-    room.place_on_front(reference, facing="front")   # patron side of the desk faces the room (chair tucks toward the wall)
+    # FRONT-LEFT = the reference station stands OFF the wall on a floor third (operator +Z toward the
+    # front wall via facing="front" -> librarian faces the room, patron counter to the room, chair behind).
+    # Placed front-LEFT so it clears the centre reading-table column (plain place_on_front jammed into it).
+    room.place_on_front_left(reference, facing="front")
+    # card catalog flush on the front wall behind the reference station; door on the right.
     room.place_on_front_wall_left(scene.AddAsset("a dark wooden card catalog cabinet with many small drawers", asset_id=_CATALOG))
     room.place_on_right(book_cart)                                             # fill the browsing aisle
     room.place_door("front_wall", position="right")

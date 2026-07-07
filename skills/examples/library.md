@@ -88,7 +88,7 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.12) as room:           # 0
     room.place_on_right_wall_center(shelves_right)
     room.place_on_back_left_corner(nook, facing="front")   # nook faces the ROOM, not its side table
     room.place_on_back_right_corner(scene.AddAsset("a tall potted plant with lush green leaves"))
-    room.place_on_front(reference, facing="front")         # reference desk+chair OFF the wall (see below)
+    room.place_on_front_left(reference, facing="front")    # reference desk+chair OFF the wall, front-left (see below)
     room.place_on_front_wall_left(scene.AddAsset("a dark wooden card catalog cabinet with many small drawers", asset_id=_CATALOG))
     room.place_on_right(book_cart)                          # fill the browsing aisle
     room.place_door("front_wall", position="right")
@@ -102,13 +102,17 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.12) as room:           # 0
 scene.export("library.blend")
 ```
 
-where the off-wall reference station is:
+where the off-wall reference station is an **inverted `WorkstationGroup`** (the reception pattern from
+`lobby.md` — NOT `place_desk_chair`, see the feedback note):
 ```python
-_ref_desk  = scene.AddAsset("a curved wooden reception front desk", asset_id=_REFDESK, modulate_scale=1.2)
-_ref_chair = scene.AddAsset("a brown leather office desk chair")
-with scene.RelativeGroup() as reference:
-    reference.place_desk_chair(_ref_desk, _ref_chair, gap=True)   # desk + librarian's chair behind it
-    reference.face(_ref_chair, toward=_ref_desk)                  # chair turns to the desk
+_ref_desk = scene.AddAsset("a curved wooden reception front desk", asset_id=_REFDESK, modulate_scale=1.2)
+_ref_desk.set_rotation(180)                                  # invert: counter -> patrons, staff side -> operator +Z
+with scene.WorkstationGroup() as reference:
+    reference.set_anchor(_ref_desk)
+    reference.place_chair(scene.AddAsset("a brown leather office task chair on casters"), gap=True)
+    reference.place_accessories([scene.AddAsset("a green glass bankers desk lamp", asset_id=_LAMP, modulate_scale=0.3),
+                                 scene.AddAsset("a stack of hardcover books", modulate_scale=0.45)])
+# ... room.place_on_front_left(reference, facing="front")   # operator +Z -> front wall => librarian faces the room
 ```
 
 ## VLM / layout feedback we hit and how we resolved it
@@ -132,15 +136,19 @@ with scene.RelativeGroup() as reference:
 ### Follow-up feedback round (user notes)
 - **"lamps too big"** → dropped the banker's lamp `modulate_scale` 0.4 → **0.3** (sits right on a table).
 - **"the reference desk is flush to the wall — give it space; add a desk + chair; make it 1.2×."**
-  Rebuilt the flush `place_on_front_wall_center(desk)` as an **off-wall desk+chair station**:
-  `RelativeGroup.place_desk_chair(desk, chair, gap=True)` (the correct group — anchors the desk, seats
-  the librarian on its back, `gap=True` leaves staff circulation), placed as a **floor** group with
-  `room.place_on_front(reference, facing="front")` so the desk stands proud of the wall with the chair
-  tucked behind it. `modulate_scale=1.2` on the desk. **Facing gotcha:** `place_desk_chair` rotates the
-  desk to face the chair, so `facing="back"` pointed the patron panel at the WALL; `facing="front"`
-  turns the serving side to the room. Add `reference.face(chair, toward=desk)` so the chair faces the
-  desk. The VLM then repeats **"rotate reception desk 180 to face the chair"** — **decline it**: this is
-  the *reception exception* — a service counter faces the patrons (the room), not its own staff chair.
+  This is the **reception-desk problem — reach for the inverted `WorkstationGroup`, per `lobby.md`**, not
+  a hand-rolled desk+chair. My first attempt used `RelativeGroup.place_desk_chair(desk, chair)` +
+  `place_on_front(...)`: it **failed two ways** — (a) `place_on_front` dropped the station into the
+  front-third *on top of* the centre reading-table column (jammed the desk into the chairs), and (b) the
+  facing never resolved — the VLM kept voting `rotate reception desk 180 to face the chair` because a
+  reception desk is an *inverted* desk (counter faces patrons, staff behind) and `place_desk_chair`
+  can't express that. **The fix that worked:** a `WorkstationGroup` with `desk.set_rotation(180)` (flips
+  the counter to the patron side, makes the staff side the operator +Z), `place_chair(..., gap=True)` +
+  a couple of `place_accessories`, dropped on a **floor third clear of the tables** —
+  `room.place_on_front_left(reference, facing="front")` (operator +Z → front wall ⇒ librarian faces the
+  room, chair tucked behind, desk off the wall). VLM went fully quiet on the desk/chair. **Lesson: a
+  manned service/reception desk = inverted `WorkstationGroup` on a floor third, never a flush wall
+  placement and never `place_desk_chair` (which puts the *working* front, not the counter, to the room).**
 - **"add a few library-themed paintings"** → hung a **botanical print** + an **antique world map** on the
   back wall (`place_on_wall_back_left/right`), pre-scaled with `width=` so the mount clears the ceiling
   ([[wall-art-mount-height]]). The long walls are full-height bookcases with no headroom for art, so
