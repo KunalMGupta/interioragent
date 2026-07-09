@@ -120,4 +120,4 @@ with scene.RoomGroup(modulate_scale=1.0, randomness=0.1) as room:
     # ceiling = warm recessed downlights (even, glare-free boutique wash)
     room.add_lighting("a recessed ceiling downlight", density=0.12)
 
-scene.export("florist_shop.blend")
+scene.export("flower_shop.blend")

@@ -26,6 +26,7 @@ pattern we've already solved.
 | [retail_store.md](retail_store.md) | apparel boutique | **Central spine + perimeter loop** — twin double-sided rails frame a display table; branded service wall; front-window mannequins. Opens with a retrieval **stress test**; lighting-density-vs-floor-area + storefront-void lessons |
 | [bedroom.md](bedroom.md) | master bedroom | Core residential — **symmetric hero** (bed) + a self-contained reading-nook sub-group |
 | [children_room.md](children_room.md) | kids bedroom | Three small zones; `place_inside` tile-fit |
+| [florist_shop.md](florist_shop.md) | flower shop | **Mass ONE abundant prop** — bouquets on six repeated `bloom_table`s carry the identity; opens with a retrieval **stress test**; storefront window + side door; asset-mesh traps (black étagère / baked-in books) |
 
 ## Early skeletons (pre-workflow, thin — rebuild candidates, don't cite as reference)
 
