@@ -13,6 +13,7 @@ pattern we've already solved.
 | [bathroom.md](bathroom.md) | spa master bath | Set-assets + width-only scaling + overlap handling for bundled sets |
 | [executive_office.md](executive_office.md) | executive office | **Single room, zoned** — a storage backbone splits work vs. lounge zones |
 | [lobby.md](lobby.md) | corporate lobby | **Reception anchor + waiting lounge** — `AroundGroup.place_rectilinear` cluster; retrieval stress-test + reception-desk ingest; `add_lighting` count math |
+| [meeting_room.md](meeting_room.md) | conference / boardroom | **Table hub + presentation wall** — a rectilinear chair ring around a stretched table; four walls each get a job (present / service / glass / art+door). Stress test; reversed-front-sideboard facing flip; boardroom lighting = one pendant + daylight (panels starfield) |
 | [computer_room.md](computer_room.md) | computer lab | **Repeated-unit grid** — a `WorkstationGroup` tiled across the floor |
 | [locker_room.md](locker_room.md) | locker room | **Long rows** flush-on-wall or down the centre (never `place_on_<side>`) |
 | [warehouse.md](warehouse.md) | industrial storage | Racking **rows in room-thirds** to carve forklift aisles |
