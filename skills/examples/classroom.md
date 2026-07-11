@@ -1,6 +1,6 @@
 # Classroom — example
 
-Status: **built & rotation-clean** (`classroom_v1.py`, seed=7). Bright daylit
+Status: **built & rotation-clean** ([classroom_v1.py](classroom_v1.py), seed=7). Bright daylit
 classroom, built coarse-to-fine through the workbench. Final compile: rotation
 clean at every level, no wall overlap, room proportions converged.
 

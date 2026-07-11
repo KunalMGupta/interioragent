@@ -1,8 +1,9 @@
 # Scene batch — discussion notes (for review)
 
 52 category scene programs live in `scenes/<name>.py`, one per category from your list.
-Each is self-contained and written coarse-to-fine in the style of `classroom_v1.py` /
-`livingroom_v1.py`: primary functional cluster(s) first (Relative/Around/Grid groups), then
+Each is self-contained and written coarse-to-fine in the style of
+`../skills/examples/classroom_v1.py` / `../skills/examples/livingroom_v1.py`: primary
+functional cluster(s) first (Relative/Around/Grid groups), then
 the `RoomGroup` shell with wall furniture, wall-mounted fixtures, windows, a door, and a
 ceiling light. They're all first drafts meant as **starting points to iterate on with you**,
 not finished scenes.

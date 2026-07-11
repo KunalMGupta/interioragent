@@ -1,6 +1,6 @@
 # Living room — example
 
-Status: **built & VLM-clean** (warm modern living room, `livingroom_v1.py`, seed=42).
+Status: **built & VLM-clean** (warm modern living room, [livingroom_v1.py](livingroom_v1.py), seed=42).
 Built coarse-to-fine through the workbench; final compile returns `no rescale` /
 `no rescale` / `no wall overlap`. The older `test.py` seed remains a second
 reference for nested-group patterns (see bottom).
