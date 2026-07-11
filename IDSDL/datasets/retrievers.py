@@ -1122,6 +1122,54 @@ WallArtRetriever.
         return top_models, top_similarities
 
 
+class MedicalFixtureRetriever(FutureHSSDAssetRetriever):
+    """Curated pool of functional HOSPITAL / CLINICAL fixtures — the gap that sent a headwall
+    gas panel, a vital-signs monitor and a wheelchair to the general pool (where they don't
+    exist) and an exit sign / medical waste bin / hand-sanitizer to the wrong specialist pools.
+    Pool = ingested custom medical meshes (headwall, vitals monitor, wheelchair) + gallery-picked
+    dataset clinical fixtures (medical carts/trolleys, sharps container, sanitizer dispensers,
+    patient whiteboard, medical stool, exam/recliner chair, exit sign, hospital bed). Keeps
+    clinical queries inside clinical-appropriate assets so 'a headwall unit' returns the gas
+    panel, not a wall AC unit, and 'a vital signs monitor' returns the real monitor, not the bed."""
+    def __init__(self):
+        super().__init__()
+        self.name = "MedicalFixtureRetriever"
+        self.description = """
+Retrieves functional HOSPITAL / CLINICAL / MEDICAL fixtures and equipment for a patient room,
+ward, exam room, clinic or operatory: a hospital bed, a headwall unit / bed-head medical gas
+panel with outlets, a patient vital-signs / cardiac monitor (wall- or stand-mounted), an IV
+drip pole, a mobile medical supply cart or crash cart / trolley, a sharps disposal container,
+a hand-sanitizer dispenser or station, a step-on medical waste bin, a patient-information
+whiteboard, a wheelchair, a medical stool on castors, and a medical exam / patient recliner
+chair. Use this for any clinical/medical fixture, monitor, cart, dispenser, or hospital-specific
+piece. Do NOT use it for generic residential furniture, decorative art, or plants.
+"""
+        self.examples = """
+1. A hospital headwall unit with medical gas outlets
+2. A patient vital signs monitor on a rolling stand
+3. An adjustable hospital patient bed with side rails
+4. A wheeled medical supply cart / crash cart trolley
+5. A wall-mounted hand sanitizer dispenser
+6. A step-on medical waste bin
+7. A hospital wheelchair
+8. A sharps disposal container
+9. A patient information whiteboard
+"""
+        with open(os.path.join(os.path.dirname(__file__), "assets/medical_fixtures.json"), "r") as f:
+            self.fixtures = json.load(f)
+
+    def get_likely_asset(self, query: str):
+        models = [m for m in self.fixtures if m in self.all_models]
+        idx = [self.all_models.tolist().index(m) for m in models]
+        embds = np.array([self.all_embeddings[i] for i in idx])
+        embd = np.array(self.encoder.embed_query(query))
+        similarities = np.dot(embds, embd)
+        top = np.argsort(similarities)[-20:][::-1]
+        top_models = [models[i] for i in top]
+        top_similarities = similarities[top]
+        return top_models, top_similarities
+
+
 class HairSalonRetriever(FutureHSSDAssetRetriever):
     """Curated pool of hair-salon furniture, fixtures and equipment (gallery-curated from the
     full dataset + ingested custom salon assets: barber chair, hairdressing chair, backwash
@@ -1227,6 +1275,74 @@ use it for the desk itself (that is the default FutureHSSDAssetRetriever), for w
         return top_models, top_similarities
 
 
+class ShopFixtureRetriever(FutureHSSDAssetRetriever):
+    """Curated pool of RETAIL / SHOP fixtures, displays and merchandise for grocery stores,
+    clothing/apparel boutiques, general retail, toy stores, comic/book shops, jewelry stores and
+    cosmetic/pharmacy shops. Pool = the 88 ingested custom retail meshes (mannequins, folded
+    clothes, gondolas, comic-book cabinets, jewelry showcases, POS/reception, food carts, toys) +
+    ~340 swept dataset assets (display cabinets/showcases, clothing racks & rails, shelving/gondolas,
+    checkout counters, cash registers, refrigerated/bakery/deli cases, magazine racks, coat/hat
+    stands, pedestals, and shop merchandise: folded clothes, jeans, books, groceries, toys,
+    necklaces, shopping bags/baskets/carts). Keeps shop queries inside shop-appropriate assets so
+    'a store mannequin' returns a retail mannequin and 'a comic book display shelf' returns a real
+    display cabinet, not a generic sculpture or a china cabinet. Custom retail assets get the pool
+    bonus so the newly-ingested meshes actually surface for NL shop queries."""
+    def __init__(self):
+        super().__init__()
+        self.name = "ShopFixtureRetriever"
+        self.description = """
+Retrieves fixtures, displays, merchandise and equipment for any SHOP / STORE / RETAIL space —
+GROCERY & supermarkets, CLOTHING & apparel boutiques, general RETAIL, TOY stores, COMIC & BOOK
+shops, JEWELRY stores, COSMETIC & pharmacy shops: gondola and wall SHELVING, display CABINETS and
+glass SHOWCASES, clothing RACKS and rails, garment displays, checkout / cashier COUNTERS, cash
+registers / point-of-sale terminals, retail MANNEQUINS and dress forms, refrigerated / freezer /
+bakery / deli display CASES, magazine and newspaper RACKS, product display STANDS and pedestals,
+shopping CARTS and BASKETS, store signage, coat / hat stands, and the MERCHANDISE shown in shops
+(folded clothes, jeans, stacked books, comics, grocery packages, toys, jewelry / necklaces on
+display, shopping bags). Use this retriever for any object in a grocery / clothing / retail / toy /
+comic / jewelry / cosmetic STORE context. Do NOT use it for a home kitchen, a bathroom, or generic
+residential living-room / bedroom furniture.
+"""
+        self.examples = """
+1. A supermarket gondola shelving unit
+2. A clothing store garment rack on wheels
+3. A glass jewelry display showcase counter
+4. A retail checkout / cashier counter with a cash register
+5. A clothing store mannequin
+6. A refrigerated supermarket display case
+7. A comic book store display shelf cabinet
+8. A stack of folded clothes for a display table
+9. A toy store display of plush toys
+10. A cosmetics display stand
+"""
+        with open(os.path.join(os.path.dirname(__file__), "assets/shop_fixtures.json"), "r") as f:
+            self.pool = json.load(f)
+
+    # Prefer the curated shop pool (bonused so the ingested custom meshes surface), but fall back to
+    # the full dataset so a generic item the pool lacks can still appear. Mirrors HairSalonRetriever.
+    POOL_BONUS = 0.04
+
+    def get_likely_asset(self, query: str):
+        embd = np.array(self.encoder.embed_query(query))
+        index = {m: i for i, m in enumerate(self.all_models.tolist())}
+
+        pool_models = [m for m in self.pool if m in index]
+        pool_sims = np.dot(np.array([self.all_embeddings[index[m]] for m in pool_models]), embd) \
+            + self.POOL_BONUS
+
+        gen_sims_all = np.dot(self.all_embeddings, embd)
+        gen_idx = np.argsort(gen_sims_all)[-20:][::-1]
+        gen_models = [self.all_models[i] for i in gen_idx]
+        gen_sims = gen_sims_all[gen_idx]
+
+        best = {}
+        for m, s in list(zip(pool_models, pool_sims)) + list(zip(gen_models, gen_sims)):
+            if m not in best or s > best[m]:
+                best[m] = float(s)
+        ranked = sorted(best.items(), key=lambda kv: kv[1], reverse=True)[:20]
+        return [m for m, _ in ranked], np.array([s for _, s in ranked])
+
+
 class CherryBlossomRetriever(SceneProgAssetRetrieverBase):
     def __init__(self):
         super().__init__()
@@ -1321,7 +1437,9 @@ FUTURE_HSSD_ASSET_RETRIEVERS = [
     CountersRetriever(),
     GameEquipmentRetriever(),
     HairSalonRetriever(),
+    MedicalFixtureRetriever(),
     DesktopWorkstationRetriever(),
+    ShopFixtureRetriever(),
     CherryBlossomRetriever(),
     SceneMotifCoderObject(),
 ]

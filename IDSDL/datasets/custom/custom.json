@@ -1,1 +1,870 @@
-{"custom/74bfa64b537b12de0771ee0cd79814f7e7446089": {"description": "Three-panel green chalkboard with an aluminium frame.", "placement": "wall", "freetop": false, "on_top_or_inside": false, "scale": 2.4}, "custom/d5884fb54a16d8f18a19a40989fcca074f5fcb84": {"description": "Neon illuminated wall sign with glowing tube lettering on a dark backing", "placement": "wall", "freetop": false, "on_top_or_inside": false, "scale": 1.1}, "custom/59a3f803acb6e00ec8e3637e862c879cf03c06be": {"description": "Salon barber styling chair with an upholstered seat, back and armrests on a chrome hydraulic pedestal base with a footrest ring", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 0.65}, "custom/192be4071c49f540d8b40c30b1bc0f565237c75b": {"description": "Salon backwash shampoo unit: a reclining chair joined to a ceramic neck-rest wash basin with a chrome faucet", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 0.75}, "custom/c07ce1eb88401269c124d2db012ed5712087d197": {"description": "Salon hairdressing chair with an upholstered seat and back on a swivel base", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 0.65}, "custom/64a7f627dc9e7a246ebfef4bc10fb15c27be636f": {"description": "Orange upholstered dental chair with a white metal frame and integrated overhead light and monitor arm.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 1.4}, "custom/9f2a77c71313fa1f84c233717e70ca8371383174": {"description": "A tall black server rack and network equipment cabinet, a floor-standing data-center rack filled with rack-mounted servers, switches, patch panels and cabling.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 0.8}, "custom/13678e75f918187fd80281ce9461cc8fc24186b4": {"description": "Green chalkboard with a dark wooden frame.", "placement": "wall", "freetop": false, "on_top_or_inside": false, "scale": 1.5}, "custom/19f70dba87ed2135bc33b107c942016dd7c2ab71": {"description": "Rustic dark brown wooden wagon cart with an open top and wheels.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 1.2}, "custom/71bda402b67456713f4f06f422bb8bb8ce1455da": {"description": "Industrial grey metal wire shelving unit with five tiers.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 1.2}, "custom/58ad2b42c254545ddef252936c3890e988dc3697": {"description": "Rusty industrial factory boiler unit with two stacked round metal tanks on a steel frame.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 1.2}, "custom/c15875b2fa17d39cf85efc946180dd49427a7244": {"description": "Orange industrial forklift with black steel mast and forks.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 1.3}, "custom/96aaadef0ac4e06d76a4d130abc55f166d7db7c7": {"description": "Industrial steel forklift with black frame, orange forks and grey cab.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 1.3}, "custom/ebe6d0a7f2bacdb4ed39b6b43617fbb34ee7933e": {"description": "Orange industrial gas cylinder canister with a grey collar.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 0.35}, "custom/7896c26afd9695a1e125809519d9590479377983": {"description": "Grey plastic multimedia projector with a black lens ring.", "placement": "NA", "freetop": false, "on_top_or_inside": true, "scale": 0.5}, "custom/839035b56a479597e781b09eaf1578ebe25cb9cf": {"description": "Small grey kei truck, a cab-over mini pickup with an open cab door.", "placement": "floor", "freetop": false, "on_top_or_inside": true, "scale": 1.5}, "custom/c169ca1ddead54f66ed5a2278f8dcd232d58ba20": {"description": "Large black ribbed plastic water storage tank with a screw-cap lid.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 0.8}, "custom/3d013e88f2977a1a98d3dd73cecf0d1cb3c3ad9f": {"description": "Orange plastic traffic cone with white reflective bands.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 0.3}, "custom/5c1edac8c0baf18250423ea7f5bc61ba38db887a": {"description": "Rusty green vintage cab-over flatbed truck.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 2.0}, "custom/ed63a6c63388ea06487deddf24b5526c3a859ccb": {"description": "Grey ceiling-mounted projection screen with an aluminum top bar.", "placement": "ceiling", "freetop": false, "on_top_or_inside": false, "scale": 2.5}, "custom/049182127609e8712ab86df11e06180a626afe87": {"description": "White retractable projection screen with an aluminium housing and a grey projector mounted in front.", "placement": "wall", "freetop": false, "on_top_or_inside": false, "scale": 2.0}, "custom/6a9a8519c436366eb369f4cf3448ea18636d1d87": {"description": "Freestanding black chalkboard on a brown wooden frame with a metal stand.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 1.0}, "custom/503e6ded76d3541bb85e06c20765ae30a3269216": {"description": "White ceiling-mounted digital video projector on a black drop-pole mount.", "placement": "ceiling", "freetop": false, "on_top_or_inside": true, "scale": 0.4}, "custom/77209bcbf628ab88f537f7b1983e42ba1cde49fb": {"description": "Grey corrugated metal roller shutter door with a rusty valance box, a shop or loading-dock shutter.", "placement": "wall", "freetop": false, "on_top_or_inside": false, "scale": 2.6}, "custom/ac9be2e873be38bccad6a1c058a4280847f37647": {"description": "Industrial orange metal pallet jack with a black handle and grey forks.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 0.8}, "custom/06463870baa87e6e753b983a48dee9aeae3e2859": {"description": "Large dark wood-framed chalkboard with a black writing surface and a bottom ledge.", "placement": "wall", "freetop": false, "on_top_or_inside": false, "scale": 1.6}, "custom/574d85991b53e5bb44fbc58914626d950c5a4d1d": {"description": "Black matte plastic projector with an exposed lens.", "placement": "NA", "freetop": false, "on_top_or_inside": true, "scale": 0.4}, "custom/e750dc69c392d8205805e7a0653c276f5ee5dd49": {"description": "Green emergency exit sign with a brushed aluminium frame.", "placement": "wall", "freetop": false, "on_top_or_inside": false, "scale": 0.6}, "custom/5db6653f74cfbc0c026cefb35ca80f6c6fbed4f3": {"description": "Grey semi-truck box trailer / shipping-container body on landing-gear legs.", "placement": "floor", "freetop": true, "on_top_or_inside": false, "scale": 2.5}, "custom/eb9d3e7bc84027186dadc23ce1dcd332429eed11": {"description": "Natural wooden shipping and storage crate with a rustic finish.", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 1.0}, "custom/cffdedd8d354e346e510f227b4a6bc5b65dc3dcb": {"description": "a long modern reception desk front counter with a solid panel front", "placement": "floor", "freetop": true, "on_top_or_inside": false, "scale": 2.0}, "custom/67ab42f94a6ca6fa3610fa5fda30aab29aeca878": {"description": "an L-shaped modern office reception desk with a counter return", "placement": "floor", "freetop": true, "on_top_or_inside": false, "scale": 2.0}, "custom/19cf67d02d5381d566e5d3d655c0767b18116d93": {"description": "a curved modern reception desk welcome counter", "placement": "floor", "freetop": true, "on_top_or_inside": false, "scale": 2.6}, "custom/920037c5376d7f897f7b4b142bea7792e938400d": {"description": "a hospital headwall unit with medical gas outlets and a mounting rail", "placement": "wall", "freetop": false, "on_top_or_inside": false, "scale": 1.4}, "custom/07c9f10971507810789d358c15c1861a4e19a67f": {"description": "a hospital wheelchair with large rear wheels and footrests", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 0.67}, "custom/475c4c6d50144e1659d7bbc18121378a897d505e": {"description": "a patient vital signs monitor on a rolling stand with a clinical display", "placement": "floor", "freetop": false, "on_top_or_inside": false, "scale": 0.42}}
+{
+ "custom/74bfa64b537b12de0771ee0cd79814f7e7446089": {
+  "description": "Three-panel green chalkboard with an aluminium frame.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.4
+ },
+ "custom/d5884fb54a16d8f18a19a40989fcca074f5fcb84": {
+  "description": "Neon illuminated wall sign with glowing tube lettering on a dark backing",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.1
+ },
+ "custom/59a3f803acb6e00ec8e3637e862c879cf03c06be": {
+  "description": "Salon barber styling chair with an upholstered seat, back and armrests on a chrome hydraulic pedestal base with a footrest ring",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.65
+ },
+ "custom/192be4071c49f540d8b40c30b1bc0f565237c75b": {
+  "description": "Salon backwash shampoo unit: a reclining chair joined to a ceramic neck-rest wash basin with a chrome faucet",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.75
+ },
+ "custom/c07ce1eb88401269c124d2db012ed5712087d197": {
+  "description": "Salon hairdressing chair with an upholstered seat and back on a swivel base",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.65
+ },
+ "custom/64a7f627dc9e7a246ebfef4bc10fb15c27be636f": {
+  "description": "Orange upholstered dental chair with a white metal frame and integrated overhead light and monitor arm.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.4
+ },
+ "custom/9f2a77c71313fa1f84c233717e70ca8371383174": {
+  "description": "A tall black server rack and network equipment cabinet, a floor-standing data-center rack filled with rack-mounted servers, switches, patch panels and cabling.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.8
+ },
+ "custom/13678e75f918187fd80281ce9461cc8fc24186b4": {
+  "description": "Green chalkboard with a dark wooden frame.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.5
+ },
+ "custom/19f70dba87ed2135bc33b107c942016dd7c2ab71": {
+  "description": "Rustic dark brown wooden wagon cart with an open top and wheels.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/71bda402b67456713f4f06f422bb8bb8ce1455da": {
+  "description": "Industrial grey metal wire shelving unit with five tiers.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/58ad2b42c254545ddef252936c3890e988dc3697": {
+  "description": "Rusty industrial factory boiler unit with two stacked round metal tanks on a steel frame.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/c15875b2fa17d39cf85efc946180dd49427a7244": {
+  "description": "Orange industrial forklift with black steel mast and forks.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.3
+ },
+ "custom/96aaadef0ac4e06d76a4d130abc55f166d7db7c7": {
+  "description": "Industrial steel forklift with black frame, orange forks and grey cab.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.3
+ },
+ "custom/ebe6d0a7f2bacdb4ed39b6b43617fbb34ee7933e": {
+  "description": "Orange industrial gas cylinder canister with a grey collar.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.35
+ },
+ "custom/7896c26afd9695a1e125809519d9590479377983": {
+  "description": "Grey plastic multimedia projector with a black lens ring.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.5
+ },
+ "custom/839035b56a479597e781b09eaf1578ebe25cb9cf": {
+  "description": "Small grey kei truck, a cab-over mini pickup with an open cab door.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 1.5
+ },
+ "custom/c169ca1ddead54f66ed5a2278f8dcd232d58ba20": {
+  "description": "Large black ribbed plastic water storage tank with a screw-cap lid.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.8
+ },
+ "custom/3d013e88f2977a1a98d3dd73cecf0d1cb3c3ad9f": {
+  "description": "Orange plastic traffic cone with white reflective bands.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.3
+ },
+ "custom/5c1edac8c0baf18250423ea7f5bc61ba38db887a": {
+  "description": "Rusty green vintage cab-over flatbed truck.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/ed63a6c63388ea06487deddf24b5526c3a859ccb": {
+  "description": "Grey ceiling-mounted projection screen with an aluminum top bar.",
+  "placement": "ceiling",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.5
+ },
+ "custom/049182127609e8712ab86df11e06180a626afe87": {
+  "description": "White retractable projection screen with an aluminium housing and a grey projector mounted in front.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/6a9a8519c436366eb369f4cf3448ea18636d1d87": {
+  "description": "Freestanding black chalkboard on a brown wooden frame with a metal stand.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/503e6ded76d3541bb85e06c20765ae30a3269216": {
+  "description": "White ceiling-mounted digital video projector on a black drop-pole mount.",
+  "placement": "ceiling",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.4
+ },
+ "custom/77209bcbf628ab88f537f7b1983e42ba1cde49fb": {
+  "description": "Grey corrugated metal roller shutter door with a rusty valance box, a shop or loading-dock shutter.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.6
+ },
+ "custom/ac9be2e873be38bccad6a1c058a4280847f37647": {
+  "description": "Industrial orange metal pallet jack with a black handle and grey forks.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.8
+ },
+ "custom/06463870baa87e6e753b983a48dee9aeae3e2859": {
+  "description": "Large dark wood-framed chalkboard with a black writing surface and a bottom ledge.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.6
+ },
+ "custom/574d85991b53e5bb44fbc58914626d950c5a4d1d": {
+  "description": "Black matte plastic projector with an exposed lens.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.4
+ },
+ "custom/e750dc69c392d8205805e7a0653c276f5ee5dd49": {
+  "description": "Green emergency exit sign with a brushed aluminium frame.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.6
+ },
+ "custom/5db6653f74cfbc0c026cefb35ca80f6c6fbed4f3": {
+  "description": "Grey semi-truck box trailer / shipping-container body on landing-gear legs.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.5
+ },
+ "custom/eb9d3e7bc84027186dadc23ce1dcd332429eed11": {
+  "description": "Natural wooden shipping and storage crate with a rustic finish.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/cffdedd8d354e346e510f227b4a6bc5b65dc3dcb": {
+  "description": "a long modern reception desk front counter with a solid panel front",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/67ab42f94a6ca6fa3610fa5fda30aab29aeca878": {
+  "description": "an L-shaped modern office reception desk with a counter return",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/19cf67d02d5381d566e5d3d655c0767b18116d93": {
+  "description": "a curved modern reception desk welcome counter",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.6
+ },
+ "custom/920037c5376d7f897f7b4b142bea7792e938400d": {
+  "description": "a hospital headwall unit with medical gas outlets and a mounting rail",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.4
+ },
+ "custom/07c9f10971507810789d358c15c1861a4e19a67f": {
+  "description": "a hospital wheelchair with large rear wheels and footrests",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.67
+ },
+ "custom/475c4c6d50144e1659d7bbc18121378a897d505e": {
+  "description": "a patient vital signs monitor on a rolling stand with a clinical display",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.42
+ },
+ "custom/e6b832f2c09637e351d79da487e66fc5d3144e95": {
+  "description": "Black metal freestanding retail display rack with a red Borges-branded header and multiple shelf levels holding jars.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.65
+ },
+ "custom/cd7e4e9c3523656c1d2a02072908607d07b2926e": {
+  "description": "Graphic-print white blazer with orange piping on a wooden dress-form mannequin.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.5
+ },
+ "custom/ef8aa03360e7bf40b6ff244e88042eb8045f634e": {
+  "description": "Mobile stainless-steel barbecue grill cart with a red-and-white striped canopy.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/d287ecfa013409a1a9803d87f25e77954a50b107": {
+  "description": "Red lacquered Brutalist-style metal bar cart with glassware display and wheels.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/61cd86192945aa341da03d3033c8a9d1638f158c": {
+  "description": "Long white display shelf with comic books and a red base.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.2
+ },
+ "custom/6416331e5ef33834ba9c78025efead4493b7b27a": {
+  "description": "White-painted wooden magazine rack with a red base for displaying magazines.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.25
+ },
+ "custom/792794fb158d69d49575d9f88569a8201bf4abef": {
+  "description": "Industrial-style coffee cart with brown wood veneer panels, black metal frame, and a glass display case for cups.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.4
+ },
+ "custom/4fdb870ece44886130c5c23d23d41968361bbc3b": {
+  "description": "Tall white freestanding magazine display cabinet with five open shelves showing comic and magazine covers.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.65
+ },
+ "custom/3dcb3733291c9c8d15c265d03e621b1b1190cd68": {
+  "description": "Olive green denim jeans with a Diesel tag.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.32
+ },
+ "custom/ec6cf00e8195adcd90a175cded8250c6e97f477d": {
+  "description": "Dark brown wooden bird sculpture on wheels in an industrial, angular style.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.5
+ },
+ "custom/1313330aef1a17f21bf3d10b639d44e0525c7cdc": {
+  "description": "White wooden wall-mounted display shelf with cubbies and a red accent base.",
+  "placement": "wall",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/d2a76f62a6bed24b778749a95cbe59eba255e568": {
+  "description": "Tall blue metal display rack with grey fabric rolls.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.4
+ },
+ "custom/fb96a41edb886b44e49d64935ea5ab6ed0fa6946": {
+  "description": "Industrial black metal and wood multi-tier retail display shelf.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/2958eda20ada213d90502d697a0030e24b74bdeb": {
+  "description": "White wooden magazine display rack with a red base and colorful comic magazines.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.4
+ },
+ "custom/ddbbb94ac0fdd21f15cd09e47568836e8ad110b4": {
+  "description": "Light-gray display cabinet with multiple shelves filled with colorful comic book covers on a wooden pedestal.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.4
+ },
+ "custom/aeaece8ee438daa2c90e5b9857c55a9046d19072": {
+  "description": "Green metal floor-standing retail display rack for hair care bottles with promotional graphics.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/dec1d5a87920cce3073622b19b6d2ad7737befdc": {
+  "description": "Small black plastic jewelry display cube with white interior, featuring a silver ring on a grey pedestal.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.15
+ },
+ "custom/48fb157f8e85e7a6a6bcdede8b0366b3d5678b45": {
+  "description": "Tall white magazine rack with a red bottom base and multiple clear-front shelves.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.3
+ },
+ "custom/690d4e41aed89665359176ede301f97f5b4dcbf6": {
+  "description": "Large white wooden display shelf for comic books with a red base.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.4
+ },
+ "custom/4e648aa3cb2a11c31d832e4e572b16c143537af7": {
+  "description": "Freestanding white Lacoste display panel with a metal mannequin torso wearing a light grey dress.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.8
+ },
+ "custom/66013e2294539c16cf13aac86931622251fd5525": {
+  "description": "Large light gray display cabinet with comic-book fronts and a red plinth.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/0dbd08c161cf956e034c61f411dd269e1d3f5799": {
+  "description": "Large multi-tier beverage display rack with a metal frame, plastic shelves, blue base and green trim.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/fc94b36e13815b1caa983910e447666b00b2bbaa": {
+  "description": "White metal-framed five-shelf magazine display rack with a red base.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.3
+ },
+ "custom/5e897e9bc8e952bf6caa331f173fa43aac2dcf3e": {
+  "description": "Large white modern display cabinet with comic-book front panels and a red base.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.5
+ },
+ "custom/f226189cd46f33713817a3b05c69066fa38bbbe0": {
+  "description": "Olive green parka jacket with a faux fur hood over a charcoal sweater, tan cargo pants, and brown hiking boots.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.5
+ },
+ "custom/6ccb1e05143f063c54d569463e6a730ddbf0c99f": {
+  "description": "Beige-blue wave-print satin two-piece romper with a matching headwrap and platform sandals.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.5
+ },
+ "custom/b00d129e2ea946c13afe616d7abf31597204ec6f": {
+  "description": "White metal four-tier magazine rack with a red base for displaying magazines.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.32
+ },
+ "custom/83377a1b03431c0aa321c3571ff69cdb3d22f390": {
+  "description": "Large white lacquered magazine display cabinet with red drawer fronts on a pedestal.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/0f626c5d19edec027e75f5c1f303787f9009b733": {
+  "description": "Life-size black female mannequin wearing a blue wave-print swimsuit with a beige knit cardigan.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.4
+ },
+ "custom/68a9b21433c848640a3e9d58c7e6464e62e350a6": {
+  "description": "White metal five-shelf magazine display rack with a red base.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.45
+ },
+ "custom/90986f42ca2e5593b42616f5caa563827a111611": {
+  "description": "Two-piece carved wooden bodice and skirt ensemble with organic latticework in warm brown.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.9
+ },
+ "custom/e649259bd3abe2c2352d2645dbfa7e5500fd0632": {
+  "description": "Modern white display cabinet with glass-front shelves and a red plinth on a carved wooden pedestal, filled with comic book covers.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": true,
+  "scale": 2.2
+ },
+ "custom/12fd8ace4b837d791d219ad6ee5d419693b56ecd": {
+  "description": "Natural wood display board with miniature clothing on metal hangers.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.6
+ },
+ "custom/c0c637ce615ff066db0bf0f000fca690a1c7f6ea": {
+  "description": "Tall black metal cabinet with curved front and copper hooks.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.6
+ },
+ "custom/cde3dd1aaf401e4ae06acdf33608b8e35d63f53a": {
+  "description": "Brown ceramic hemispherical tabletop fountain with rock accents and a water feature.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.25
+ },
+ "custom/8a1de8d14772c760c6ee63c1e86fbcdb26ec7a31": {
+  "description": "Large beige wooden multi-tier retail display stand with black shelves.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/207dc4d659ea793901093e8e4d404f5d8f81ce2c": {
+  "description": "White mid-century display cabinet with open shelves full of colorfully wrapped comic magazines, supported by a wooden pedestal base and red trim.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.4
+ },
+ "custom/48c47b4444541e84a1b819860ce162c6b9513300": {
+  "description": "Tall wooden pharmacy display rack with a branded Arko Pharma sign, stocked with assorted boxed medicines.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.6
+ },
+ "custom/424f59cce4d18e1f55cb57fdabecb0f8567717f2": {
+  "description": "Vintage dessert cart with a grey curved canopy, gold metal frame and brown wooden panels.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.8
+ },
+ "custom/fc9df30e9f7e0ce89d9bf02b3d59b72f8913ade9": {
+  "description": "Large light oak wall-mounted eyewear display frame with multiple black hanging display boxes.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.8
+ },
+ "custom/36f5975f31eb9e877e88469a834514854f36941d": {
+  "description": "Black metal planogram merchandising board with color-story cards.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/1028be7dddc5b7e1a0c4339582223f5d787400c3": {
+  "description": "Walnut wood jewelry display counter with grey back panels and circular earring display holes, featuring OLIVIA branding.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/26450933189c4658009b2fce4fba8c7ebb7845cc": {
+  "description": "Modern grey-painted wooden display bookcase with magazine slots filled with colorful comic books and a red kick panel.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/5996d434cc0291953b658a03d6ad967d477d7ded": {
+  "description": "Floor-standing light oak wooden display rack with circular pizza tins on open shelves.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/c53de778cc431cbeca6cbb144593814c3f5f48ca": {
+  "description": "Industrial white-top display table with a black metal frame showcasing shoes and accessories.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.6
+ },
+ "custom/fa208cc78e4d2023e2b904364b15563451d2d75f": {
+  "description": "Modern silver metal room divider with vertical slats on casters.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/9a9d74c2a2f6a119281c6f64a4ca89f524f58746": {
+  "description": "Contemporary concrete-top kitchen island with an orange brick veneer base.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.4
+ },
+ "custom/91fa23e0a20611ad9947849754009b617250ac0b": {
+  "description": "White wooden display cabinet with comic-book shelves and a red base.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/eedaa74ba03140b24a6629be7ce4be699bd96307": {
+  "description": "Curved light-wood reception counter with a white laminate top and integrated POS system.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/5e8ac57b6545852dd7c6c399b080005add9ba613": {
+  "description": "Tall white Nespresso capsule display cabinet with wooden slatted shelves and chrome accents.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.6
+ },
+ "custom/58abc7f89b32c383c522aea9ce15d5fca0601ee2": {
+  "description": "Light oak curved reception desk with an integrated tablet display.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.6
+ },
+ "custom/e28ea4d51a80f6072e5de0c11184cc77fe8556cb": {
+  "description": "Large white freestanding display cabinet with multiple magazine shelves and a red base, featuring a small bread display beneath.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.3
+ },
+ "custom/d9735b9a1a3a021e133543fbc298ce0578a326d4": {
+  "description": "Industrial black metal rolling storage cabinet with dark wood drawers and a mosaic map-patterned lower section.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.65
+ },
+ "custom/53ec24cbbfdeeef36447b4b3c575c6497827f38b": {
+  "description": "Black velvet cushion with a purple beaded necklace draped over it.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.6
+ },
+ "custom/da6b77cb4d3722d5c4133cda6f8911bb3d0b87e9": {
+  "description": "Abstract black brushstroke triptych wall art on canvas.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.5
+ },
+ "custom/d7cf7f12dfbb1c8504329b991b774999e5fe6cc6": {
+  "description": "Industrial grey metal freestanding clothing rack with multiple hanging rails and garments.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.5
+ },
+ "custom/bd8b4750199cb23d6dba316fc69acd40348f81cc": {
+  "description": "Large white laminate comic-book display shelf with a red base trim and blue bin storage underneath.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.3
+ },
+ "custom/3add6d78d7bb91dc7f29c1b18c1a6449972f1fdc": {
+  "description": "Black velvet jewelry display bust with a gold chain necklace.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.28
+ },
+ "custom/ca90cc08f591beaa7d24de2d6444d504b654ed49": {
+  "description": "Cozy stack of folded wool blankets in assorted colors.",
+  "placement": "NA",
+  "freetop": true,
+  "on_top_or_inside": true,
+  "scale": 0.6
+ },
+ "custom/44c769b3b671e22ecfb7bfc0d4f8d9459c12f6f1": {
+  "description": "Colorful beaded curtain room divider with a wooden frame.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/31253ebc9cec4504c64a362da08719f831118fb3": {
+  "description": "Wide white display cabinet with colorful comic-book drawer fronts, red base trim, resting on a wooden pedestal.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.8
+ },
+ "custom/4eb97f51396ca110bc9328ab756643761d982da6": {
+  "description": "Green plastic cartoon dinosaur toy with a wide white-teethed grin and chunky limbs.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.25
+ },
+ "custom/d79cf88b2009bca2cc0b6295e664d560290f4526": {
+  "description": "Industrial-style silver metal grocery display shelf with multiple fixed shelves.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/e5f46396d6c1651b074011aa52c1d193223744c9": {
+  "description": "Plastic Spider-Man action figure in a red-and-blue suit with black webbing, in a standing pose.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.07
+ },
+ "custom/2a6d9b68e93adec12269ffc7a4e6c3673360667e": {
+  "description": "Grey metal street food cart with wooden trim and a string-light canopy.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/781de2d18edc5455b09c46e5201ae31ab1ecdc2d": {
+  "description": "Industrial chrome wire display rack with four shelves for snack bags.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/35dcbeee8955d2140b8bac66b73026190dafa6d4": {
+  "description": "White retro-style wooden comic-book display cabinet with a red base and grey trim.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/a909577f569942c61852328f58da1abb61917171": {
+  "description": "Grey minimalist ceramic sculpture with a bulbous base and slender neck.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.25
+ },
+ "custom/c1a7df9d9f83868ba9b2299b23658fecbda0b1c9": {
+  "description": "Brown plush teddy bear with beige muzzle and paw pads.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.25
+ },
+ "custom/e990fcf9aa4bdf6ad4cc544993c746720cca1001": {
+  "description": "Rustic wooden sailing ship model with a multicoloured hull and intricate rigging.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.25
+ },
+ "custom/df9fc6e68ff291495a9fcf53945c3cda10e14e16": {
+  "description": "Black velvet necklace display bust.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.25
+ },
+ "custom/7989a71996f5674b12d7d35a5c1691cdb2034ddf": {
+  "description": "Industrial steel-framed four-column bin storage rack with blue and brown plastic bins.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/c8ea2c65f6afd95c62dd1529d5b3028e336990b9": {
+  "description": "Modern white display cabinet with comic-book compartments on a red plinth and a wooden pedestal.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.8
+ },
+ "custom/3ce470b6d1359739cf0ce39f11a0eda62d746e45": {
+  "description": "Small wooden toy car with a natural wood body, a red glossy canopy, and black wheels.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.12
+ },
+ "custom/aa215a255edce2fdfbd47bdcf2bdebf18978e22c": {
+  "description": "Retro wooden rocket sculpture with a grey body, red fins and a blue window on a circular wooden base.",
+  "placement": "NA",
+  "freetop": true,
+  "on_top_or_inside": true,
+  "scale": 0.08
+ },
+ "custom/b619a8e18d7975dc466d0895380e6b186924add2": {
+  "description": "Tall black metal retail display rack with orange Veritas signage and plastic-pocket shelves.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.6
+ },
+ "custom/a1194a9ff3175fab7bc2cb450966b614783ec02b": {
+  "description": "Chunky red plastic toy train locomotive with blue accents.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.08
+ },
+ "custom/794923e68107f3dca0e57a2de7c5703c7cf6df01": {
+  "description": "Modern white wooden display cabinet with comic-book cubbies and a red base.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.6
+ },
+ "custom/fe325cdf23f8a3bf9c0f8306269d96cf0a6d8c44": {
+  "description": "White freestanding magazine rack with multiple shelves and a red base.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.4
+ },
+ "custom/45c9b0bb41b8325ad12adfbd3c8337cddd69fc25": {
+  "description": "Industrial metal clothing rack with a perforated grid front and four black jackets.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.6
+ },
+ "custom/186c1488f8102d36c3638b69170ea0bb52cede73": {
+  "description": "Beige wood-toned freestanding triple-panel display cabinet with bottle shelves and a dark central panel.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/459328e003398ab525d2d64a976fccb920c6b600": {
+  "description": "Industrial black metal freestanding clothing display rack with multiple hanging rails and a blue signage panel.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.2
+ },
+ "custom/31767ec663692f68958440dc330f1e9825220089": {
+  "description": "Medieval knight figurine in resin with a cream fur-trimmed cloak and teal accents, on a rocky base.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.15
+ },
+ "custom/82165101449972edaaf391df1d4e608201ad04d4": {
+  "description": "Grey metal comic-book display cabinet with a red base.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.0
+ },
+ "custom/67ef9bf4b8cf43d40be78e31950f8a49a5c36d25": {
+  "description": "Blue-and-white metal-frame promotional display cart on wheels with multiple shelves and a signage header.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/5176090424b4e054146e6b8850a33c0d933d53c9": {
+  "description": "Plastic cowboy action figure wearing a yellow plaid shirt, cow-print vest, blue jeans, brown boots, and a brown hat.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.25
+ },
+ "custom/e66e06f505e8b8356ac1782afacf74acaf616e6f": {
+  "description": "Small wooden pull-along duck toy with a natural wood finish.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.25
+ },
+ "custom/8708b86952b58bb61fe661fffb1a0a670336d70e": {
+  "description": "Large light-grey wooden display cabinet with a red base and multi-tier comic book shelves.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.5
+ }
+}
