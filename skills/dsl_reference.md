@@ -47,6 +47,17 @@ recompile-safe) or `scene.reselect_asset(obj, i_or_model)` (post-hoc swap, then 
 Inspect candidates with `python workbench.py inspect "<query>" [--render]` (the `--render`
 flag renders the top finalists in-engine for a closer look).
 
+**Scaling an object** (after `AddAsset`, before placement):
+```python
+obj.scale(0.9)                # UNIFORM scale so WIDTH = 0.9 m (aspect preserved)
+obj.scale_only_height(1.5)    # single-axis (distorts aspect); also _width / _depth
+w, h, d = obj.get_whd()       # measure native dims OFFLINE (no network) before choosing a target
+```
+`scale(w)` sets the width in metres and scales relative to the asset's current (often
+pre-normalised, non-1.0) scale — so it is reliable regardless of how the mesh shipped. To scale
+by a factor: `obj.scale(obj.get_width()*f)`. **To hit a target HEIGHT uniformly** (useful for
+fixtures whose native proportions vary — shelves, cabinets): `obj.scale(obj.get_width()*H/obj.get_height())`.
+
 ## Groups
 
 Groups are spatial-composition abstractions. Use them as context managers; the
@@ -130,6 +141,12 @@ the anchor. Each has **two paths**:
 
 Both paths flag the items `ignore_overlap` and add them as children — the DSL call site is
 identical either way.
+
+**Gotcha — `place_on_top` breaks on FLAT anchors (a rug, a pallet).** The surface-region tiler
+computes a near-zero tile size and shatters the top into thousands of microscopic tiles, shrinking
+the placed items to a few cm (seen: a flat rug → 0.029 m tiles → 7396 tiles → bean bags at ~3 cm).
+For **floor seating / a rug-grounded cluster**, don't stack onto the rug — place the items as FLOOR
+objects (anchor group's `place_on_left/right/front/back`) and add the rug under them with `place_rug`.
 
 **Post-placement orientation (opt-in).** Placement bakes a fixed rotation into
 each object, which is often wrong for orientation-sensitive cases. Available on
