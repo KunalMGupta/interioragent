@@ -880,8 +880,13 @@ class SceneProgObject:
         if current_width == 0:
             raise ValueError(f"Object '{self.name}' has zero width, cannot scale.")
 
-        uniform_scale = target_width / current_width
-        self.transform.set_scale([uniform_scale, uniform_scale, uniform_scale])
+        # Uniform scale so the object's WIDTH becomes target_width. Apply RELATIVE to the
+        # current scale (like scale_only_width/height/depth) — assets that ship pre-normalised
+        # with a non-1.0 transform.scale would otherwise blow up: target/current_width was being
+        # set as the ABSOLUTE scale, i.e. width = raw_width * ratio instead of target_width.
+        factor = target_width / current_width
+        cs = self.transform.scale
+        self.transform.set_scale([cs[0] * factor, cs[1] * factor, cs[2] * factor])
 
     def scale_only_width(self, target_width):
         current_width = self.get_width()
