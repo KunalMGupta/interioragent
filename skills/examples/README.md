@@ -25,9 +25,11 @@ pattern we've already solved.
 | [restaurant.md](restaurant.md) | bistro dining room | **Zoned single room** — bar wall + banquette wall + a field of 2-top clusters; opens with a retrieval STRESS TEST; cafe-SET retrieval trap |
 | [library.md](library.md) | reading hall | **Symmetric corridor** — twin shelf rows on the long walls + a centre reading-table column; retrieval stress-test kickoff; `add_lighting` size↔count coupling |
 | [retail_store.md](retail_store.md) | apparel boutique | **Central spine + perimeter loop** — twin double-sided rails frame a display table; branded service wall; front-window mannequins. Opens with a retrieval **stress test**; lighting-density-vs-floor-area + storefront-void lessons |
+| [jewelry_shop.md](jewelry_shop.md) | fine-jewelry boutique | **Show the PRODUCT, not the fixtures** — a shop reads by its merchandise at viewing height: MASS jewelry props (gold stands / gems / cloches) on a central display table + cash-wrap + window pedestals; keep glass vitrines a thin backdrop. Teaches "empty fixtures don't name the shop" + "VLM loop verifies geometry, not category legibility (human gut-check retail)" + pool-routing reword + pin-for-palette |
 | [bedroom.md](bedroom.md) | master bedroom | Core residential — **symmetric hero** (bed) + a self-contained reading-nook sub-group |
 | [children_room.md](children_room.md) | kids bedroom | Three small zones; `place_inside` tile-fit |
 | [florist_shop.md](florist_shop.md) | flower shop | **Mass ONE abundant prop** — bouquets on six repeated `bloom_table`s carry the identity; opens with a retrieval **stress test**; storefront window + side door; asset-mesh traps (black étagère / baked-in books) |
+| [toy_shop.md](toy_shop.md) | toy / comic / book shop | **PRE-STOCKED shop fixtures** (via `ShopFixtureRetriever`) carry the identity — don't crown empty/wrong shelves; perimeter ring + play island + teepee/bean-bag nooks + checkout. Forced out a core `object.scale()` fix + **scale-by-height** for fixtures; teaches `place_on_top`-breaks-on-flat-surfaces and **caption≠mesh (eyeball the preview)** |
 
 ## Early skeletons (pre-workflow, thin — rebuild candidates, don't cite as reference)
 
