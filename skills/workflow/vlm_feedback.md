@@ -240,3 +240,51 @@ rotation issue you can *see*; the VLM rotation text is just a hint.
   = converging; stopped at 0.85 on a well-proportioned render rather than chasing 0.8 forever. Also
   declined the perennial "rotate sofa to face the round [side] table" — a wall-backed lounge sofa
   should not pivot to face its own end table (noise, like the dental unit rotation).
+- **[retail_store v1, lighting density scales with FLOOR AREA]** `add_lighting(..., density=0.3)` —
+  perfectly calm in the small executive office — tiled **~40 flush discs into a dense ceiling grid**
+  on the large retail floor. Dropped to **0.08** for a clean ~5. Refines the executive_office rule:
+  `density` is a fixture COUNT *and the count grows with room footprint*, so a **big room wants a much
+  lower density (~0.05–0.1)** than a small one for the same visual calm. (Still a FLUSH fixture — the
+  chandelier ban stands.) When a ceiling reads as a grid/band of fixtures, cut density first.
+- **[retail_store v1, storefront = worst-case black void]** `place_window_floor_to_ceiling("front_wall")`
+  filled the ENTIRE front wall with a pure-black void (no exterior env) — the window-void limit at its
+  worst because a storefront wall is huge. → `place_window_standard(position="center")` (a modest pane)
+  + **staged the three mannequins in front of it as the "window display."** Now reads as an evening
+  storefront. Lesson: **never full-height-glaze a wall you'll look at; a standard pane + a foreground
+  object (mannequin/plant) turns the void into a backdrop.** Generalizes the executive_office window rule.
+- **[retail_store v1, converged in 3]** render1 (void + 40-disc grid) → window+density fixes; render2
+  one vote `rescale room by 0.9` (floor visibly empty) → applied `modulate_scale=0.9`, **declined**
+  `rotate checkout counter/POS to face customer` (a back-wall cash-wrap facing into the store already
+  faces approaching customers — ambiguous noise); render3 `no rescale / no rotation / no wall overlap`
+  everywhere → stop. The single mild rescale vote acted-on-once + clean next render = the converge signal.
+- **[jewelry_shop v1→v2, a shop reads by its PRODUCT, not its fixtures — the user caught what the
+  VLM couldn't]** No velvet jewelry bust exists (~0.5 → decorative sculptures, recall ≠ quality, the
+  florist trap). **v1 wrong move:** massed the strong *fixture* — glass display vitrines ×6 —
+  assuming "cases = jewelry store." But the vitrine meshes are EMPTY (no jewelry modelled inside), so
+  the room read as a **furniture showroom**, and 6 tall cabinets **congested** it. The VLM feedback
+  loop went fully clean (it checks per-object geometry, NOT "does this look like a jewelry shop" or
+  "is it crowded"), so I shipped it — and the **user** flagged both problems. **v2 fix:** a dedicated
+  *jewelry-PROP* scan (the furniture stress test never surfaces "a diamond ring / a gem on a stand")
+  found real props — gold hand-shaped stand, geode, agate-on-stand, cloche, jewelry boxes, display
+  bust — **massed at viewing height** on a central display table + the cash-wrap + the window
+  pedestals; cut vitrines 6→4; up-scaled 0.8→0.9. Lessons: (a) **to make a retail scene read as its
+  category, put the PRODUCT on the display surfaces at eye level — an empty fixture names the fixture,
+  not the shop**; (b) **the VLM loop converging is necessary but NOT sufficient — gut-check category
+  legibility + crowding yourself**; (c) congestion is driven by TALL pieces blocking sightlines (cut
+  those), not low displays.
+- **[jewelry_shop v1, pin anything whose COLOUR carries the palette]** The accent armchair was left
+  unpinned; retrieval **flipped it pink → emerald between two runs at the same seed=42** (the VLM
+  pick is not deterministic). Because the jewel-tone palette leaned on it, pinned the emerald chair.
+  Reinforces restaurant's "pin for palette, not just type": a fixed seed does NOT fix an unpinned
+  pick's colour — pin it.
+- **[jewelry_shop v1, converged in 2 via pattern reuse]** Copied the retail "central piece + perimeter
+  loop + branded service wall" recipe (vitrines for rails, pedestals for mannequins) → render1 hit only
+  the routine trio (`rescale room 0.8` empty floor + `rescale jewelry boxes 0.5` oversized + a
+  `density=0.1` disc-band on a medium room → 0.05); render2 clean everywhere. Reusing a solved pattern
+  collapses the feedback loop. Also refines lighting: even a MEDIUM room over-tiled at 0.1 → 0.05.
+- **[TOOLING GOTCHA — `run_scene` mtime-fallback]** `mcp__idsdl__run_scene` reports whichever
+  `report.json` is **newest by mtime across all `tmp/*` dirs**, so when a build **errors before writing
+  its own report** (or another run finished more recently) it surfaces a *different scene's* renders +
+  feedback — I got a full **garage** back for a retail program (`ok=False`, but the images/asset-list
+  were garage). **Tell by the printed asset list**: if it isn't your program's assets, ignore the
+  render and re-run directly (`python workbench.py run <prog>`) to see the real build output/traceback.

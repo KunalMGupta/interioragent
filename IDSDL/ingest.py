@@ -127,20 +127,24 @@ def _worker_scene():
 
 
 def _copy_centered(src, dst):
-    """Copy a supplied .glb into the library with its bounding box centered at the origin.
+    """Copy a supplied .glb into the library VERBATIM — do NOT re-export through trimesh.
 
-    The runtime floor-aligns by aabb bottom but some room-level passes assume the mesh origin
-    sits at its bbox center; a mesh authored with an off-center origin therefore lands sunk into
-    or floating above the floor. Centering on ingest removes that ambiguity (translation only —
-    the supplied Y-up / front-+Z / metric scale are preserved). Falls back to a verbatim copy if
-    the mesh can't be processed."""
-    try:
-        import trimesh
-        m = trimesh.load(src, force="mesh", process=False)
-        m.apply_translation(-(m.bounds[0] + m.bounds[1]) / 2.0)
-        m.export(dst)
-    except Exception:
-        shutil.copy(src, dst)
+    Two round-trip hazards, both seen in practice, are why this is a byte copy:
+      * `trimesh.load(src, force="mesh")` concatenates every primitive into one mesh and DROPS
+        the materials of any multi-material asset — the stored glb comes out POSITION-only and
+        renders as a flat WHITE object.
+      * `trimesh.load(src).export(dst)` (a Scene round-trip, even keeping materials) EXPLODES a
+        single authored multi-primitive glTF mesh into MANY separate meshes/nodes. The Blender
+        loader in scene.py keeps only `imported_objs[0]`, so all but one primitive are dropped at
+        the origin — the asset renders DISASSEMBLED (part placed, the rest stuck at 0,0,0).
+
+    A verbatim copy keeps the authored single-mesh / multi-material structure, which Blender
+    imports as ONE object carrying all material slots (textured AND whole). Centering on ingest is
+    unnecessary: the loader re-centers every asset on import via
+    `origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')`, and size queries (`get_whd`) are
+    translation-invariant. The ingest contract already requires assets be supplied correctly
+    oriented + metric, so no geometry processing is needed here."""
+    shutil.copy(src, dst)
 
 
 def _process_one(glb, fname, sha, vlm, encoder, manifest):

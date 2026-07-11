@@ -135,6 +135,21 @@ combos and speakers/mics that "desk lamp"/"monitor stand" queries drag in). Pair
 it overlaps `TableTopDecorRetriever` (generic table decor) — the router prefers this one for
 desk/computer queries because its description names the workstation items explicitly.
 
+**`ShopFixtureRetriever`** (pool `assets/shop_fixtures.json`, 428 ids) is the retail/shop pool spanning
+GROCERY, CLOTHING, general RETAIL, TOY, COMIC/BOOK, JEWELRY and COSMETIC stores: gondola/wall shelving,
+display cabinets & glass showcases, clothing racks & rails, checkout counters, cash registers/POS,
+mannequins & dress forms, refrigerated/bakery/deli cases, magazine racks, pedestals, coat/hat stands,
+and shop MERCHANDISE (folded clothes, jeans, books, groceries, toys, necklaces, shopping bags/carts).
+Built = the **88 ingested custom retail meshes** ([[ingested-retail-assets]]) + **~340 swept dataset
+assets** (a keyword-curated embedding sweep of ~45 shop queries × top-15, see below). This is what makes
+the ingested custom assets **surface in NL retrieval**: without it, "a store mannequin" routes to
+`HumansAndSculptures` and "a comic-book display shelf" to `CabinetandShelf` — neither of which includes
+custom assets, so the ingested meshes were invisible to plain `AddAsset`. Mirrors `HairSalonRetriever`
+(pool + `POOL_BONUS=0.04` + full-dataset fallback merge), so the curated shop assets win ties while a
+clearly-better general asset can still surface. NOTE: adding a NEW retriever CLASS needs a fresh import
+— `run_scene` (subprocess-isolated) picks it up immediately, but the warm MCP `retrieve`/`inspect` tools
+only reflect it after a server restart (`refresh_retrievers` rebuilds instances but does not re-import).
+
 ## "Set assets" — bundled categories (vanities, toilets)
 Some categories are **complete sets** in the mesh and must be retrieved + placed as ONE unit, never
 as separable parts: a vanity = cabinet+sink+counter; a toilet = bowl+cistern+flush-buttons+TP-holder.
