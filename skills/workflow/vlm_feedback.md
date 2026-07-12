@@ -298,6 +298,19 @@ rotation issue you can *see*; the VLM rotation text is just a hint.
   — calm on nothing: it produced a ~26-fixture starfield on a café-sized room (count is
   `1+(max_lights-1)*density`). → **0.01 gave a clean 6.** Extends the retail area-scaling rule
   downward: small room ≈ 0.01-0.02, medium ≈ 0.05, and only genuinely big floors near 0.08.
+- **[laundromat v1, room size — a SPARSE room may shrink below 1.0]** `RoomProportions`
+  voted `0.7` (Ph1) → `0.8` (Ph2); held per render-wins-early. Applied
+  `modulate_scale=0.85` in the final phase → the vote PERSISTED at `0.75` (the centre
+  aisle was genuinely empty — 4 floor slots, small furniture). Took one more decisive
+  shrink to **0.75** → `no rescale`. Refines the locker_room rule: "never shrink below
+  1.0" applies to furniture-PACKED rooms (wall rows overflow their slots); a room that
+  is genuinely sparse in the render CAN go well below 1.0 — expect a two-step
+  final-phase convergence when the first application undershoots.
+- **[laundromat v1, clean by construction]** `no rotation` / `no wall overlap` every
+  phase: all three wall placements (machine row back / counter left / bench right)
+  omitted `facing` (the heuristic faces the room), art hung over the LOW machine run
+  (not a tall spine), window `standard` on a slot the door doesn't claim. Copying the
+  worked-example defaults collapsed the feedback loop to a single room-size thread.
 - **[TOOLING GOTCHA — `run_scene` mtime-fallback]** `mcp__idsdl__run_scene` reports whichever
   `report.json` is **newest by mtime across all `tmp/*` dirs**, so when a build **errors before writing
   its own report** (or another run finished more recently) it surfaces a *different scene's* renders +
