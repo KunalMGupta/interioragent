@@ -196,9 +196,24 @@ RoomGroup auto-sizes WIDTH/DEPTH from what you place. The room is the only group
 that renders **interior** views (`auto_render=True` → `render_interior()` on compile;
 also `render_interior_combined()` for the 4-view strip the VLM uses).
 
+**Auto-size mechanics — room size is a consequence of slot occupancy.** Floor
+placements land in a 3×3 slot grid; the shell grows until the widest slot-ROW and
+deepest slot-COLUMN fit their occupants. So a small/cozy room = few occupied slots
+(4-5) with modest hero widths; occupying all nine slots, or dropping one wide
+multi-cluster composed group into a single slot, forces a cavernous shell that no
+decor can fill (the coffee-shop lesson). `modulate_scale` only scales that computed
+size — it cannot rescue a footprint the placements dictate, and raising it above 1.0
+to dodge overlaps just inflates the room (shrink/remove furniture instead).
+
 Floor placement: `place_on_center/back/front/left/right`, `*_left/right`, and
 `*_corner` variants — all take optional `facing`. Wall-adjacent furniture:
 `place_on_<wall>_wall_<pos>`. Wall-hung art: `place_on_wall_<wall>_<pos>`.
+
+**Wall-hung = FLAT only.** `place_on_wall_*` hangs the mesh at art height; a mesh
+deeper than ~0.25 m (shelving, a veneer panel, any cabinet) renders as furniture
+FLOATING in mid-air. The DSL now warns (print + `scene.vlm_feedback`) when a deep
+mesh is hung — fix by using `place_on_<wall>_wall_<pos>` (floor, against the wall)
+or pinning a genuinely thin canvas/mirror/board mesh.
 Openings: `place_door(wall, position)`, `place_window_floor_to_ceiling`,
 `place_window_picture`, `place_window_standard(wall, position, curtain)`.
 

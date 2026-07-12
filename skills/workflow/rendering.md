@@ -3,6 +3,14 @@
 How to see what you built. Everything lands in the per-run scratchpad
 `tmp/<run_id>/`; nothing should be written to the repo root.
 
+> **Minimal render policy is the DEFAULT** (`IDSDL/render_policy.py`). To keep
+> iteration fast, the only render per compile is the **room VLM strip**
+> (`render_interior_combined()`, cached once per compile in `tmp/<run>/vlm_views/`),
+> and the only critique channel is the room-level VLM (RoomProportions + Rotation +
+> WallOverlap). Anchor-group VLM constraints (ObjectProportions/Rotation — a full
+> Blender render per group per compile) and the 8-view `render_interior()` set are
+> skipped. Set `IDSDL_MINIMAL_RENDERS=0` to restore everything below.
+
 ## The workbench
 
 ```bash

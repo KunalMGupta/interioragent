@@ -217,8 +217,13 @@ class AnchorGroup(SceneProgObject):
 
         # Run optimization
         self.OverlapConstraint()
-        self.ObjectProportionsConstraint()
-        self.RotationConstraint()
+        # Anchor-group VLM critique (ObjectProportions/Rotation) costs a full Blender
+        # 4-view render per group per compile; under the minimal render policy the room
+        # strip is the single critique channel (see IDSDL/render_policy.py).
+        from IDSDL.render_policy import minimal_renders
+        if not minimal_renders():
+            self.ObjectProportionsConstraint()
+            self.RotationConstraint()
         self._run_constraint_hooks()
         self.grad_optimize()
 
@@ -1020,9 +1025,13 @@ class RoomGroup(SceneProgObject):
 
     def __init__(self, scene, name=None, modulate_scale=1.0, randomness=0.0,
                  auto_render=True, render_dir=None,
-                 render_resolution=(1280, 900), render_samples=48, max_height=3.0):
+                 render_resolution=(1280, 900), render_samples=48, max_height=3.0,
+                 auto_clearances=True):
         super().__init__(scene, name=name)
         self.modulate_scale = modulate_scale
+        # Category-default clearances (counters, cabinets, appliances, ... — see
+        # IDSDL/default_constraints.py), applied like the automatic door clearance.
+        self.auto_clearances = auto_clearances
         # Ceiling height is normally clamped to 3.0 m. For rooms with tall contents (a gym's
         # power racks / machines, a warehouse), raise this cap so the room can grow with its
         # tallest floor object instead of the ceiling cutting through it. Default 3.0 keeps
@@ -1502,6 +1511,12 @@ class RoomGroup(SceneProgObject):
         obj.set_rotation(self.facing_to_rotation(facing))
         self.add_child(obj)
 
+    # Wall-hung items are meant to be flat (art, mirrors, boards). A mesh deeper
+    # than this after scaling is almost certainly FLOOR furniture hung at art
+    # height — it renders as a cabinet/panel floating in mid-air (the
+    # children_room "wheeled easel as wall art" lesson).
+    WALL_HUNG_MAX_DEPTH = 0.25
+
     def _place_on_wall(self, obj, x, y, z, rot, target_width):
         orig_width = max(obj.get_width(), 1e-6)
         orig_height = max(obj.get_height(), 1e-6)
@@ -1512,6 +1527,20 @@ class RoomGroup(SceneProgObject):
         sx = new_width / orig_width
         sy = new_height / orig_height
         new_depth = 0.5 * (sx + sy) * orig_depth
+
+        if new_depth > self.WALL_HUNG_MAX_DEPTH:
+            desc = getattr(obj, "description", None) or getattr(obj, "name", "object")
+            msg = (f"[RoomGroup] WARNING: wall-hung '{desc}' is {new_depth:.2f} m deep — "
+                   f"it will read as furniture FLOATING in mid-air, not wall art. "
+                   f"Either place it as floor furniture against the wall "
+                   f"(place_on_<wall>_wall_<pos>) or pin a genuinely thin (<{self.WALL_HUNG_MAX_DEPTH:.2f} m) "
+                   f"canvas/panel/mirror mesh instead.")
+            print(msg)
+            if self.scene is not None:
+                if getattr(self.scene, "vlm_feedback", None):
+                    self.scene.vlm_feedback += "\n" + msg
+                else:
+                    self.scene.vlm_feedback = msg
 
         obj.scale_only_width(new_width)
         obj.scale_only_height(new_height)
@@ -2134,6 +2163,42 @@ class RoomGroup(SceneProgObject):
             self.children.append(proxy)
             self.ClearanceConstraint(proxy, distance=self.DOOR_CLEARANCE, dir="front")
 
+    def _register_default_clearances(self):
+        """Auto-register category-default clearances (counters, cabinets, appliances, …
+        — the table in IDSDL/default_constraints.py) for the room's floor furniture,
+        matched by the asset's retrieval description. Same mechanism as the automatic
+        door clearance; constraints are re-instantiated fresh each compile."""
+        from IDSDL.default_constraints import (auto_clearances_enabled,
+                                               default_clearance_for)
+        if not self.auto_clearances or not auto_clearances_enabled():
+            return
+
+        def _identity_desc(obj, depth=0):
+            """The description that names this room child: its own, or (for a
+            composed group) its anchor chain's — a bar station is 'a bar counter'."""
+            d = getattr(obj, "description", None)
+            if d:
+                return d
+            anchor = getattr(obj, "anchor", None)
+            if anchor is not None and depth < 3:
+                return _identity_desc(anchor, depth + 1)
+            return None
+
+        for c in self.children:
+            if getattr(c, "is_proxy", False) or getattr(c, "ignore_overlap", False) \
+                    or getattr(c, "is_light", False):
+                continue
+            desc = _identity_desc(c)
+            rule = default_clearance_for(desc)
+            if rule is None:
+                continue
+            distance, direction = rule
+            # the constraint moves the target object, so it must attach to the
+            # room-level child (the group), never a leaf frozen inside it
+            self.ClearanceConstraint(c, distance=distance, dir=direction)
+            print(f"[RoomGroup] default clearance {distance} m ({direction}) for "
+                  f"'{(desc or '')[:60]}'")
+
     def _enforce_door_clearances(self):
         """Deterministic guarantee (run after the stochastic solve, like _snap_overlaps /
         _clamp_to_bounds): push any floor item that still intrudes into a doorway band out
@@ -2254,6 +2319,10 @@ class RoomGroup(SceneProgObject):
     def compile(self):
         self.reset_compile_state()
         self.clear_constraints()
+        # One VLM strip per compile: RoomProportions + Rotation both call
+        # render_interior_combined() on the same settled layout, so the first
+        # render is cached and reused (see render_interior_combined).
+        self._vlm_strip_cache = None
 
         # Resolve each grid placement's facing exactly once (caller value, else heuristic
         # default) and inject it back into the op so both room-sizing and the placement body
@@ -2291,6 +2360,10 @@ class RoomGroup(SceneProgObject):
         # register their ClearanceConstraint before the solve, so floor furniture is
         # pushed out of the doorway just like any author-added clearance.
         self._register_door_clearances()
+
+        # Category-default clearances (counters, cabinets, appliances, ...) — the
+        # hardcoded usage-constraint table in IDSDL/default_constraints.py.
+        self._register_default_clearances()
 
         self.OverlapConstraint()
         self.OutOfBoundsConstraint()
@@ -2333,7 +2406,8 @@ class RoomGroup(SceneProgObject):
         self.is_frozen_group = True
         self.last_compile_report = self.make_compile_report()
 
-        if self.auto_render:
+        from IDSDL.render_policy import minimal_renders
+        if self.auto_render and not minimal_renders():
             self.render_interior()
 
         return self.last_compile_report
@@ -2373,9 +2447,17 @@ class RoomGroup(SceneProgObject):
         image (back | front | left | right), returning its path. This is the
         inside-the-room analogue of SceneProgObject.render(): VLM constraints on
         a closed room must see the interior, not the exterior box.
+
+        Cached per compile: the layout is settled by the time the VLM constraints
+        run, so the first strip is reused by every later caller until the next
+        compile resets the cache.
         """
         import matplotlib.pyplot as plt
         from IDSDL.renderer.renderer import SceneRenderer
+
+        cached = getattr(self, "_vlm_strip_cache", None)
+        if cached and os.path.exists(cached):
+            return cached
 
         run_dir = self._run_dir("vlm_views")
         blend_path = self._build_blend()
@@ -2397,6 +2479,7 @@ class RoomGroup(SceneProgObject):
         combined = np.hstack([plt.imread(p) for p in wall_paths])
         combined_path = os.path.join(run_dir, f"combined_{uid}.png")
         plt.imsave(combined_path, combined)
+        self._vlm_strip_cache = combined_path
         return combined_path
 
     # -----------------------------------------------------------------

@@ -14,6 +14,14 @@ class Raytracer2D:
 
         self.aabb = {obj: self.enhance_aabb(obj.get_aabb()) for obj in self.objects}
 
+    def _aabb_of(self, obj):
+        """AABB for any object, including a composed GROUP used as a constraint
+        target (e.g. a category-default clearance on a bar station). The cache is
+        built from the flattened leaves, so group targets are added lazily."""
+        if obj not in self.aabb:
+            self.aabb[obj] = self.enhance_aabb(obj.get_aabb())
+        return self.aabb[obj]
+
     def enhance_aabb(self, aabb):
         margin = 0.05
         aabb = np.asarray(aabb, dtype=np.float32)
@@ -26,8 +34,8 @@ class Raytracer2D:
         )
 
     def overlap(self, obj1, obj2):
-        aabb1 = self.aabb[obj1]
-        aabb2 = self.aabb[obj2]
+        aabb1 = self._aabb_of(obj1)
+        aabb2 = self._aabb_of(obj2)
         return self.aabb_overlap(aabb1, aabb2)
 
     def aabb_overlap(self, aabb1, aabb2):
@@ -52,8 +60,8 @@ class Raytracer2D:
         return True, float(degree)
 
     def dist_in_xpos(self, obj1, obj2):
-        aabb1 = self.aabb[obj1]
-        aabb2 = self.aabb[obj2]
+        aabb1 = self._aabb_of(obj1)
+        aabb2 = self._aabb_of(obj2)
 
         xmin1, ymin1, zmin1 = aabb1[0]
         xmax1, ymax1, zmax1 = aabb1[1]
@@ -89,8 +97,8 @@ class Raytracer2D:
         return xmin2 - xmax1
 
     def dist_in_xneg(self, obj1, obj2):
-        aabb1 = self.aabb[obj1]
-        aabb2 = self.aabb[obj2]
+        aabb1 = self._aabb_of(obj1)
+        aabb2 = self._aabb_of(obj2)
 
         xmin1, ymin1, zmin1 = aabb1[0]
         xmax1, ymax1, zmax1 = aabb1[1]
@@ -126,8 +134,8 @@ class Raytracer2D:
         return xmin1 - xmax2
 
     def dist_in_zpos(self, obj1, obj2):
-        aabb1 = self.aabb[obj1]
-        aabb2 = self.aabb[obj2]
+        aabb1 = self._aabb_of(obj1)
+        aabb2 = self._aabb_of(obj2)
 
         xmin1, ymin1, zmin1 = aabb1[0]
         xmax1, ymax1, zmax1 = aabb1[1]
@@ -163,8 +171,8 @@ class Raytracer2D:
         return zmin2 - zmax1
 
     def dist_in_zneg(self, obj1, obj2):
-        aabb1 = self.aabb[obj1]
-        aabb2 = self.aabb[obj2]
+        aabb1 = self._aabb_of(obj1)
+        aabb2 = self._aabb_of(obj2)
 
         xmin1, ymin1, zmin1 = aabb1[0]
         xmax1, ymax1, zmax1 = aabb1[1]
@@ -206,8 +214,17 @@ class Raytracer2D:
         if dir not in ["x+", "x-", "z+", "z-"]:
             raise ValueError("Invalid direction. Use 'x+', 'x-', 'z+', or 'z-'.")
 
+        # A composed-group target contains its own members in the flattened object
+        # list — they must not count as intruders in the group's clearance band.
+        own = set(obj.get_children()) if getattr(obj, "children", None) else set()
+        if own:
+            own.add(obj)
+            objects = [o for o in self.objects if o not in own]
+        else:
+            objects = self.objects
+
         if dir == "x+":
-            for other in self.objects:
+            for other in objects:
                 if other is obj:
                     continue
                 tmp = self.dist_in_xpos(obj, other)
@@ -216,7 +233,7 @@ class Raytracer2D:
                     nearest_obj = other
 
         elif dir == "x-":
-            for other in self.objects:
+            for other in objects:
                 if other is obj:
                     continue
                 tmp = self.dist_in_xneg(obj, other)
@@ -225,7 +242,7 @@ class Raytracer2D:
                     nearest_obj = other
 
         elif dir == "z+":
-            for other in self.objects:
+            for other in objects:
                 if other is obj:
                     continue
                 tmp = self.dist_in_zpos(obj, other)
@@ -234,7 +251,7 @@ class Raytracer2D:
                     nearest_obj = other
 
         elif dir == "z-":
-            for other in self.objects:
+            for other in objects:
                 if other is obj:
                     continue
                 tmp = self.dist_in_zneg(obj, other)
