@@ -29,6 +29,7 @@ folder with a `SKILL.md` (name + description front matter, then instructions).
 
 | Skill | Purpose |
 |---|---|
+| [generate-scene](generate-scene/SKILL.md) | Generate a complete 3D scene from a text prompt, end to end — the plan → retrieve-traces → asset-audit → author → build → critique → judge → write-back playbook (agent-as-author), plus the one-command `main.py` / MCP-job automatic mode. |
 | [add-placement-group](add-placement-group/SKILL.md) | Add a new placement group / arrangement motif to `IDSDL/groups_extra.py` — hand-written motifs or integrations of external 3D scene-generation repos (SceneMotifCoder, diffusion/transformer/CNN/LLM models). Validates numerically + via renders. |
 | _add-constraint_ | _(planned)_ Add a new optimization constraint without touching core. |
 
