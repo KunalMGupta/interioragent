@@ -74,9 +74,11 @@ def _collect(scene):
         renders = sorted(
             glob.glob(os.path.join(run_dir, "**", "*.png"), recursive=True)
         )
+    from IDSDL.phases import current_phase
     return {
         "scene": getattr(scene, "name", "?"),
         "run_dir": run_dir,
+        "phase": current_phase(),
         "counts": {
             "objects": len(getattr(scene, "objects", [])),
             "walls": len(getattr(scene, "walls", [])),
@@ -136,11 +138,40 @@ def _print(report):
     print(bar + "\n")
 
 
-def cmd_run(program_path):
+def cmd_lint(program_path):
+    """Static API lint (IDSDL/lints.py): unknown methods/kwargs vs the real surface.
+    Milliseconds instead of a failed multi-minute build."""
     program_path = os.path.abspath(program_path)
     if not os.path.isfile(program_path):
         print(f"[workbench] no such program: {program_path}", file=sys.stderr)
         return 1
+    from IDSDL.lints import lint_program_file
+    errors = lint_program_file(program_path)
+    if errors:
+        print(f"[workbench] lint: {len(errors)} error(s) in {program_path}")
+        for e in errors:
+            print(f"  {e}")
+        return 1
+    print(f"[workbench] lint: clean ({program_path})")
+    return 0
+
+
+def cmd_run(program_path, phase=None):
+    program_path = os.path.abspath(program_path)
+    if not os.path.isfile(program_path):
+        print(f"[workbench] no such program: {program_path}", file=sys.stderr)
+        return 1
+    # Fail fast on API-surface errors before spending minutes on a build.
+    if cmd_lint(program_path) != 0:
+        print("[workbench] refusing to run: fix the lint errors above "
+              "(they would crash or corrupt the build).", file=sys.stderr)
+        return 1
+    if phase is not None:
+        # Phase-gated build (IDSDL/phases.py): the program's `if PHASE >= n:`
+        # gates read this env var. No-op for non-gated programs.
+        os.environ["IDSDL_PHASE"] = str(phase)
+        print(f"[workbench] building at phase {phase} "
+              f"(gated programs skip later-phase statements)")
     print(f"[workbench] running {program_path} ...")
     ns = runpy.run_path(program_path, run_name="__main__")
     scene = _find_scene(ns)
@@ -516,8 +547,13 @@ SCRATCH_BROWSE = os.path.join(
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="workbench")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    r = sub.add_parser("run", help="run a scene program and report")
+    r = sub.add_parser("run", help="run a scene program and report (lints first)")
     r.add_argument("program", help="path to a scene .py program")
+    r.add_argument("--phase", type=int, default=None, choices=(1, 2, 3),
+                   help="build only up to this phase (1 anchors / 2 surfaces / "
+                        "3 everything) — for programs gated on IDSDL/phases.py")
+    lt = sub.add_parser("lint", help="static API lint of a scene program (no build)")
+    lt.add_argument("program", help="path to a scene .py program")
     sub.add_parser("report", help="re-print the latest run's saved report")
     ins = sub.add_parser("inspect", help="show retrieval candidates for a query")
     ins.add_argument("query", help="asset description to retrieve")
@@ -541,7 +577,9 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     if args.cmd == "run":
-        return cmd_run(args.program)
+        return cmd_run(args.program, phase=args.phase)
+    if args.cmd == "lint":
+        return cmd_lint(args.program)
     if args.cmd == "report":
         return cmd_report()
     if args.cmd == "inspect":

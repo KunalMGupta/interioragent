@@ -248,10 +248,14 @@ is deterministic (no solve), so keep its `randomness` modest. Good defaults: sea
 
 ## Constraints (see workflow/constraints.md for the full model)
 
-- **Auto** (you do nothing): `OverlapConstraint`, `OutOfBoundsConstraint`, and
+- **Auto** (you do nothing): `OverlapConstraint`, `OutOfBoundsConstraint`,
   **door clearance** — every `place_door` auto-registers a `ClearanceConstraint`
-  (~0.9 m) at the doorway, so floor furniture is kept out of the way. Don't add your
-  own clearance for a door.
+  (~0.9 m) at the doorway, so floor furniture is kept out of the way (don't add your
+  own clearance for a door) — and `CategoryClearanceConstraint`: counters/display
+  cases/cabinets/appliances/fireplaces/pianos automatically get their functional
+  front clearance from the table in `IDSDL/default_constraints.py`, matched on the
+  asset's description (for a composed group, its anchor chain's). Disable per room
+  with `RoomGroup(auto_clearances=False)`.
 - **Manual gradient** (you add, they move objects): add them *inside* the group's
   `with` block via the native convenience methods (available on every group).
   `compile()` (on `__exit__`) re-runs them after the auto constraints and before
@@ -277,6 +281,24 @@ is deterministic (no solve), so keep its `randomness` modest. Good defaults: sea
   (anchor groups), `RoomProportionsConstraint` + `WallOverlapConstraint` (RoomGroup).
   They append rescale/rotation/feedback text to `scene.vlm_feedback`. Nothing moves
   automatically — act via the program (rescale, `face()`/`rotate()`, reposition).
+
+## Phases & lints (iterative verification)
+
+- **Phase-gate your program** (`IDSDL/phases.py`): `PHASE = current_phase()` at the
+  top (defaults to 3 = everything), then `if PHASE >= 2:` around surface dressing
+  (place_on_top/place_inside) and `if PHASE >= 3:` around wall art/windows/lighting/
+  mood. `workbench run <p>.py --phase 1` then builds just the floor layout (~1–2 min)
+  for a cheap layout check. Later phases only ADD — never move phase-1 geometry.
+  Canonical gated program: `skills/examples/coffee_shop_v1.py`.
+- **Static lint** (`workbench lint <p>.py`, MCP `lint_program`): validates every
+  method call + keyword against the real DSL surface in milliseconds — catches
+  invented verbs (`place_on_left_adjacent`) and kwargs (`add_lighting(asset_id=…)`)
+  before a build. `workbench run` lints first and refuses to build on errors.
+- **Compile lints** (`IDSDL/lints.py`, auto): floor objects floating/sunk (AABB
+  bottom off y=0 — usual cause: off-center mesh origin, SWAP the mesh) and lighting
+  starfield (fixture count far over the room's area budget) are flagged as `[Lint]`
+  lines in `scene.vlm_feedback`/the report. Keep them clean per phase; disable with
+  `IDSDL_LINTS=0`.
 
 ## Export
 

@@ -13,8 +13,16 @@ so the RoomGroup shell auto-sizes cafe-scale by construction.
 - Lighting: rattan pendants over the counter zone (singular query, density 0.15) +
   flush-mount room fill at 0.01 (SMALL-room density lesson: 0.05 is a starfield) +
   window daylight.
+
+Phase-gated (IDSDL/phases.py): `workbench run <this> --phase 1` builds only the
+floor layout (~1 min) to verify room size / overlaps / clearances before the
+expensive surface dressing (phase 2) and walls/lighting/mood (phase 3). The
+default build (no --phase) is the complete scene, identical to the ungated form.
 """
+from IDSDL.phases import current_phase
 from IDSDL.scene import SceneProgRoom
+
+PHASE = current_phase()   # 1 anchors / 2 surfaces / 3 walls+mood (default 3 = all)
 
 scene = SceneProgRoom("CozyCoffeeShop", seed=7)
 
@@ -76,30 +84,33 @@ counter = scene.AddAsset("a long wooden cafe counter with a paneled front",
                          asset_id=COUNTER, width=2.4)
 with scene.RelativeGroup() as counter_group:
     counter_group.set_anchor(counter)
-    counter_group.place_on_top([
-        scene.AddAsset("a stainless steel commercial espresso machine", asset_id=ESPRESSO),
-        scene.AddAsset("a black touchscreen POS terminal", asset_id=POS),
-        scene.AddAsset("a white three-tiered cake stand with pastries", asset_id=TIER3),
-        scene.AddAsset("a white sponge cake with floral decoration", asset_id=CAKE),
-        scene.AddAsset("a trio of chocolate donuts on a napkin", asset_id=DONUTS),
-        scene.AddAsset("a set of takeaway coffee cups in a carrier", asset_id=TAKEAWAY),
-    ])
-    counter_group.add_lighting("a woven rattan dome pendant light", density=0.15)
+    if PHASE >= 2:
+        counter_group.place_on_top([
+            scene.AddAsset("a stainless steel commercial espresso machine", asset_id=ESPRESSO),
+            scene.AddAsset("a black touchscreen POS terminal", asset_id=POS),
+            scene.AddAsset("a white three-tiered cake stand with pastries", asset_id=TIER3),
+            scene.AddAsset("a white sponge cake with floral decoration", asset_id=CAKE),
+            scene.AddAsset("a trio of chocolate donuts on a napkin", asset_id=DONUTS),
+            scene.AddAsset("a set of takeaway coffee cups in a carrier", asset_id=TAKEAWAY),
+        ])
+    if PHASE >= 3:
+        counter_group.add_lighting("a woven rattan dome pendant light", density=0.15)
 
 backbar = scene.AddAsset("a light oak open bookshelf back bar", asset_id=BACKBAR, width=1.8)
 # stock the back-bar shelves — a dressed shelf reads "coffee shop"; an empty one
 # reads "furniture showroom" (jewelry_shop lesson, applied to the service wall)
 with scene.RelativeGroup() as backbar_group:
     backbar_group.set_anchor(backbar)
-    backbar_group.place_inside([
-        scene.AddAsset("a set of ceramic jars labeled tea coffee sugar", asset_id=JARSET),
-        scene.AddAsset("a wooden coffee bean jar", asset_id=BEANJAR),
-        scene.AddAsset("a white ceramic coffee shop mug", asset_id=CAFEMUG),
-        scene.AddAsset("a white coffee cup and saucer", asset_id=CUP),
-    ])
-    backbar_group.place_on_top([
-        scene.AddAsset("a trailing potted pothos plant"),
-    ])
+    if PHASE >= 2:
+        backbar_group.place_inside([
+            scene.AddAsset("a set of ceramic jars labeled tea coffee sugar", asset_id=JARSET),
+            scene.AddAsset("a wooden coffee bean jar", asset_id=BEANJAR),
+            scene.AddAsset("a white ceramic coffee shop mug", asset_id=CAFEMUG),
+            scene.AddAsset("a white coffee cup and saucer", asset_id=CUP),
+        ])
+        backbar_group.place_on_top([
+            scene.AddAsset("a trailing potted pothos plant"),
+        ])
 
 cart = scene.AddAsset("a vintage cream dessert cart with a canopy", asset_id=CART)
 with scene.RelativeGroup() as station:
@@ -117,11 +128,12 @@ with scene.AroundGroup(sparsity=0.2, jitter=0.35) as two_top:
     two_top.place_circle(chairs)
     for c in chairs:
         two_top.face(c, toward=t)
-    two_top.place_on_top([
-        scene.AddAsset("a white coffee cup and saucer", asset_id=CUP),
-        scene.AddAsset("an open box of assorted donuts", asset_id=DONUTBOX),
-    ])
-    two_top.place_rug("a neutral woven jute round rug", size=1.1)
+    if PHASE >= 2:
+        two_top.place_on_top([
+            scene.AddAsset("a white coffee cup and saucer", asset_id=CUP),
+            scene.AddAsset("an open box of assorted donuts", asset_id=DONUTBOX),
+        ])
+        two_top.place_rug("a neutral woven jute round rug", size=1.1)
 
 tt_left, tt_center = 2 * two_top
 
@@ -145,17 +157,19 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.15) as room:
     room.place_on_center(tt_center, facing="front")
     room.place_on_right(nook, facing="left")                    # armchair looks into the room
     room.place_on_front_wall_center(bench)                      # default: faces the room
-    room.place_on_back_right_corner(
-        scene.AddAsset("a leafy potted plant in a gray ceramic planter", asset_id=PLANT),
-        facing="front")
-    room.place_on_wall_back_center(
-        scene.AddAsset("a vintage espresso-themed chalkboard menu", asset_id=MENU))
-    room.place_on_wall_left_center(
-        scene.AddAsset("a framed vintage coffee advertisement print"))
-    room.place_window_standard("front_wall", position="left",
-                               curtain="cream cafe curtains")
+    # door in PHASE 1: its auto clearance shapes the floor solve
     room.place_door("front_wall", position="right")
-    room.add_lighting("a flat round LED flush mount ceiling light", density=0.01)
+    if PHASE >= 3:
+        room.place_on_back_right_corner(
+            scene.AddAsset("a leafy potted plant in a gray ceramic planter", asset_id=PLANT),
+            facing="front")
+        room.place_on_wall_back_center(
+            scene.AddAsset("a vintage espresso-themed chalkboard menu", asset_id=MENU))
+        room.place_on_wall_left_center(
+            scene.AddAsset("a framed vintage coffee advertisement print"))
+        room.place_window_standard("front_wall", position="left",
+                                   curtain="cream cafe curtains")
+        room.add_lighting("a flat round LED flush mount ceiling light", density=0.01)
 
 # The walnut bench mesh has an off-center origin and floats when wall-placed
 # (bottom ~0.6 m up; counter/back-bar rest fine) — snap it to the floor by its

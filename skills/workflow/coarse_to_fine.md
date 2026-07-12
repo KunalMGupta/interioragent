@@ -7,6 +7,15 @@ is positioned relative to it. Get the big rocks right before sand.
 After **every** phase: run the workbench, look at the renders, read the VLM
 feedback, fix, recompile. Do not advance to the next phase with a broken layout.
 
+This loop is now MECHANICAL, not aspirational: gate the program on
+`IDSDL/phases.py` (`PHASE = current_phase()`, then `if PHASE >= 2:` /
+`if PHASE >= 3:` around the later layers) and build each phase separately —
+`workbench run <program>.py --phase 1` builds just the floor layout in ~1–2 min
+(vs ~9 for a full build). Canonical gated program:
+`skills/examples/coffee_shop_v1.py`. Rule: later phases only ADD; never move
+phase-1 geometry. Deterministic lints (floaters, lighting starfield — see
+`IDSDL/lints.py`) land in the feedback of every build; keep them clean per phase.
+
 ---
 
 ## Phase 0 — ideate

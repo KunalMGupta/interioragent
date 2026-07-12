@@ -44,7 +44,9 @@ The geometry above converged clean but read sterile. Four additions carried the 
 ## Skeleton program
 See [coffee_shop_v1.py](coffee_shop_v1.py) — the canonical form (constants block of
 eyeball-verified pinned ids → stocked counter station → duplicated 2-top → nook →
-RoomGroup shell).
+RoomGroup shell), and the canonical PHASE-GATED program (`IDSDL/phases.py`):
+`workbench run <it> --phase 1` builds just the floor layout in ~1–2 min for the
+cheap layout check; the default build is the full scene.
 
 ## What worked / gotchas
 - **Eyeball EVERY pinned mesh preview first** (caption≠mesh): "window bench" retrieved a

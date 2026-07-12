@@ -22,6 +22,11 @@ grow: every scene, we add the concrete feedback→action decisions we made and
   on the same group (RoomGroup needs an explicit `toward=`).
 - **WallOverlapConstraint** → free-text about wall items overlapping each other
   or doors/windows.
+- **`[Lint]` lines** (deterministic, `IDSDL/lints.py` — not a VLM) → floor objects
+  floating/sunk off y=0 and lighting starfields. Unlike the VLM signals these are
+  computed facts, not judgements: treat them as MUST-FIX (or explain why not),
+  never as noise to decline. Also `[RoomGroup] WARNING:` lines (residual overlaps
+  = room too small; over-height; deep wall-hung mesh) — same standing.
 
 ## How to act (default heuristics — refine these as we learn)
 

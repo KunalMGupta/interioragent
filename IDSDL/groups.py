@@ -1030,7 +1030,7 @@ class RoomGroup(SceneProgObject):
         super().__init__(scene, name=name)
         self.modulate_scale = modulate_scale
         # Category-default clearances (counters, cabinets, appliances, ... — see
-        # IDSDL/default_constraints.py), applied like the automatic door clearance.
+        # IDSDL/default_constraints.py) via CategoryClearanceConstraint at compile.
         self.auto_clearances = auto_clearances
         # Ceiling height is normally clamped to 3.0 m. For rooms with tall contents (a gym's
         # power racks / machines, a warehouse), raise this cap so the room can grow with its
@@ -2163,42 +2163,6 @@ class RoomGroup(SceneProgObject):
             self.children.append(proxy)
             self.ClearanceConstraint(proxy, distance=self.DOOR_CLEARANCE, dir="front")
 
-    def _register_default_clearances(self):
-        """Auto-register category-default clearances (counters, cabinets, appliances, …
-        — the table in IDSDL/default_constraints.py) for the room's floor furniture,
-        matched by the asset's retrieval description. Same mechanism as the automatic
-        door clearance; constraints are re-instantiated fresh each compile."""
-        from IDSDL.default_constraints import (auto_clearances_enabled,
-                                               default_clearance_for)
-        if not self.auto_clearances or not auto_clearances_enabled():
-            return
-
-        def _identity_desc(obj, depth=0):
-            """The description that names this room child: its own, or (for a
-            composed group) its anchor chain's — a bar station is 'a bar counter'."""
-            d = getattr(obj, "description", None)
-            if d:
-                return d
-            anchor = getattr(obj, "anchor", None)
-            if anchor is not None and depth < 3:
-                return _identity_desc(anchor, depth + 1)
-            return None
-
-        for c in self.children:
-            if getattr(c, "is_proxy", False) or getattr(c, "ignore_overlap", False) \
-                    or getattr(c, "is_light", False):
-                continue
-            desc = _identity_desc(c)
-            rule = default_clearance_for(desc)
-            if rule is None:
-                continue
-            distance, direction = rule
-            # the constraint moves the target object, so it must attach to the
-            # room-level child (the group), never a leaf frozen inside it
-            self.ClearanceConstraint(c, distance=distance, dir=direction)
-            print(f"[RoomGroup] default clearance {distance} m ({direction}) for "
-                  f"'{(desc or '')[:60]}'")
-
     def _enforce_door_clearances(self):
         """Deterministic guarantee (run after the stochastic solve, like _snap_overlaps /
         _clamp_to_bounds): push any floor item that still intrudes into a doorway band out
@@ -2361,9 +2325,12 @@ class RoomGroup(SceneProgObject):
         # pushed out of the doorway just like any author-added clearance.
         self._register_door_clearances()
 
-        # Category-default clearances (counters, cabinets, appliances, ...) — the
-        # hardcoded usage-constraint table in IDSDL/default_constraints.py.
-        self._register_default_clearances()
+        # Category-default usage clearances (counters, cabinets, appliances, ...) —
+        # a regular constraint (CategoryClearanceConstraint) over the table in
+        # IDSDL/default_constraints.py, added like any other standard constraint.
+        from IDSDL.default_constraints import auto_clearances_enabled
+        if self.auto_clearances and auto_clearances_enabled():
+            self.CategoryClearanceConstraint()
 
         self.OverlapConstraint()
         self.OutOfBoundsConstraint()
@@ -2392,6 +2359,11 @@ class RoomGroup(SceneProgObject):
         # Final overlap guarantee-check: flag any floor objects that still interpenetrate
         # (almost always = the room is too small for its furniture). See _warn_overlaps.
         self._warn_overlaps()
+
+        # Deterministic lints (floaters/sunk floor objects, lighting starfield) —
+        # advisory, recorded in scene.vlm_feedback like the warnings above.
+        from IDSDL.lints import run_room_lints
+        run_room_lints(self)
 
         # Apply opt-in rotation overrides after layout/wall placement settle, so the
         # VLM rotation check below judges the corrected orientation.
