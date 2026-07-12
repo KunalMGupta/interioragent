@@ -435,6 +435,56 @@ class ClearanceConstraint(ConstraintBase):
                     self.obj.grad += np.array([-delta / 2, 0, 0], dtype=np.float32) * self.weight
                     nearest_obj.grad += np.array([delta / 2, 0, 0], dtype=np.float32) * self.weight
                     
+class CategoryClearanceConstraint(ConstraintBase):
+    """Usage clearances from the category-default table in IDSDL/default_constraints.py
+    (counters keep a customer aisle, cabinets keep door swing, ...). Scans the group's
+    children once at construction, matches each by its identity description — an asset's
+    own, or for a composed group the description of its anchor chain — and expands every
+    match into a standard ClearanceConstraint on the group-level child (never a leaf
+    frozen inside it, since the push must move the whole unit). RoomGroup registers one
+    automatically when auto_clearances=True; any group can also add it explicitly."""
+
+    ANCHOR_CHAIN_MAX_DEPTH = 3
+
+    def __init__(self, group):
+        self.name = "CategoryClearanceConstraint"
+        self.type = "GRADIENT"
+        self.weight = 1.0
+        super().__init__(group)
+        self.expanded = self._expand()
+
+    @classmethod
+    def _identity_desc(cls, obj, depth=0):
+        d = getattr(obj, "description", None)
+        if d:
+            return d
+        anchor = getattr(obj, "anchor", None)
+        if anchor is not None and depth < cls.ANCHOR_CHAIN_MAX_DEPTH:
+            return cls._identity_desc(anchor, depth + 1)
+        return None
+
+    def _expand(self):
+        from IDSDL.default_constraints import default_clearance_for
+        expanded = []
+        for c in self.group.children:
+            if getattr(c, "is_proxy", False) or getattr(c, "ignore_overlap", False) \
+                    or getattr(c, "is_light", False):
+                continue
+            desc = self._identity_desc(c)
+            rule = default_clearance_for(desc)
+            if rule is None:
+                continue
+            distance, direction = rule
+            expanded.append(ClearanceConstraint(self.group, c,
+                                                distance=distance, dir=direction))
+            print(f"[CategoryClearance] {distance} m ({direction}) for "
+                  f"'{(desc or '')[:60]}'")
+        return expanded
+
+    def compute_gradients(self):
+        pass  # the expanded ClearanceConstraints registered above do the pushing
+
+
 class AccessConstraint(ConstraintBase):
     def __init__(self, group, obj, target, min_dist=0.1, max_dist=0.15, dir="front"):
         self.name = "AccessConstraint"
@@ -1238,6 +1288,7 @@ say which object to rotate and toward what.
 CONSTRAINTS = [
     OverlapConstraint,
     ClearanceConstraint,
+    CategoryClearanceConstraint,
     AccessConstraint,
     OutOfBoundsConstraint,
     VisibilityConstraint,

@@ -14,7 +14,7 @@ them and never tune them.
 | `OverlapConstraint` | objects don't interpenetrate (2D footprint) | every group's compile (GridGroup skips — deterministic layout) |
 | `OutOfBoundsConstraint` | objects stay within group WIDTH/DEPTH | RoomGroup, BasicRoomGroup |
 | **door clearance** (auto) | floor furniture is kept ~0.9 m clear of every doorway | RoomGroup, automatically per `place_door` |
-| **category-default clearances** (auto) | functional clearance in front of counters/reception desks (0.9), display cases (0.75), cabinets/wardrobes/shelving (0.6), appliances (0.9), fireplaces (0.8), pianos (0.9) — matched by keywords in the asset description (for a composed group, its anchor's) | RoomGroup compile; table in `IDSDL/default_constraints.py`; disable with `RoomGroup(auto_clearances=False)` or `IDSDL_AUTO_CLEARANCES=0` |
+| `CategoryClearanceConstraint` (auto) | functional clearance in front of counters/reception desks (0.9), display cases (0.75), cabinets/wardrobes/shelving (0.6), appliances (0.9), fireplaces (0.8), pianos (0.9) — matched by keywords in the asset description (for a composed group, its anchor's), each match expanding into a standard `ClearanceConstraint` | RoomGroup compile (any group can add it explicitly); table in `IDSDL/default_constraints.py`; disable with `RoomGroup(auto_clearances=False)` or `IDSDL_AUTO_CLEARANCES=0` |
 
 > Grow the category table in `IDSDL/default_constraints.py` as new categories earn a
 > rule — that file is the single list of "hardcoded" usage constraints. Note the door

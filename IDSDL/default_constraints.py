@@ -4,9 +4,10 @@ Some furniture ALWAYS needs functional clearance — a counter needs a customer
 aisle, a cabinet needs door swing, an appliance needs standing room. Doors get
 this automatically (RoomGroup registers a clearance per place_door); this table
 extends the same idea to asset categories, matched by keywords in the asset's
-retrieval description. Applied automatically by RoomGroup at compile
-(``_register_default_clearances``); disable with ``RoomGroup(auto_clearances=False)``
-or ``IDSDL_AUTO_CLEARANCES=0``. An author-added ``add_clearance`` on the same
+retrieval description. Manifested as a regular constraint —
+``CategoryClearanceConstraint`` in ``IDSDL/constraints.py`` — which any group can
+add; RoomGroup adds one automatically at compile. Disable with
+``RoomGroup(auto_clearances=False)`` or ``IDSDL_AUTO_CLEARANCES=0``. An author-added ``add_clearance`` on the same
 object simply stacks (constraints are additive; the larger requirement wins in
 the solve).
 
