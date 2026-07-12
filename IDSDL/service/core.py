@@ -291,9 +291,13 @@ def plan_refine(prompt, renders, prior=None, instruction=None, top_k=3, out=None
             "stderr_tail": "\n".join((p.stderr or "").splitlines()[-12:]) if p.returncode else ""}
 
 
-def run_scene(program_path, timeout=2400):
+def run_scene(program_path, timeout=2400, phase=None):
     """Build+render a DSL scene program. Subprocess-isolated (a fresh scene/retriever + cold
     Blender, like batchgen). Returns the run's ``report`` dict + the room view paths.
+
+    ``phase`` (1 anchors / 2 surfaces / 3 everything, default) builds a phase-gated
+    program only up to that phase — see IDSDL/phases.py. A phase-1 build of a gated
+    program takes ~a minute, so layout errors are caught before expensive dressing.
 
     Only accepts a report.json written AFTER this run started, so a build that errors
     before reporting can never surface a different scene's renders (the old mtime-fallback
@@ -302,7 +306,10 @@ def run_scene(program_path, timeout=2400):
     import time as _time
     start = _time.time()
     env = {**os.environ, "PYTHONPATH": "/work"}
-    p = subprocess.run([sys.executable, "workbench.py", "run", program_path],
+    cmd = [sys.executable, "workbench.py", "run", program_path]
+    if phase is not None:
+        cmd += ["--phase", str(int(phase))]
+    p = subprocess.run(cmd,
                        cwd="/work", env=env, capture_output=True, text=True, timeout=timeout)
     out = p.stdout + "\n" + p.stderr
     report, run_dir = {}, None
@@ -321,6 +328,21 @@ def run_scene(program_path, timeout=2400):
     return {"program": program_path, "ok": p.returncode == 0 and bool(report), "run_dir": run_dir,
             "report": report, "room_views": views,
             "stderr_tail": "\n".join(out.splitlines()[-18:]) if (p.returncode or not report) else ""}
+
+
+def lint_program(program_path=None, source=None):
+    """Static API lint of a scene program (IDSDL/lints.py) — unknown methods /
+    keywords vs the real DSL surface, in milliseconds, no build. Pass a path or
+    raw source. Returns {ok, errors}. `workbench run` also runs this and refuses
+    to build on errors."""
+    from IDSDL.lints import lint_program as _lint, lint_program_file as _lint_file
+    if source is not None:
+        errors = _lint(source)
+    elif program_path is not None:
+        errors = _lint_file(program_path)
+    else:
+        return {"ok": False, "errors": ["pass program_path or source"]}
+    return {"ok": not errors, "errors": errors}
 
 
 # ---- reasoning-based trace retrieval (retriever_core) -----------------------

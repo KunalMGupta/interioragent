@@ -212,14 +212,87 @@ class SceneGenerator:
         table += f"\n\n{len(results) - weak}/{len(results)} resolved cleanly; {weak} weak."
         return table
 
-    def _build(self, program: Path, out: Path, tag: str, log) -> BuildResult:
+    def _lint_gate(self, task, program_src: str, log, max_tries: int = 2) -> str:
+        """Static-lint the authored program (IDSDL/lints.py) and have the author fix
+        API-surface errors BEFORE any build is attempted — milliseconds instead of a
+        failed multi-minute build. Gives up after max_tries (the build then surfaces
+        whatever remains; workbench also refuses to run on lint errors)."""
+        from IDSDL.lints import lint_program
+        for _ in range(max_tries):
+            errors = lint_program(program_src)
+            if not errors:
+                return program_src
+            log(f"      lint: {len(errors)} API error(s) — revising without a build")
+            for e in errors:
+                log(f"        {e}")
+            directives = ["Static lint found API errors (no build was attempted). "
+                          "Fix exactly these:"] + errors
+            program_src = self.author.revise(task, program_src, directives)
+        return program_src
+
+    _BLOCKING = re.compile(r"\[Lint\]|WARNING", re.IGNORECASE)
+
+    def _phase_gates(self, task, program_src: str, out: Path, version: int,
+                     log, trace, save_trace):
+        """Cheap staged validation of a freshly authored program: build phase 1
+        (anchors, ~1 min) then phase 2 (surfaces), and have the author fix any
+        crash or blocking [Lint]/WARNING findings before the expensive full build
+        — layout errors get caught for the price of a phase-1 build instead of a
+        full one. One retry per phase; skipped entirely for non-gated programs.
+        Returns (program_src, version)."""
+        if "current_phase" not in program_src:
+            log("      program is not phase-gated — skipping phase gates")
+            return program_src, version
+        for ph in (1, 2):
+            for attempt in (0, 1):
+                path = out / f"program_v{version}.py"
+                path.write_text(program_src)
+                log(f"[5/7] phase-{ph} gate build v{version}...")
+                build = self._build(path, out, f"v{version}_p{ph}", log, phase=ph)
+                crashed = not build.ok and build.run_dir is None
+                blocking = [] if crashed else \
+                    [l for l in (build.feedback or "").splitlines()
+                     if self._BLOCKING.search(l)]
+                trace["iterations"].append(
+                    {"version": version, "phase_gate": ph, "ok": build.ok,
+                     "run_dir": build.run_dir, "blocking": blocking,
+                     "crashed": crashed})
+                save_trace()
+                if not crashed and not blocking:
+                    log(f"      phase-{ph} gate: clean")
+                    break
+                if attempt == 1:
+                    log(f"      phase-{ph} gate still unresolved — proceeding "
+                        f"(the full build will surface it)")
+                    break
+                directives = (
+                    [f"The program crashed in a phase-{ph} build. Fix the error:\n"
+                     + build.stderr_tail] if crashed else
+                    [f"The phase-{ph} layout build produced blocking findings — "
+                     f"fix exactly these:"] + blocking)
+                log(f"      phase-{ph} gate: "
+                    + ("crash" if crashed else f"{len(blocking)} blocking finding(s)")
+                    + " — revising...")
+                version += 1
+                program_src = self.author.revise(
+                    task, program_src, directives,
+                    images=([build.strip] if build.strip else None))
+                program_src = self._lint_gate(task, program_src, log)
+        return program_src, version
+
+    def _build(self, program: Path, out: Path, tag: str, log,
+               phase: int | None = None) -> BuildResult:
         """Run the program via the workbench in a subprocess; collect the report
         written by THIS run (mtime-newer-than-start, so a failed build can never
-        surface another run's report — the run_scene mtime-fallback gotcha)."""
+        surface another run's report — the run_scene mtime-fallback gotcha).
+        `phase` builds a phase-gated program only up to that phase (IDSDL/phases.py)."""
         start = time.time()
         env = {**os.environ, "PYTHONPATH": str(ROOT)}
+        cmd = [self.python, str(ROOT / "workbench.py"), "run", str(program)]
+        if phase is not None:
+            cmd += ["--phase", str(phase)]
         proc = subprocess.run(
-            [self.python, str(ROOT / "workbench.py"), "run", str(program)],
+            cmd,
             cwd=ROOT, env=env, capture_output=True, text=True, timeout=3600,
         )
         (out / f"build_{tag}.log").write_text(
@@ -325,7 +398,14 @@ class SceneGenerator:
 
         log("[4/7] authoring the scene program (with the plan image)...")
         program_src = self.author.write(task, images=plan_img or None)
+        program_src = self._lint_gate(task, program_src, log)
         version = 0
+
+        # Phase gates: validate the floor layout (phase 1, ~1 min) and the surface
+        # dressing (phase 2) of the fresh program before any full build — layout
+        # errors cost a phase-1 build to catch instead of a full one.
+        program_src, version = self._phase_gates(task, program_src, out, version,
+                                                 log, trace, save_trace)
         program_path = out / f"program_v{version}.py"
         program_path.write_text(program_src)
 
@@ -357,6 +437,7 @@ class SceneGenerator:
                     log("      program error — revising...")
                     version += 1
                     program_src = self.author.revise(task, program_src, directives)
+                    program_src = self._lint_gate(task, program_src, log)
                     program_path = out / f"program_v{version}.py"
                     program_path.write_text(program_src)
                     continue  # crash revise: no images (nothing was built)
@@ -373,6 +454,7 @@ class SceneGenerator:
                 program_src = self.author.revise(task, program_src,
                                                  review["directives"],
                                                  images=revise_images(build) or None)
+                program_src = self._lint_gate(task, program_src, log)
                 program_path = out / f"program_v{version}.py"
                 program_path.write_text(program_src)
 
@@ -397,6 +479,7 @@ class SceneGenerator:
             program_src = self.author.revise(task, last_good["program"],
                                              verdict["gaps"],
                                              images=revise_images(last_good["build"]) or None)
+            program_src = self._lint_gate(task, program_src, log)
             program_path = out / f"program_v{version}.py"
             program_path.write_text(program_src)
 

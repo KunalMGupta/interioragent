@@ -273,11 +273,26 @@ def plan_refine(prompt: str, renders: list, prior: list = None,
 
 
 @mcp.tool()
-def run_scene(program_path: str) -> list:
-    """Build + render a DSL scene program. SLOW (3-8 min, cold Blender). Returns the VLM feedback
-    + asset picks + the interior room views inline (first few). Runs subprocess-isolated."""
+def lint_program(program_path: str) -> str:
+    """Static API lint of a scene program — validates every method call and keyword argument
+    against the REAL DSL surface (unknown verbs like place_on_left_adjacent, invented kwargs
+    like add_lighting(asset_id=...)) in milliseconds, without building. ALWAYS run this before
+    run_scene; run_scene's build also refuses to start on lint errors."""
+    d = core.lint_program(program_path=program_path)
+    if d["ok"]:
+        return f"lint clean: {program_path}"
+    return f"{len(d['errors'])} lint error(s) in {program_path}:\n" + "\n".join(d["errors"])
+
+
+@mcp.tool()
+def run_scene(program_path: str, phase: int | None = None) -> list:
+    """Build + render a DSL scene program. SLOW (3-8 min, cold Blender). Lints first (see
+    lint_program) and refuses to build on errors. Returns the VLM feedback
+    + asset picks + the interior room views inline (first few). Runs subprocess-isolated.
+    `phase` (1 anchors / 2 surfaces / 3 all) builds a phase-gated program only up to that
+    phase — a phase-1 layout check takes ~1 min instead of ~8 (see IDSDL/phases.py)."""
     with _quiet():
-        d = core.run_scene(program_path)
+        d = core.run_scene(program_path, phase=phase)
     if not d["ok"] and not d["report"]:
         return [f"run failed:\n{d['stderr_tail']}"]
     rep = d["report"]
@@ -386,6 +401,53 @@ def generate_scene_result(job_id: str) -> list:
         if img:
             out.append(img)
     return out
+
+
+# ---- Tier E: the guided 9-gate flow (IDSDL/service/flow.py) --------------------
+@mcp.tool()
+def howto() -> str:
+    """START HERE if you are new to this server: what IDSDL is, the 9-gate scene-generation
+    recipe distilled from the worked examples, and which tools to use at each gate."""
+    from IDSDL.service import flow
+    return flow.howto()
+
+
+@mcp.tool()
+def flow_start(prompt: str) -> str:
+    """Begin a guided scene generation for a text prompt. Returns step 1's card: what to do,
+    the exact commands, and the evidence to bring back. Each subsequent gate (flow_advance)
+    validates your evidence mechanically before revealing the next step — this is how the
+    best scenes were built. State is file-backed; flow_status resumes after a disconnect."""
+    from IDSDL.service import flow
+    with _quiet():
+        return flow.flow_start(prompt)
+
+
+@mcp.tool()
+def flow_status(flow_id: str) -> str:
+    """Where a guided flow stands: gates passed (with any overrides) + the current step card."""
+    from IDSDL.service import flow
+    with _quiet():
+        return flow.flow_status(flow_id)
+
+
+@mcp.tool()
+def flow_advance(flow_id: str, evidence: str) -> str:
+    """Submit the current gate's evidence (a JSON object — see the EVIDENCE line of the step
+    card). Validated mechanically (files exist, program lints clean, fresh phase-N report, no
+    unresolved [Lint]/WARNING lines). On pass: the next step card. On fail: exactly what to fix."""
+    from IDSDL.service import flow
+    with _quiet():
+        return flow.flow_advance(flow_id, evidence)
+
+
+@mcp.tool()
+def flow_override(flow_id: str, reason: str) -> str:
+    """Pass the current gate WITHOUT valid evidence, recording your reasoning in the flow's
+    provenance. For deliberate deviations only — gates guide, they don't imprison."""
+    from IDSDL.service import flow
+    with _quiet():
+        return flow.flow_override(flow_id, reason)
 
 
 def main():

@@ -273,9 +273,32 @@ pool_add** (pool curation), **ingest_glbs** (custom-asset ingestion + auto re-wa
 Knowledge + generation tools: **catalog** (the tacit-knowledge index, offline),
 **retrieve_context** (reasoning-based trace retrieval → bundle.md for an agent to read before
 authoring a scene — this is the agent-as-author path: plan → retrieve_context → write the
-program yourself with retrieve/pin → run_scene), and **generate_scene_start / _status /
-_result** (the full main.py pipeline as a background job — takes 15–45 min, so it is job-based
-with live strip previews while it runs).
+program yourself with retrieve/pin → run_scene), **lint_program** (static API check of a scene
+program in milliseconds — `run_scene`/`workbench run` refuse to build on errors), and
+**generate_scene_start / _status / _result** (the full main.py pipeline as a background job —
+takes 15–45 min, so it is job-based with live strip previews while it runs).
+
+Guided-flow tools — the 9-gate recipe as a server-side state machine (`IDSDL/service/flow.py`):
+**howto** (orientation card for a fresh agent), **flow_start / flow_status / flow_advance /
+flow_override**. Each gate's card says what to do and what evidence to bring back; evidence is
+validated mechanically (files exist, program lints clean, FRESH phase-N build report, no
+unresolved `[Lint]`/`WARNING` lines) before the next step is revealed, and overrides are
+recorded in the flow's provenance. State is file-backed under `tmp/flows/`, so a disconnected
+agent resumes exactly where it stopped.
+
+### Iterative verification (lints + phases)
+
+Two mechanisms make "verify early, cheap" mechanical rather than aspirational:
+- **Deterministic lints** (`IDSDL/lints.py`): post-compile geometric checks (floor objects
+  floating/sunk, lighting starfield) recorded in the build's VLM feedback, plus `lint_program`
+  — a static AST validation of a program against the real DSL surface that catches invented
+  verbs/kwargs in milliseconds instead of a failed multi-minute build. `workbench lint`,
+  `workbench run` (pre-build), the MCP `lint_program` tool and the generation pipeline all use it.
+- **Phase-gated builds** (`IDSDL/phases.py`): a program gates its statements with
+  `if PHASE >= n:` (1 anchors / 2 surfaces / 3 walls+mood); `workbench run --phase 1` then
+  builds just the floor layout in ~1–2 min (vs ~9 for a full build) so layout errors are caught
+  before any expensive dressing. Non-gated programs are unaffected (default = build everything).
+  The generation pipeline runs phase-1/2 gate builds on every freshly authored program.
 
 ## About
 

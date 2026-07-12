@@ -32,9 +32,15 @@ Hard requirements for the program you write:
 - Create the scene with a FIXED seed: `scene = SceneProgRoom("<Name>", seed=<int>)`.
 - Immediately after creating the scene, call `scene.prefetch_assets([...])` with every
   asset description you will use (concurrent retrieval warm-up).
-- Structure the program coarse-to-fine with comment headers:
-  `# Phase 1 — floor anchors`, `# Phase 2 — surface & floor details`,
-  `# Phase 3 — walls, ceiling & decor` (all in ONE program; phases are sections, not runs).
+- Structure the program coarse-to-fine AND phase-GATE it (IDSDL/phases.py):
+  `from IDSDL.phases import current_phase` then `PHASE = current_phase()` at the top,
+  gating the later layers with plain ifs so the harness can build a cheap layout-only
+  version first:
+    phase 1 (ungated): floor anchors, composed stations, doors, the RoomGroup shell
+    `if PHASE >= 2:` place_on_top / place_inside surface dressing
+    `if PHASE >= 3:` wall art, windows, lighting, mood decor
+  The default build runs everything; later phases must only ADD, never move phase-1
+  geometry. (Canonical form: skills/examples/coffee_shop_v1.py.)
 - Build repeated composed units ONCE and duplicate with `N * unit`.
 - Use the asset audit: for weak/wrong picks, reword the query or pin `asset_id=`;
   pin anything whose colour carries the palette.

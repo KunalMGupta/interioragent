@@ -41,12 +41,23 @@ PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python -m planner_core "<prom
 PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python -m retriever_core "<prompt>" --plan tmp/<run>/plan/skill.txt --out tmp/<run>/ctx
 PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python -m retriever_core --catalog   # inspect the card index (offline)
 
-# Build + observe: runs the program, prints VLM feedback + render index
+# Static API lint: unknown verbs/kwargs vs the real DSL surface, in milliseconds
+PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python workbench.py lint <program>.py
+
+# Build + observe: runs the program (lints first), prints VLM feedback + render index.
+# --phase 1 builds ONLY the floor layout of a phase-gated program (~1-2 min) — verify
+# the layout cheap before dressing (IDSDL/phases.py; canonical: examples/coffee_shop_v1.py)
+PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python workbench.py run <program>.py --phase 1
 PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python workbench.py run <program>.py
 
-# Fully automatic text→scene (plan → retrieve → stress test → author → critic → judge)
+# Fully automatic text→scene (plan → retrieve → stress test → author → lint gate →
+# phase-1/2 gate builds → critic → judge)
 PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python main.py "<prompt>" --out results/<name>
 ```
+
+For MCP agents the same recipe is served as a guided 9-gate flow: `howto()` →
+`flow_start("<prompt>")` → per-step cards with mechanical evidence validation
+(`flow_advance`) — see [generate-scene/SKILL.md](generate-scene/SKILL.md).
 
 > Note the catalog is PARSED from these markdown files (`retriever_core/catalog.py`):
 > the examples/README.md tables, the vlm_feedback.md decision-log bullets, the
