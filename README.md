@@ -262,7 +262,11 @@ Setup:
 /opt/conda/envs/interioragent/bin/pip install mcp        # one-time dependency
 ```
 Registration is `/.mcp.json` (project-scoped; Claude Code discovers it on session start and
-prompts to approve `idsdl`). Requires `OPENAI_API_KEY` in the environment.
+prompts to approve `idsdl`). Requires `OPENAI_API_KEY` in the environment **at launch** — the
+warm process snapshots it. If the key rotates mid-session, call the **reload_credentials**
+tool (pass the fresh key, or write `OPENAI_API_KEY=...` to `/work/.env` and call it bare)
+instead of restarting; LLM-backed tools also detect a stale key and point you there rather
+than dumping a 401 traceback.
 
 Tools (`mcp__idsdl__*`): **retrieve / inspect** (route+resolve a query → candidate contact sheet
 inline), **browse** (montage of dataset matches), **reselect / show / pin** (session-memory picks

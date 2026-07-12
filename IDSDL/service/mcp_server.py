@@ -30,6 +30,18 @@ def _quiet():
         yield
 
 
+def _llm_tool(body):
+    """Run an LLM-backed tool body; turn a raw OpenAI 401 traceback into an
+    actionable one-liner pointing at reload_credentials."""
+    try:
+        return body()
+    except Exception as e:
+        hint = core.stale_key_hint(e)
+        if hint:
+            return [hint]
+        raise
+
+
 # ---- session state for the discovery loop -------------------------------------
 @dataclass
 class Session:
@@ -95,14 +107,16 @@ def retrieve(query: str, pin: str | None = None) -> list:
     candidates as a contact sheet (inline) plus a numbered table. This is the primary tool for
     the asset-discovery loop. Pass `pin` (a model id) to force a specific asset. After this,
     use reselect/show/pin (they read the remembered candidate set — instant, no re-retrieval)."""
-    with _quiet():
-        d = core.retrieve(query, pin)
-    _remember(d)
-    out = [_candidate_table(d)]
-    img = _img(d["sheet"])
-    if img:
-        out.append(img)
-    return out
+    def body():
+        with _quiet():
+            d = core.retrieve(query, pin)
+        _remember(d)
+        out = [_candidate_table(d)]
+        img = _img(d["sheet"])
+        if img:
+            out.append(img)
+        return out
+    return _llm_tool(body)
 
 
 @mcp.tool()
@@ -240,16 +254,19 @@ def ingest_glbs(zip_path: str, category: str | None = None, manifest_path: str |
 def plan(prompt: str, top_k: int = 3) -> list:
     """Run the interior planner: a design brief (skill.txt) + a reference-collage (plan.png).
     Returns the brief text + the collage inline. ~tens of seconds (image generation)."""
-    with _quiet():
-        d = core.plan(prompt, top_k=top_k)
-    if not d["ok"]:
-        return [f"planner failed:\n{d['stderr_tail']}"]
-    txt = f"PLAN out_dir: {d['out_dir']}\n\n{d['skill']}"
-    out = [txt]
-    img = _img(d["plan_png"], max_px=1600, brighten=1.0)
-    if img:
-        out.append(img)
-    return out
+    def body():
+        with _quiet():
+            d = core.plan(prompt, top_k=top_k)
+        if not d["ok"]:
+            hint = core.stale_key_hint(RuntimeError(d["stderr_tail"]))
+            return [hint or f"planner failed:\n{d['stderr_tail']}"]
+        txt = f"PLAN out_dir: {d['out_dir']}\n\n{d['skill']}"
+        out = [txt]
+        img = _img(d["plan_png"], max_px=1600, brighten=1.0)
+        if img:
+            out.append(img)
+        return out
+    return _llm_tool(body)
 
 
 @mcp.tool()
@@ -260,16 +277,20 @@ def plan_refine(prompt: str, renders: list, prior: list = None,
     and the retrieved skills. The composer critiques the build against intent, then image-conditions
     a fresh 2x4 target exploring layout/styling improvements. Returns the revised brief + the new
     target collage inline. ~tens of seconds (image generation)."""
-    with _quiet():
-        d = core.plan_refine(prompt, renders, prior=prior, instruction=instruction, top_k=top_k)
-    if not d["ok"]:
-        return [f"refine failed:\n{d['stderr_tail']}"]
-    txt = f"REFINE out_dir: {d['out_dir']}\n\n{d['skill']}"
-    out = [txt]
-    img = _img(d["refined_png"], max_px=1600, brighten=1.0)
-    if img:
-        out.append(img)
-    return out
+    def body():
+        with _quiet():
+            d = core.plan_refine(prompt, renders, prior=prior, instruction=instruction,
+                                 top_k=top_k)
+        if not d["ok"]:
+            hint = core.stale_key_hint(RuntimeError(d["stderr_tail"]))
+            return [hint or f"refine failed:\n{d['stderr_tail']}"]
+        txt = f"REFINE out_dir: {d['out_dir']}\n\n{d['skill']}"
+        out = [txt]
+        img = _img(d["refined_png"], max_px=1600, brighten=1.0)
+        if img:
+            out.append(img)
+        return out
+    return _llm_tool(body)
 
 
 @mcp.tool()
@@ -332,14 +353,31 @@ def retrieve_context(prompt: str, plan: str | None = None,
     recipes, workflow guides and atomic lessons a scene author must read. Writes the assembled
     context to bundle.md and returns its path + the procedural signature + the selection —
     READ the bundle file before writing the scene program (it is large; not inlined here)."""
+    def body():
+        with _quiet():
+            d = core.retrieve_context(prompt, plan=plan, include_programs=include_programs)
+        return (f"procedural signature:\n{d['procedural_signature']}\n\n"
+                f"why: {d['reasoning']}\n\n"
+                f"examples : {d['examples']}\n"
+                f"workflow : {d['workflow_docs']}\n"
+                f"lessons  : {len(d['lessons'])} selected\n"
+                f"bundle   : {d['bundle_path']}  ({d['bytes']/1000:.0f} KB) — read this file.")
+    out = _llm_tool(body)
+    return out[0] if isinstance(out, list) else out
+
+
+@mcp.tool()
+def reload_credentials(key: str | None = None) -> str:
+    """Fix a stale/rotated OPENAI_API_KEY WITHOUT restarting the server. The warm process
+    snapshots env at launch, so a rotated key otherwise 401s every LLM-backed tool. Pass the
+    fresh key directly, or write `OPENAI_API_KEY=...` to /work/.env and call with no args.
+    Rebuilds the LLM-holding singletons in seconds (embedding arrays stay cached)."""
     with _quiet():
-        d = core.retrieve_context(prompt, plan=plan, include_programs=include_programs)
-    return (f"procedural signature:\n{d['procedural_signature']}\n\n"
-            f"why: {d['reasoning']}\n\n"
-            f"examples : {d['examples']}\n"
-            f"workflow : {d['workflow_docs']}\n"
-            f"lessons  : {len(d['lessons'])} selected\n"
-            f"bundle   : {d['bundle_path']}  ({d['bytes']/1000:.0f} KB) — read this file.")
+        d = core.reload_credentials(key)
+    if not d.get("ok"):
+        return d.get("error", "reload failed")
+    return (f"credentials reloaded from {d['source']} (…{d['key_tail']}); "
+            f"{d['models']} models warm. LLM-backed tools are live again.")
 
 
 @mcp.tool()

@@ -109,13 +109,6 @@ def _print(report):
     print(f" scene   : {c['objects']} objects, {c['walls']} walls, "
           f"{c['wall_objects']} wall-objects, {c['ceiling_lights']} ceiling-lights")
 
-    print("\n--- VLM FEEDBACK (collected this compile) ---")
-    if report["vlm_feedback"]:
-        print(report["vlm_feedback"])
-    else:
-        print("(none — no VLM constraint produced feedback, or no group with VLM "
-              "constraints compiled)")
-
     print("\n--- ASSETS (retrieval: * = chosen; #N=sheet label, idx N-1 for reselect_asset) ---")
     assets = report.get("assets", [])
     if not assets:
@@ -135,6 +128,15 @@ def _print(report):
             print(f"  {p}")
     else:
         print("(none found under run_dir)")
+
+    # LAST on purpose: a `tail` of the build log must show the feedback, not clip
+    # it above the long asset list.
+    print("\n--- VLM FEEDBACK (collected this compile) ---")
+    if report["vlm_feedback"]:
+        print(report["vlm_feedback"])
+    else:
+        print("(none — no VLM constraint produced feedback, or no group with VLM "
+              "constraints compiled)")
     print(bar + "\n")
 
 

@@ -1,5 +1,6 @@
 import os
 import random
+import shutil
 import numpy as np
 from IDSDL.object import SceneProgObject, placemethod
 
@@ -2451,6 +2452,9 @@ class RoomGroup(SceneProgObject):
         combined = np.hstack([plt.imread(p) for p in wall_paths])
         combined_path = os.path.join(run_dir, f"combined_{uid}.png")
         plt.imsave(combined_path, combined)
+        # Stable alias: always the LATEST strip of this run, so tooling/agents can
+        # reference it without listing the directory for the uid-suffixed name.
+        shutil.copyfile(combined_path, os.path.join(run_dir, "combined.png"))
         self._vlm_strip_cache = combined_path
         return combined_path
 

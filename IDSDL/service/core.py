@@ -71,6 +71,53 @@ def warm():
     return {"models": int(len(get_base_retriever().all_models))}
 
 
+def reload_credentials(key=None):
+    """Refresh OPENAI_API_KEY in the WARM server without a restart.
+
+    The server process snapshots env at launch, so a rotated/stale key otherwise
+    401s every LLM-backed tool until restart. Source order: explicit ``key`` arg >
+    an ``OPENAI_API_KEY=...`` line in /work/.env > fail with instructions. Every
+    singleton that captured an OpenAI client at construction (router, planner,
+    trace retriever, the module retriever list) is rebuilt; the embedding arrays
+    stay cached, so this is seconds, not a cold start. Subprocess tools
+    (run_scene / generate_*) inherit os.environ and are fixed automatically."""
+    source = "argument"
+    if not key:
+        env_file = "/work/.env"
+        if os.path.isfile(env_file):
+            for line in open(env_file):
+                line = line.strip()
+                if line.startswith("OPENAI_API_KEY=") and line.split("=", 1)[1]:
+                    key = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    source = env_file
+                    break
+    if not key:
+        return {"ok": False,
+                "error": "no key found — pass key=..., or write OPENAI_API_KEY=... "
+                         "to /work/.env and call reload_credentials() again"}
+    os.environ["OPENAI_API_KEY"] = key
+    global _base, _router, _planner, _trace_retriever
+    with _LOCK:
+        import IDSDL.datasets.retrievers as R
+        # rebuild instances (they hold OpenAI clients); npz/json caches stay warm
+        R.FUTURE_HSSD_ASSET_RETRIEVERS = [type(r)() for r in R.FUTURE_HSSD_ASSET_RETRIEVERS]
+        _base = _router = _planner = _trace_retriever = None
+        info = warm()
+    return {"ok": True, "source": source, "key_tail": key[-6:], **info}
+
+
+def stale_key_hint(exc):
+    """A friendly message when an exception is an OpenAI auth failure, else None.
+    Tools return this instead of a raw 401 traceback."""
+    s = f"{type(exc).__name__}: {exc}"
+    markers = ("401", "AuthenticationError", "invalid_api_key", "Incorrect API key")
+    if any(m in s for m in markers):
+        return ("OPENAI_API_KEY is invalid or stale for this warm server (it snapshots "
+                "env at launch). Fix WITHOUT restarting: call reload_credentials(key=...) "
+                "— or write OPENAI_API_KEY=... to /work/.env and call reload_credentials().")
+    return None
+
+
 def refresh_retrievers():
     """Re-instantiate the warm singletons so freshly-ingested custom assets become visible in
     the SAME process. ingest clears the module npz/json caches, but the already-built retriever

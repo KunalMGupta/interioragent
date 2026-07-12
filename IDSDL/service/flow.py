@@ -87,7 +87,7 @@ EVIDENCE: {"program": "<path to program .py>"}  (gate re-lints it)""",
   (or the MCP `run_scene` tool with phase=1)
 Look at the strip: room size right? overlaps? clearances working? orientation?
 Fix and rebuild phase 1 until clean — this loop is cheap, use it.
-EVIDENCE: {"run_dir": "<tmp/<run> of the accepted phase-1 build>"}
+EVIDENCE: {"run_dir": "<tmp/<run> of the accepted phase-1 build>"}  ("latest" works)
 Gate: fresh report with phase=1 and NO [Lint]/WARNING lines (or override).""",
     },
     {
@@ -97,7 +97,7 @@ Gate: fresh report with phase=1 and NO [Lint]/WARNING lines (or override).""",
   Command : workbench run <program>.py --phase 2
 Check the strip: product at viewing height, stocked shelves, nothing floating,
 items sized to their surfaces.
-EVIDENCE: {"run_dir": "<tmp/<run> of the accepted phase-2 build>"}
+EVIDENCE: {"run_dir": "<tmp/<run> of the accepted phase-2 build>"}  ("latest" works)
 Gate: fresh report with phase=2 and NO [Lint]/WARNING lines (or override).""",
     },
     {
@@ -108,7 +108,7 @@ decisive change per iteration, converge don't chase):
   Command : workbench run <program>.py
 If exactly one object floats while neighbours rest, interrogate the exported
 blend (bottom = loc_z - dims_z/2): off-center mesh origin means SWAP the mesh.
-EVIDENCE: {"run_dir": "<tmp/<run> of the CONVERGED full build>"}
+EVIDENCE: {"run_dir": "<tmp/<run> of the CONVERGED full build>"}  ("latest" works)
 Gate: fresh report with phase=3 and NO [Lint]/WARNING lines (or override).""",
     },
     {
@@ -248,8 +248,16 @@ def _validate(step_key, evidence, state):
     elif step_key in ("build1", "build2", "build3"):
         want = {"build1": 1, "build2": 2, "build3": 3}[step_key]
         run_dir = ev.get("run_dir", "")
+        if run_dir == "latest":
+            # convenience: resolve the newest run — the freshness check below
+            # still guarantees it was built after this step started
+            import glob as _glob
+            reports = sorted(_glob.glob("/work/tmp/*/report.json"),
+                             key=os.path.getmtime, reverse=True)
+            run_dir = os.path.dirname(reports[0]) if reports else ""
+            ev["run_dir"] = run_dir   # record the resolved dir in provenance
         if not run_dir:
-            errs.append("run_dir required")
+            errs.append('run_dir required ("latest" resolves the newest run)')
         else:
             report, err = _fresh_report(run_dir, since)
             if err:
