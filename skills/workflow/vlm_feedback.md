@@ -282,6 +282,17 @@ rotation issue you can *see*; the VLM rotation text is just a hint.
   the routine trio (`rescale room 0.8` empty floor + `rescale jewelry boxes 0.5` oversized + a
   `density=0.1` disc-band on a medium room → 0.05); render2 clean everywhere. Reusing a solved pattern
   collapses the feedback loop. Also refines lighting: even a MEDIUM room over-tiled at 0.1 → 0.05.
+- **[coffee_shop v1, floating mesh with off-center origin]** The walnut storage bench
+  (`hssd/66b84f2b…`) hovered ~0.6 m up when wall-placed; its self-reported AABB disagrees with
+  its render geometry, so even an AABB-based floor-snap left it ~0.3 m off the floor (counter/
+  back-bar/tables from the same build all rested fine). Dataset-mesh analogue of the ingest
+  off-center-origin lesson. → **Swapped the mesh** (`hssd/a5faa788…` rests perfectly). Lesson:
+  if ONE object floats while its neighbours rest, suspect that mesh's origin — verify in the
+  exported blend (`bottom = loc_z - dims_z/2`), and swap rather than compensate.
+- **[coffee_shop v0, lighting density on a SMALL room]** `add_lighting(flush, density=0.05)`
+  — calm on nothing: it produced a ~26-fixture starfield on a café-sized room (count is
+  `1+(max_lights-1)*density`). → **0.01 gave a clean 6.** Extends the retail area-scaling rule
+  downward: small room ≈ 0.01-0.02, medium ≈ 0.05, and only genuinely big floors near 0.08.
 - **[TOOLING GOTCHA — `run_scene` mtime-fallback]** `mcp__idsdl__run_scene` reports whichever
   `report.json` is **newest by mtime across all `tmp/*` dirs**, so when a build **errors before writing
   its own report** (or another run finished more recently) it surfaces a *different scene's* renders +
