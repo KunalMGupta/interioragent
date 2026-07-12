@@ -15,6 +15,13 @@ examples). This is the everyday loop for producing rooms. Layout:
 | [workflow/](workflow/) | coarse_to_fine · constraints · vlm_feedback · rendering |
 | [examples/](examples/) | per-scene-type recipes (living_room, classroom, kitchen, …) |
 
+This knowledge base is also machine-retrievable: `retriever_core/` parses these files
+into a card catalog (recipes indexed by layout pattern, workflow guides, atomic
+lessons) and an LLM reasons over the whole catalog to select what's procedurally
+relevant for a new prompt — used by `main.py` and the MCP `retrieve_context` tool.
+Keep the markdown structures (README tables, decision-log bullets, `##` sections)
+intact when writing back so new lessons stay retrievable.
+
 ### B. Codebase-extension playbooks (Claude Code SKILL.md format)
 
 Reusable, agent-runnable playbooks for extending IDSDL **without changing core logic**. Each is a

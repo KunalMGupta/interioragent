@@ -36,9 +36,22 @@ repeat. Then distill what you learned back into these files.
 # Ideate: collage + conditioning skill + retrieved reference skills
 PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python -m planner_core "<prompt>" --out tmp/<run>/plan
 
+# Retrieve traces: a reasoner reads the WHOLE knowledge catalog (these files, parsed
+# into cards) and selects the procedurally-similar recipes + lessons into bundle.md
+PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python -m retriever_core "<prompt>" --plan tmp/<run>/plan/skill.txt --out tmp/<run>/ctx
+PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python -m retriever_core --catalog   # inspect the card index (offline)
+
 # Build + observe: runs the program, prints VLM feedback + render index
 PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python workbench.py run <program>.py
+
+# Fully automatic text→scene (plan → retrieve → stress test → author → critic → judge)
+PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python main.py "<prompt>" --out results/<name>
 ```
+
+> Note the catalog is PARSED from these markdown files (`retriever_core/catalog.py`):
+> the examples/README.md tables, the vlm_feedback.md decision-log bullets, the
+> asset_selection.md `##` sections, and scenes/NOTES.md cross-cutting items. Keeping
+> those structures intact when writing back is what keeps new lessons retrievable.
 
 The workbench prints the per-run scratchpad path, the collected VLM feedback,
 and a list of every render PNG produced — open those to judge quality. See
