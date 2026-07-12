@@ -299,6 +299,95 @@ def run_scene(program_path: str) -> list:
     return out
 
 
+# ---- Tier D: knowledge retrieval + end-to-end generation -----------------------
+@mcp.tool()
+def catalog() -> str:
+    """The organized knowledge catalog: every worked example recipe (indexed by LAYOUT PATTERN),
+    workflow guide and atomic lesson available for scene generation. Offline/instant. Read this
+    to see what tacit knowledge exists; use retrieve_context to have a reasoner select from it."""
+    with _quiet():
+        return core.catalog_listing()
+
+
+@mcp.tool()
+def retrieve_context(prompt: str, plan: str | None = None,
+                     include_programs: bool = True) -> str:
+    """Reasoning-based trace retrieval (no embeddings): an LLM reads the WHOLE knowledge catalog
+    plus your prompt (and optional planner brief) and selects the procedurally-similar example
+    recipes, workflow guides and atomic lessons a scene author must read. Writes the assembled
+    context to bundle.md and returns its path + the procedural signature + the selection —
+    READ the bundle file before writing the scene program (it is large; not inlined here)."""
+    with _quiet():
+        d = core.retrieve_context(prompt, plan=plan, include_programs=include_programs)
+    return (f"procedural signature:\n{d['procedural_signature']}\n\n"
+            f"why: {d['reasoning']}\n\n"
+            f"examples : {d['examples']}\n"
+            f"workflow : {d['workflow_docs']}\n"
+            f"lessons  : {len(d['lessons'])} selected\n"
+            f"bundle   : {d['bundle_path']}  ({d['bytes']/1000:.0f} KB) — read this file.")
+
+
+@mcp.tool()
+def generate_scene_start(prompt: str, seed: int = 42, max_inner: int = 3,
+                         max_outer: int = 2, threshold: float = 8.0,
+                         skip_stress: bool = False, model: str = "gpt-5") -> str:
+    """Launch the FULL text→scene pipeline (plan → retrieve traces → asset stress test → author
+    program → build → VLM-critic loop → design-match judging) as a background job. Takes 15-45
+    min. Returns the job_id — poll with generate_scene_status, collect with generate_scene_result."""
+    with _quiet():
+        d = core.generate_start(prompt, seed=seed, max_inner=max_inner,
+                                max_outer=max_outer, threshold=threshold,
+                                skip_stress=skip_stress, model=model)
+    return (f"started {d['job_id']}\nout: {d['out_dir']}\nlog: {d['log_path']}\n"
+            f"poll: generate_scene_status('{d['job_id']}')")
+
+
+@mcp.tool()
+def generate_scene_status(job_id: str) -> list:
+    """Progress of a generation job: stage log tail, iteration count, design-judge scores so far,
+    and the latest room strip inline."""
+    with _quiet():
+        d = core.generate_status(job_id)
+    if d.get("error"):
+        return [f"{d['error']}  (known jobs: {d.get('known')})"]
+    scores = ", ".join(f"{j['score']:.1f}" for j in d["judgements"]) or "(none yet)"
+    lines = [f"{d['job_id']}  running={d['running']}  returncode={d['returncode']}",
+             f"iterations: {d['iterations']}   judge scores: {scores}",
+             f"design plan: {d.get('plan_png') or '(not yet generated)'}",
+             f"--- log tail ---\n{d['log_tail']}"]
+    out = ["\n".join(lines)]
+    img = _img(d.get("latest_strip"), max_px=1400)
+    if img:
+        out.append(img)
+    return out
+
+
+@mcp.tool()
+def generate_scene_result(job_id: str) -> list:
+    """Final artifacts of a finished generation job: score, program path, .blend path, the full
+    provenance trace, and — inline — the design plan followed by the final room strip (compare
+    them: the plan is the target the build was judged against)."""
+    with _quiet():
+        d = core.generate_result(job_id)
+    if d.get("error"):
+        return [d["error"]]
+    t = d.get("trace", {})
+    lines = [f"{d['job_id']}  score={d.get('score')}",
+             f"program: {d['program']}",
+             f"blend  : {d['blend']}",
+             f"plan   : {d.get('plan_png')}",
+             f"trace  : {os.path.join(d['out_dir'], 'trace.json')}"]
+    sig = t.get("procedural_signature")
+    if sig:
+        lines.append(f"\nprocedural signature:\n{sig}")
+    out = ["\n".join(lines)]
+    for path in (d.get("plan_png"), d.get("final_strip")):
+        img = _img(path, max_px=1400, brighten=1.0)
+        if img:
+            out.append(img)
+    return out
+
+
 def main():
     if not os.environ.get("OPENAI_API_KEY"):
         print("[idsdl-mcp] FATAL: OPENAI_API_KEY not set; retrieval/LLM calls will fail.",

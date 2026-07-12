@@ -27,6 +27,7 @@ _LOCK = threading.Lock()          # serialize the router (LLM client + any mutab
 _base = None                      # FUTURE_HSSD_ASSET_RETRIEVERS[0] — full embeddings + metadata
 _router = None                    # SceneProgAssetRetriever(seed=None) — routes + visual-picks
 _planner = None                   # InteriorPlanner — RAG + image planner
+_trace_retriever = None           # retriever_core.TraceRetriever — reasoning over the catalog
 
 
 def get_base_retriever():
@@ -53,6 +54,14 @@ def get_planner():
         from planner_core.planner import InteriorPlanner
         _planner = InteriorPlanner()
     return _planner
+
+
+def get_trace_retriever():
+    global _trace_retriever
+    if _trace_retriever is None:
+        from retriever_core import TraceRetriever
+        _trace_retriever = TraceRetriever()
+    return _trace_retriever
 
 
 def warm():
@@ -284,18 +293,129 @@ def plan_refine(prompt, renders, prior=None, instruction=None, top_k=3, out=None
 
 def run_scene(program_path, timeout=2400):
     """Build+render a DSL scene program. Subprocess-isolated (a fresh scene/retriever + cold
-    Blender, like batchgen). Returns the run's ``report`` dict + the room_views paths."""
+    Blender, like batchgen). Returns the run's ``report`` dict + the room view paths.
+
+    Only accepts a report.json written AFTER this run started, so a build that errors
+    before reporting can never surface a different scene's renders (the old mtime-fallback
+    gotcha). Under the minimal render policy room_views/ is not produced; the VLM strip(s)
+    in vlm_views/ are returned instead."""
+    import time as _time
+    start = _time.time()
     env = {**os.environ, "PYTHONPATH": "/work"}
     p = subprocess.run([sys.executable, "workbench.py", "run", program_path],
                        cwd="/work", env=env, capture_output=True, text=True, timeout=timeout)
     out = p.stdout + "\n" + p.stderr
-    reps = sorted(glob.glob(os.path.join(_TMP, "*", "report.json")), key=os.path.getmtime)
-    report = _json.load(open(reps[-1])) if reps else {}
-    run_dir = report.get("run_dir")
+    report, run_dir = {}, None
+    for rp in sorted(glob.glob(os.path.join(_TMP, "*", "report.json")),
+                     key=os.path.getmtime, reverse=True):
+        if os.path.getmtime(rp) >= start:
+            report = _json.load(open(rp))
+            run_dir = report.get("run_dir")
+            break
     views = []
     if run_dir:
-        rv = os.path.join("/work", run_dir, "room_views")
-        views = sorted(glob.glob(os.path.join(rv, "*.png")))
-    return {"program": program_path, "ok": p.returncode == 0, "run_dir": run_dir,
+        views = sorted(glob.glob(os.path.join("/work", run_dir, "room_views", "*.png")))
+        if not views:   # minimal render policy: only the VLM strip exists
+            views = sorted(glob.glob(os.path.join("/work", run_dir, "vlm_views", "combined_*.png")),
+                           key=os.path.getmtime)
+    return {"program": program_path, "ok": p.returncode == 0 and bool(report), "run_dir": run_dir,
             "report": report, "room_views": views,
-            "stderr_tail": "\n".join(out.splitlines()[-18:]) if p.returncode else ""}
+            "stderr_tail": "\n".join(out.splitlines()[-18:]) if (p.returncode or not report) else ""}
+
+
+# ---- reasoning-based trace retrieval (retriever_core) -----------------------
+def catalog_listing():
+    """The organized knowledge-catalog listing (offline; no LLM call)."""
+    return get_trace_retriever().catalog.listing()
+
+
+def retrieve_context(prompt, plan=None, out=None, include_programs=True):
+    """Reasoning-based retrieval over the knowledge catalog: the selector LLM reads the whole
+    catalog + the prompt (and optional planner brief) and picks the procedurally-relevant
+    recipes/lessons. Writes bundle.md + selection.json to `out` and returns
+    ``{procedural_signature, reasoning, examples, workflow_docs, lessons, bundle_path, bytes}``.
+    The bundle itself is large — read it from bundle_path rather than inlining it."""
+    out = out or os.path.join(_TMP, f"context_{_safe(prompt)}")
+    with _LOCK:
+        bundle = get_trace_retriever().retrieve(prompt, plan=plan,
+                                                include_programs=include_programs)
+    bundle_path = str(bundle.save(out))
+    return {"procedural_signature": bundle.procedural_signature,
+            "reasoning": bundle.reasoning,
+            "examples": bundle.examples,
+            "workflow_docs": bundle.workflow_docs,
+            "lessons": bundle.lessons,
+            "bundle_path": bundle_path,
+            "bytes": len(bundle.markdown)}
+
+
+# ---- end-to-end generation jobs (main.py in a subprocess) --------------------
+_JOBS = {}   # job_id -> {proc, out_dir, log_path, prompt}
+
+
+def generate_start(prompt, seed=42, max_inner=3, max_outer=2, threshold=8.0,
+                   skip_stress=False, model="gpt-5", out=None):
+    """Launch the full text→scene pipeline (main.py) as a background subprocess.
+    Returns ``{job_id, out_dir, log_path}``; poll with generate_status()."""
+    import time as _time
+    job_id = f"gen_{int(_time.time())}_{_safe(prompt)[:16]}"
+    out_dir = out or os.path.join("/work", "results", job_id)
+    os.makedirs(out_dir, exist_ok=True)
+    log_path = os.path.join(out_dir, "generate.log")
+    args = [sys.executable, "main.py", prompt, "--out", out_dir, "--seed", str(seed),
+            "--max-inner", str(max_inner), "--max-outer", str(max_outer),
+            "--threshold", str(threshold), "--model", model]
+    if skip_stress:
+        args.append("--skip-stress")
+    env = {**os.environ, "PYTHONPATH": "/work"}
+    logf = open(log_path, "w")
+    proc = subprocess.Popen(args, cwd="/work", env=env, stdout=logf,
+                            stderr=subprocess.STDOUT)
+    _JOBS[job_id] = {"proc": proc, "out_dir": out_dir, "log_path": log_path,
+                     "prompt": prompt}
+    return {"job_id": job_id, "out_dir": out_dir, "log_path": log_path}
+
+
+def _job_trace(out_dir):
+    tp = os.path.join(out_dir, "trace.json")
+    return _json.load(open(tp)) if os.path.exists(tp) else {}
+
+
+def generate_status(job_id):
+    """Progress of a generation job: ``{running, returncode, log_tail, trace_summary,
+    latest_strip}``. The strip is the newest room VLM strip produced so far."""
+    job = _JOBS.get(job_id)
+    if not job:
+        return {"error": f"unknown job {job_id!r}", "known": list(_JOBS)}
+    rc = job["proc"].poll()
+    log_tail = ""
+    if os.path.exists(job["log_path"]):
+        log_tail = "\n".join(open(job["log_path"]).read().splitlines()[-15:])
+    trace = _job_trace(job["out_dir"])
+    iters = trace.get("iterations", [])
+    strips = [i.get("strip") for i in iters if i.get("strip")]
+    plan_png = os.path.join(job["out_dir"], "plan.png")
+    return {"job_id": job_id, "running": rc is None, "returncode": rc,
+            "out_dir": job["out_dir"], "prompt": job["prompt"],
+            "iterations": len(iters),
+            "judgements": trace.get("judgements", []),
+            "latest_strip": strips[-1] if strips else None,
+            "plan_png": plan_png if os.path.exists(plan_png) else None,
+            "log_tail": log_tail}
+
+
+def generate_result(job_id):
+    """Final artifacts of a finished generation job: the trace, program, blend and strip."""
+    job = _JOBS.get(job_id)
+    if not job:
+        return {"error": f"unknown job {job_id!r}", "known": list(_JOBS)}
+    if job["proc"].poll() is None:
+        return {"error": "still running — use generate_status", "job_id": job_id}
+    trace = _job_trace(job["out_dir"])
+    out_dir = job["out_dir"]
+    return {"job_id": job_id, "out_dir": out_dir, "trace": trace,
+            "program": os.path.join(out_dir, "program.py"),
+            "blend": os.path.join(out_dir, "scene.blend"),
+            "plan_png": os.path.join(out_dir, "plan.png"),
+            "final_strip": os.path.join(out_dir, "final_strip.png"),
+            "score": trace.get("final", {}).get("score")}

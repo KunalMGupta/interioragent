@@ -11,10 +11,12 @@ resolves the layout with geometric and vision-language constraints, and exports 
 
 📖 **Full documentation & visual guide:** <https://interioragent.github.io/docs/>
 
-This repository contains two complementary components:
+This repository contains four complementary components:
 
 - **IDSDL** — a structured language that builds explicit **3D scenes** (geometry you can open and render in Blender). *Documented below and on the docs site.*
 - **InteriorPlanner** (`planner_core/`) — a retrieval-augmented **design-image** generator that turns a text prompt into a photorealistic interior collage and supports conversational editing. *See [Interior Planner](#interior-planner-planner_core).*
+- **TraceRetriever** (`retriever_core/`) — reasoning-based (no embeddings) retrieval over the repo's tacit-knowledge library: worked example recipes, workflow guides and atomic build lessons, selected by **procedural similarity** to the requested room. *See [Text→scene generation](#textscene-generation-mainpy).*
+- **SceneGenerator** (`generator_core/` + `main.py`) — the end-to-end **text→3D-scene** pipeline: plan → retrieve traces → asset stress test → author the DSL program (pluggable authors) → build → VLM-critic loop → design-match judging. *See [Text→scene generation](#textscene-generation-mainpy).*
 
 ---
 
@@ -207,6 +209,46 @@ Each `generate`/`edit` returns a `DesignResult` with `.image`, the synthesized `
   from this repo (see `.gitignore`); the docs live at
   [interioragent/docs](https://github.com/interioragent/docs).
 
+## Text→scene generation (`main.py`)
+
+One command turns a prompt into a `.blend` scene, encoding the same workflow used to
+hand-build the library scenes (see `skills/SKILLS.md`):
+
+```bash
+python main.py "a cozy ramen bar with counter seating" --out results/ramen_bar
+```
+
+Pipeline (`generator_core/pipeline.py`):
+
+1. **Plan** — `planner_core` produces a design brief + reference collage.
+2. **Retrieve** — `retriever_core` selects context by **reasoning over the whole
+   knowledge catalog** (no embeddings): the worked example recipes (indexed by *layout
+   pattern*, so a pharmacy pulls the retail_store skeleton), the workflow guides, and
+   the atomic lessons likely to fire (lighting density, window voids, retrieval SET
+   traps, …). Inspect the catalog offline: `python -m retriever_core --catalog`.
+3. **Asset stress test** — the shopping list is batch-resolved against the warm
+   retriever and audited (similarity + chosen mesh), so the author pins/rewords weak
+   picks before writing any placement.
+4. **Author** — a pluggable `Author` writes the IDSDL program. Default is a single
+   LLM (`--author llm`); `--author command --command '<shell cmd>'` delegates to ANY
+   external coding agent (Claude Code, Codex, aider, …) via a prepared workspace
+   (`TASK.md` + `scene.py`) — nothing is hardcoded to a specific agent.
+5. **Build + inner loop** — each build produces the room VLM strip + textual VLM
+   feedback; a **critic** that encodes the `skills/workflow/vlm_feedback.md` playbook
+   turns feedback into concrete program directives until converged (`--max-inner`).
+6. **Outer loop** — a **design judge** scores the built room against the plan
+   (strip vs. collage + brief, 0–10) and emits gap directives until the score clears
+   `--threshold` (default 8.0) or `--max-outer` is exhausted.
+
+Every run writes full provenance to `<out>/trace.json` (procedural signature, selected
+traces, asset audit, per-iteration feedback→directives, judge scores) plus
+`program.py`, `scene.blend`, `final_strip.png`.
+
+**Render policy:** builds run under the minimal render policy by default — the only
+render per compile is the room VLM strip (the single critique channel). Set
+`IDSDL_MINIMAL_RENDERS=0` for full per-group renders + the 8-view interior set
+(see `IDSDL/render_policy.py`).
+
 ## MCP server (warm, typed tools for agents)
 
 `IDSDL/service/mcp_server.py` is a stdio [MCP](https://modelcontextprotocol.io) server that
@@ -227,6 +269,13 @@ inline), **browse** (montage of dataset matches), **reselect / show / pin** (ses
 — instant, no re-retrieval; `pin` → the `AddAsset(asset_id=…)` snippet), **candidates / gallery /
 pool_add** (pool curation), **ingest_glbs** (custom-asset ingestion + auto re-warm), **plan**
 (design brief + collage) and **run_scene** (build+render a DSL program → VLM feedback + room views).
+
+Knowledge + generation tools: **catalog** (the tacit-knowledge index, offline),
+**retrieve_context** (reasoning-based trace retrieval → bundle.md for an agent to read before
+authoring a scene — this is the agent-as-author path: plan → retrieve_context → write the
+program yourself with retrieve/pin → run_scene), and **generate_scene_start / _status /
+_result** (the full main.py pipeline as a background job — takes 15–45 min, so it is job-based
+with live strip previews while it runs).
 
 ## About
 
