@@ -1518,12 +1518,44 @@ class RoomGroup(SceneProgObject):
     # children_room "wheeled easel as wall art" lesson).
     WALL_HUNG_MAX_DEPTH = 0.25
 
-    def _place_on_wall(self, obj, x, y, z, rot, target_width):
+    def _wall_art_slot_bounds(self, length, third):
+        """Along-wall bounds (room coords) of a wall-art slot: 'low'/'mid'/'high' =
+        the first/middle/last third of the wall. Mirrors the horizontal_zones split
+        in wall.PlaneMesh.get_partition_bounds_by_label."""
+        zones = {'low': (0.02 * length, length / 3.0),
+                 'mid': (length / 3.0, 2.0 * length / 3.0),
+                 'high': (2.0 * length / 3.0, 0.98 * length)}
+        return zones[third]
+
+    def _place_on_wall(self, obj, x, y, z, rot, target_width, along_bounds=None):
         orig_width = max(obj.get_width(), 1e-6)
         orig_height = max(obj.get_height(), 1e-6)
         orig_depth = max(obj.get_depth(), 1e-6)
 
         new_width, new_height = self.wall_obj_scale_computer(orig_width, orig_height, target_width)
+
+        # Keep the piece INSIDE its wall slot. The slot-occupancy model
+        # (_register_wall_occupancy / WallOverlapConstraint) assumes one item per
+        # wall+slot and never re-checks geometry, so an item that leaves its slot can
+        # silently overlap the neighbouring slot's item. Two ways out of the slot:
+        # (a) a support-anchored piece (art over a console/cabinet) inherits its
+        #     support's position, and the support may have drifted along the wall in
+        #     the solve; (b) the static anchors (L/4, 3L/4) are off the zone centers,
+        #     so a wide piece can spill over the zone edge. Shrink to the slot span if
+        #     needed, then clamp the along-wall center so the span stays in-slot.
+        if along_bounds is not None:
+            margin = 0.02
+            lo, hi = along_bounds[0] + margin, along_bounds[1] - margin
+            span = hi - lo
+            if new_width > span > 1e-6:
+                f = span / new_width
+                new_width *= f
+                new_height *= f
+            half = new_width / 2.0
+            if rot in (0, 180):     # back/front wall: along-wall axis is x
+                x = float(np.clip(x, lo + half, hi - half))
+            else:                   # left/right wall: along-wall axis is z
+                z = float(np.clip(z, lo + half, hi - half))
 
         sx = new_width / orig_width
         sy = new_height / orig_height
@@ -1569,7 +1601,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.WIDTH / 3) * 0.6
 
         target_width = min(target_width, (self.WIDTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, 0, target_width)
+        self._place_on_wall(obj, x, y, z, 0, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.WIDTH, 'mid'))
 
     @placemethod
     def place_on_wall_back_left(self, obj):
@@ -1588,7 +1621,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.WIDTH / 3) * 0.6
 
         target_width = min(target_width, (self.WIDTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, 0, target_width)
+        self._place_on_wall(obj, x, y, z, 0, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.WIDTH, 'low'))
 
     @placemethod
     def place_on_wall_back_right(self, obj):
@@ -1607,7 +1641,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.WIDTH / 3) * 0.6
 
         target_width = min(target_width, (self.WIDTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, 0, target_width)
+        self._place_on_wall(obj, x, y, z, 0, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.WIDTH, 'high'))
 
     @placemethod
     def place_on_wall_left_right(self, obj):
@@ -1626,7 +1661,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.DEPTH / 3) * 0.6
 
         target_width = min(target_width, (self.DEPTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, 90, target_width)
+        self._place_on_wall(obj, x, y, z, 90, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.DEPTH, 'low'))
 
     @placemethod
     def place_on_wall_left_center(self, obj):
@@ -1645,7 +1681,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.DEPTH / 3) * 0.6
 
         target_width = min(target_width, (self.DEPTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, 90, target_width)
+        self._place_on_wall(obj, x, y, z, 90, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.DEPTH, 'mid'))
 
     @placemethod
     def place_on_wall_left_left(self, obj):
@@ -1664,7 +1701,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.DEPTH / 3) * 0.6
 
         target_width = min(target_width, (self.DEPTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, 90, target_width)
+        self._place_on_wall(obj, x, y, z, 90, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.DEPTH, 'high'))
 
     @placemethod
     def place_on_wall_right_left(self, obj):
@@ -1683,7 +1721,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.DEPTH / 3) * 0.6
 
         target_width = min(target_width, (self.DEPTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, -90, target_width)
+        self._place_on_wall(obj, x, y, z, -90, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.DEPTH, 'low'))
 
     @placemethod
     def place_on_wall_right_center(self, obj):
@@ -1702,7 +1741,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.DEPTH / 3) * 0.6
 
         target_width = min(target_width, (self.DEPTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, -90, target_width)
+        self._place_on_wall(obj, x, y, z, -90, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.DEPTH, 'mid'))
 
     @placemethod
     def place_on_wall_right_right(self, obj):
@@ -1721,7 +1761,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.DEPTH / 3) * 0.6
 
         target_width = min(target_width, (self.DEPTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, -90, target_width)
+        self._place_on_wall(obj, x, y, z, -90, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.DEPTH, 'high'))
 
     @placemethod
     def place_on_wall_front_left(self, obj):
@@ -1740,7 +1781,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.WIDTH / 3) * 0.6
 
         target_width = min(target_width, (self.WIDTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, 180, target_width)
+        self._place_on_wall(obj, x, y, z, 180, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.WIDTH, 'high'))
 
     @placemethod
     def place_on_wall_front_center(self, obj):
@@ -1759,7 +1801,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.WIDTH / 3) * 0.6
 
         target_width = min(target_width, (self.WIDTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, 180, target_width)
+        self._place_on_wall(obj, x, y, z, 180, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.WIDTH, 'mid'))
 
     @placemethod
     def place_on_wall_front_right(self, obj):
@@ -1778,7 +1821,8 @@ class RoomGroup(SceneProgObject):
             target_width = (self.WIDTH / 3) * 0.6
 
         target_width = min(target_width, (self.WIDTH / 3) * 0.6)
-        self._place_on_wall(obj, x, y, z, 180, target_width)
+        self._place_on_wall(obj, x, y, z, 180, target_width,
+                            along_bounds=self._wall_art_slot_bounds(self.WIDTH, 'low'))
 
     def wall_obj_scale_computer(self, w, h, W):
         lambda1 = 1.0
@@ -2164,6 +2208,52 @@ class RoomGroup(SceneProgObject):
             self.children.append(proxy)
             self.ClearanceConstraint(proxy, distance=self.DOOR_CLEARANCE, dir="front")
 
+    # Wall-adjacent furniture ops and the wall each one belongs to (used by
+    # _repin_wall_furniture). Wall-HUNG ops (place_on_wall_*) are placed after the
+    # solve and never drift, so they are not listed.
+    WALL_FURNITURE_OPS = {
+        'place_on_back_wall_left': 'back', 'place_on_back_wall_center': 'back',
+        'place_on_back_wall_right': 'back',
+        'place_on_front_wall_left': 'front', 'place_on_front_wall_center': 'front',
+        'place_on_front_wall_right': 'front',
+        'place_on_left_wall_left': 'left', 'place_on_left_wall_center': 'left',
+        'place_on_left_wall_right': 'left',
+        'place_on_right_wall_left': 'right', 'place_on_right_wall_center': 'right',
+        'place_on_right_wall_right': 'right',
+    }
+
+    def _repin_wall_furniture(self):
+        """Deterministic guarantee (run after the stochastic solve, like
+        _enforce_door_clearances): snap wall-adjacent furniture back flush to its wall
+        on the perpendicular axis, keeping any along-wall drift the solve produced.
+
+        The GradSolver's action sampler gives every object a small exploration
+        probability toward open space even at zero gradient (max(grad·dir, 0.01) *
+        free-space affinity / area), so a THIN wall piece (a fireplace: huge free space
+        in front, tiny footprint area) random-walks off its wall over the solve. Wall
+        placements are flush by construction and are excluded from floor jitter by
+        design ("moving those off their wall would look wrong" — FLOOR_SLOTS), so the
+        drift is always unintended: re-pin deterministically."""
+        for op in self.operations:
+            if op is None or op.name not in self.WALL_FURNITURE_OPS:
+                continue
+            obj = getattr(op, "obj", None)
+            if obj is None:
+                continue
+            wall = self.WALL_FURNITURE_OPS[op.name]
+            # Snap by the CURRENT world AABB, not wall_deltas: get_whd is rotation-aware
+            # post-solve, so recomputing deltas double-swaps width/depth for items rotated
+            # 90° (a left-wall bookcase). The AABB is rotation- and mesh-origin-proof.
+            (x0, _, z0), (x1, _, z1) = obj.get_aabb()
+            if wall == 'back':
+                obj.translate(0, 0, -float(z0))
+            elif wall == 'front':
+                obj.translate(0, 0, self.DEPTH - float(z1))
+            elif wall == 'left':
+                obj.translate(-float(x0), 0, 0)
+            elif wall == 'right':
+                obj.translate(self.WIDTH - float(x1), 0, 0)
+
     def _enforce_door_clearances(self):
         """Deterministic guarantee (run after the stochastic solve, like _snap_overlaps /
         _clamp_to_bounds): push any floor item that still intrudes into a doorway band out
@@ -2176,36 +2266,172 @@ class RoomGroup(SceneProgObject):
                           if not getattr(c, "is_proxy", False)
                           and not getattr(c, "ignore_overlap", False)
                           and not getattr(c, "is_light", False)]
+
+        # Wall-flush furniture (a locker spine, a cabinet run) must never be pushed off
+        # its wall by a door on the SAME wall — the normal-push strands it floating in
+        # the middle of the room. For those, escape ALONG the wall (slide sideways out
+        # of the doorway span); fall back to the normal push only when there is no room
+        # to slide.
+        wall_of = {}
+        for op in self.operations:
+            if op is not None and op.name in self.WALL_FURNITURE_OPS:
+                o = getattr(op, "obj", None)
+                if o is not None:
+                    wall_of[id(o)] = self.WALL_FURNITURE_OPS[op.name] + "_wall"
+
+        def _slide_along(lo_span, hi_span, band_lo, band_hi, wall_len, translate_along):
+            """Slide the object along the wall so [lo_span, hi_span] clears
+            [band_lo, band_hi]; applies the smaller in-bounds slide, if any."""
+            d_up = band_hi - lo_span      # slide toward +axis until clear of the band
+            d_down = band_lo - hi_span    # slide toward -axis (negative delta)
+            for d in sorted((d_up, d_down), key=abs):
+                if lo_span + d >= -1e-6 and hi_span + d <= wall_len + 1e-6:
+                    translate_along(float(d))
+                    return True
+            return False
+
         for wall, center_along, door_width in self._doorway_specs():
             hw = door_width / 2.0
             for c in floor_children:
                 aabb = c.get_aabb()
                 xmin, _, zmin = aabb[0]
                 xmax, _, zmax = aabb[1]
+                same_wall_flush = wall_of.get(id(c)) == wall
                 if wall in ('back_wall', 'front_wall'):
                     # door spans x in [center-hw, center+hw]; band is `clear` deep off the wall
                     if xmax <= center_along - hw or xmin >= center_along + hw:
                         continue
+                    intrudes = zmin < clear if wall == 'back_wall' else zmax > self.DEPTH - clear
+                    if not intrudes:
+                        continue
+                    if same_wall_flush and _slide_along(
+                            xmin, xmax, center_along - hw, center_along + hw,
+                            self.WIDTH, lambda d, c=c: c.translate(d, 0, 0)):
+                        moved = True
+                        continue
                     if wall == 'back_wall':              # wall at z=0, push +z
-                        if zmin < clear:
-                            c.translate(0, 0, clear - zmin); moved = True
+                        c.translate(0, 0, clear - zmin); moved = True
                     else:                                # front wall at z=DEPTH, push -z
-                        if zmax > self.DEPTH - clear:
-                            c.translate(0, 0, (self.DEPTH - clear) - zmax); moved = True
+                        c.translate(0, 0, (self.DEPTH - clear) - zmax); moved = True
                 else:
                     if zmax <= center_along - hw or zmin >= center_along + hw:
                         continue
+                    intrudes = xmin < clear if wall == 'left_wall' else xmax > self.WIDTH - clear
+                    if not intrudes:
+                        continue
+                    if same_wall_flush and _slide_along(
+                            zmin, zmax, center_along - hw, center_along + hw,
+                            self.DEPTH, lambda d, c=c: c.translate(0, 0, d)):
+                        moved = True
+                        continue
                     if wall == 'left_wall':              # wall at x=0, push +x
-                        if xmin < clear:
-                            c.translate(clear - xmin, 0, 0); moved = True
+                        c.translate(clear - xmin, 0, 0); moved = True
                     else:                                # right wall at x=WIDTH, push -x
-                        if xmax > self.WIDTH - clear:
-                            c.translate((self.WIDTH - clear) - xmax, 0, 0); moved = True
+                        c.translate((self.WIDTH - clear) - xmax, 0, 0); moved = True
         if moved:
             # repair any overlaps / OOB the push introduced (reuses the solver's deterministic passes,
             # alternating them so a bounds-clamp can't leave a re-introduced overlap — see _settle)
             self.grad_solver.objects = self.children
             self.grad_solver._settle()
+
+    # Wall-HUNG ops (place_on_wall_*) and the wall each one mounts on. Distinct from
+    # WALL_FURNITURE_OPS (floor furniture against a wall): these are the art/mirror/
+    # display/clock items whose wall surface _enforce_wall_object_clearances keeps visible.
+    WALL_HUNG_OPS = {
+        'place_on_wall_back_left': 'back_wall', 'place_on_wall_back_center': 'back_wall',
+        'place_on_wall_back_right': 'back_wall',
+        'place_on_wall_front_left': 'front_wall', 'place_on_wall_front_center': 'front_wall',
+        'place_on_wall_front_right': 'front_wall',
+        'place_on_wall_left_left': 'left_wall', 'place_on_wall_left_center': 'left_wall',
+        'place_on_wall_left_right': 'left_wall',
+        'place_on_wall_right_left': 'right_wall', 'place_on_wall_right_center': 'right_wall',
+        'place_on_wall_right_right': 'right_wall',
+    }
+    WALL_OBJECT_CLEARANCE = 0.75   # keep-visible band depth in front of a wall object
+    WALL_OBJECT_SIGHT_TOL = 0.05   # an occluder must rise this far above the object's bottom
+
+    def _enforce_wall_object_clearances(self):
+        """Deterministic guarantee (run after the wall-hung ops execute, mirroring
+        _enforce_door_clearances): the wall surface occupied by a wall-hung object
+        (art, mirror, clock, display) stays visible. Any floor object TALL enough to
+        occlude it — AABB top above the wall object's AABB bottom — standing inside
+        the WALL_OBJECT_CLEARANCE band in front of the object's along-wall span is
+        pushed ALONG the wall out of that span. Sideways on purpose: wall-adjacent
+        furniture must stay flush to its wall (_repin_wall_furniture), so a
+        perpendicular push would be undone on the next compile. Short furniture under
+        the object (a console below a painting) is legal and untouched.
+
+        Runs after wall-hung placement because those ops execute post-solve — the
+        object's final AABB doesn't exist during the gradient solve, so this cannot
+        be an in-solve proxy like the doorway nudge."""
+        clear = self.WALL_OBJECT_CLEARANCE
+        tol = self.WALL_OBJECT_SIGHT_TOL
+        hung = [(op, self.WALL_HUNG_OPS[op.name]) for op in self.operations
+                if op is not None and op.name in self.WALL_HUNG_OPS
+                and getattr(op, "obj", None) is not None]
+        if not hung:
+            return
+
+        floor_children = [c for c in self.children
+                          if not getattr(c, "is_proxy", False)
+                          and not getattr(c, "ignore_overlap", False)
+                          and not getattr(c, "is_light", False)]
+        moved = False
+        for op, wall in hung:
+            (wx0, wy0, wz0), (wx1, wy1, wz1) = op.obj.get_aabb()
+            along = 'x' if wall in ('back_wall', 'front_wall') else 'z'
+            a0, a1 = (wx0, wx1) if along == 'x' else (wz0, wz1)
+            length = self.WIDTH if along == 'x' else self.DEPTH
+            bottom = float(wy0)
+
+            for c in floor_children:
+                (cx0, cy0, cz0), (cx1, cy1, cz1) = c.get_aabb()
+                if float(cy1) <= bottom + tol:
+                    continue          # too short to occlude — a support/console is fine
+                # inside the band in front of the wall object's wall?
+                if wall == 'back_wall' and cz0 >= clear:
+                    continue
+                if wall == 'front_wall' and cz1 <= self.DEPTH - clear:
+                    continue
+                if wall == 'left_wall' and cx0 >= clear:
+                    continue
+                if wall == 'right_wall' and cx1 <= self.WIDTH - clear:
+                    continue
+                c0, c1 = (cx0, cx1) if along == 'x' else (cz0, cz1)
+                if c1 <= a0 or c0 >= a1:
+                    continue          # no along-wall overlap with the object's span
+                # push along the wall out of the span: the smaller in-bounds exit wins
+                d_neg = a0 - float(c1)            # slide toward the wall start
+                d_pos = a1 - float(c0)            # slide toward the wall end
+                candidates = sorted((d for d in (d_neg, d_pos)
+                                     if 0.0 <= c0 + d and c1 + d <= length),
+                                    key=abs)
+                desc = (getattr(c, "retrieval_query", None)
+                        or getattr(c, "name", None) or c.__class__.__name__)
+                wdesc = (getattr(op.obj, "retrieval_query", None)
+                         or getattr(op.obj, "name", None) or "wall object")
+                if not candidates:
+                    msg = (f"[RoomGroup] WARNING: '{desc[:40]}' occludes wall-hung "
+                           f"'{wdesc[:40]}' on {wall} and no along-wall slot can clear it — "
+                           f"move one of them to a different wall/slot.")
+                    print(msg)
+                    self.scene.vlm_feedback += ("\n" if self.scene.vlm_feedback else "") + msg
+                    continue
+                d = candidates[0]
+                if along == 'x':
+                    c.translate(float(d), 0, 0)
+                else:
+                    c.translate(0, 0, float(d))
+                moved = True
+                print(f"[RoomGroup] wall-object clearance: slid '{desc[:40]}' {d:+.2f} m along "
+                      f"{wall} so it no longer occludes '{wdesc[:40]}'.")
+
+        if moved:
+            # repair any overlaps/OOB the slides introduced, then re-guarantee doorways
+            # (a slide can land furniture in a door band; that pass _settles again).
+            self.grad_solver.objects = self.children
+            self.grad_solver._settle()
+            self._enforce_door_clearances()
 
     def _warn_over_height(self, tol=0.02):
         """Warn at compile time about any placed object whose top pokes through the ceiling.
@@ -2338,6 +2564,11 @@ class RoomGroup(SceneProgObject):
         self._run_constraint_hooks()
         self.grad_optimize()
 
+        # Deterministic wall guarantee: wall-adjacent furniture back flush to its wall
+        # (the action sampler's exploration floor drifts thin wall pieces into the room).
+        # Runs BEFORE the doorway pass so a door band still wins over flushness.
+        self._repin_wall_furniture()
+
         # Deterministic doorway guarantee: ensure every doorway band is actually clear,
         # even for large furniture the area-weighted solver moves slowly.
         self._enforce_door_clearances()
@@ -2345,6 +2576,11 @@ class RoomGroup(SceneProgObject):
         for op in self.operations:
             if op.name in skip_for_now:
                 op.execute()
+
+        # Deterministic wall-object guarantee: floor furniture tall enough to occlude a
+        # wall-hung object (art/mirror/clock) is slid along the wall out of its span.
+        # Must run here — wall-hung ops only got their final AABB in the loop above.
+        self._enforce_wall_object_clearances()
 
         for asset in self.scene.ceiling_lights:
             x, _, z = asset.transform.decompose_matrix()[0]

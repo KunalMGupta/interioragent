@@ -105,9 +105,15 @@ class SceneProgObjectWall:
             raise ValueError(f"Unknown wall name: {wall.name}")
 
     def translate(self, mesh, translation):
+        # Center by the BBOX midpoint, not the vertex mean: a mesh with uneven vertex
+        # density (the door glb has ~0.18 m mean-vs-bbox skew from its hinge-side
+        # geometry) would otherwise land offset from the partition center that all the
+        # downstream math (doorway clearance proxies, _enforce_door_clearances,
+        # wall-slot occupancy) computes from — furniture then legally sat "outside the
+        # clearance band" while visibly covering the door leaf.
         translation = np.asarray(translation, dtype=np.float32)
         vertices = mesh.vertices
-        center = np.mean(vertices, axis=0)
+        center = (vertices.min(axis=0) + vertices.max(axis=0)) / 2.0
         vertices -= center
         vertices += translation
         mesh.vertices = vertices
