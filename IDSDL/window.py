@@ -319,6 +319,14 @@ class Window(SceneProgObjectWall):
 
         self.cut_wall(wall)
 
+        # A standard window is bare by default — only dress it if a curtain texture is given
+        # (same contract as add_window_picture above). Without this, `curtain=None` still loaded
+        # the DEFAULT patterned drape mesh, so there was NO way to author an undressed window —
+        # it put floral curtains on a prison cell, and silently on every other scene that omits
+        # the kwarg (retail/jewelry storefronts, a warehouse, a pantry).
+        if not curtain_texture:
+            return self, None
+
         mesh = self.add_curtain(curtain_texture)
         mesh = self.scale(mesh, 1.1 * window_width, 1.1 * window_height)
         mesh = self.rotate(mesh, wall)

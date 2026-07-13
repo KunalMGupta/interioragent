@@ -2059,21 +2059,44 @@ class RoomGroup(SceneProgObject):
             for obj in objs:
                 xs.append(current_x + obj.get_width() / 2)  # center x
                 current_x += obj.get_width() + spacing
-                zs.append(obj.get_depth() / 2)
+                # Hang on the wall's INNER FACE, not on the wall plane: offset INTO the room by half
+                # the piece's thickness (+BUFFER) -- the same convention the slot verbs use. back_wall
+                # is at z=0 (offset +), front_wall at z=DEPTH (offset -). Without the front_wall case
+                # every front-wall piece landed on the BACK wall facing away, as a dark backing board.
+                zs.append(obj.get_depth() / 2 + BUFFER if wall == 'back_wall'
+                          else self.DEPTH - obj.get_depth() / 2 - BUFFER)
         else:
-            total_width = sum(obj_depths)
+            # ALONG-WALL EXTENT IS THE OBJECT'S *WIDTH*, NOT ITS DEPTH -- on a side wall too.
+            # `_place_on_wall` scales the piece with scale_only_width(target) and THEN rotates it
+            # 90/270 deg onto the wall, so the target it wants is always the width axis. This branch
+            # used to pack and size side-wall pieces by obj.get_depth(), which for a painting is its
+            # THICKNESS (~0.05 m): every canvas hung on a left/right wall was scaled down to a few
+            # centimetres and rendered as a sliver. (Only back_wall -- which correctly uses width --
+            # was ever exercised in a shipped scene, so this went unnoticed.)
+            obj_sizes = [obj.get_width() for obj in objs]
+            total_width = sum(obj_sizes)
             if total_width > depth * 0.5:
                 scaling_factor = (depth / total_width) * 0.5
-                obj_depths = [d * scaling_factor for d in obj_depths]
+                obj_sizes = [s * scaling_factor for s in obj_sizes]
+                total_width = sum(obj_sizes)
 
             spacing = (depth - total_width) / (len(objs) + 1)
             current_z = spacing
             xs, zs = [], []
-            for obj in objs:
-                xs.append(0.0)
-                zs.append(current_z + obj.get_depth() / 2)  # center z
-                current_z += obj.get_depth() + spacing
-            obj_widths = obj_depths
+            for obj, size in zip(objs, obj_sizes):
+                # Hang on the wall's INNER FACE (see the back/front branch). left_wall is at x=0,
+                # right_wall at x=WIDTH; offset INTO the room by half the thickness, exactly as the
+                # slot verbs do. Two bugs lived here:
+                #   * x was ALWAYS 0.0, so every right_wall piece was placed on the LEFT wall while
+                #     rotated 270 deg to face -x -- it hung backwards inside the opposite wall and
+                #     rendered as a black bar;
+                #   * even for the left wall, x=0.0 is the wall PLANE, so the canvas ended up buried
+                #     in (indeed just behind) the wall -- out of the room's bounds entirely.
+                xs.append(obj.get_depth() / 2 + BUFFER if wall == 'left_wall'
+                          else self.WIDTH - obj.get_depth() / 2 - BUFFER)
+                zs.append(current_z + size / 2)  # center z (advance by the SCALED size)
+                current_z += size + spacing
+            obj_widths = obj_sizes
 
         for i, obj in enumerate(objs):
             self._place_on_wall(obj, xs[i], height / 2, zs[i], rot, obj_widths[i])

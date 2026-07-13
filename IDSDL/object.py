@@ -1039,7 +1039,11 @@ class SceneProgObject:
 
         # Split a fixed illumination budget across the N pendants so adding more lights makes the
         # room no brighter (just more fixtures), instead of N*500 W blowing the scene out to white.
-        per_light_energy = 500.0 / max(1, N)
+        # The budget is a scene-level dial (`scene.light_budget`, default 500 W): `density` sets the
+        # fixture COUNT and cannot change brightness, so a deliberately DIM room (a wine cellar, a
+        # bar, a cinema) had no lever at all and rendered blown out whatever fixture it picked.
+        budget = float(getattr(self.scene, "light_budget", 500.0))
+        per_light_energy = budget / max(1, N)
         for i in range(min(N, len(locs))):
             x = locs[i, 0]
             z = locs[i, 1]

@@ -37,6 +37,7 @@ def lints_enabled() -> bool:
 FLOAT_TOL = 0.05          # m — floor objects should rest within this of y=0
 LIGHTS_PER_M2_CAP = 0.3   # fixtures per m^2 of floor beyond which it's a starfield
 LIGHTS_MIN_CAP = 8        # never flag small absolute counts
+EMBED_TOL = 0.05          # m — penetration on ALL THREE axes before it's a real intersection
 
 
 def _label(obj):
@@ -98,11 +99,84 @@ def lint_lighting(room):
             f"0.01-0.02 for a small room, ~0.05 for a medium one."]
 
 
+def _ancestry(obj):
+    """ids of obj and every ancestor (an on-top prop's parent chain reaches its anchor)."""
+    out, p = set(), obj
+    while p is not None and id(p) not in out:
+        out.add(id(p))
+        p = getattr(p, "parent", None)
+    return out
+
+
+def lint_embedded_wall_objects(room, tol=EMBED_TOL):
+    """Flag a wall-mounted / ignore_overlap object INTERSECTING another object in 3D.
+
+    THE SOLVER'S BLIND SPOT. Every overlap check in the room is 2D-footprint AND drops
+    ignore_overlap items: `GradSolver.overlap_pairs` (which backs the residual-overlap
+    warning) filters them out by construction, the gradient solve never pushes them, and
+    `_snap_overlaps` / `_clamp_to_bounds` skip them too. That flag is *necessary* on
+    wall-mounted pieces — a shelf lifted with `bottom=` is registered as floor furniture, so
+    without it the 2D solver sees a shelf and the cabinet beneath/beside it as interpenetrating
+    and shoves them apart along the wall (and on a stacked run, shoves the stack apart). But
+    the flag is a blanket exemption: once set, NOTHING ever looks at that object again, so a
+    floor cabinet is free to drift along the wall straight INTO a mounted shelf and no signal
+    fires. Seen in closet v1: a wall-mounted clothes shelf ended 0.45 m inside a wardrobe bay
+    while the whole VLM loop reported `no rescale / no rotation / no wall overlap`.
+
+    So: check exactly the pairs the solver refuses to. Full 3D AABB (a shelf ABOVE a console
+    is legal and must stay silent — that is the whole reason the 2D test can't be reused), and
+    only pairs where at least one party is ignore_overlap. Parent/child pairs are skipped: a
+    `place_on_top` prop is *supposed* to intersect the anchor it rests on.
+
+    Advisory, like every lint here — there is no safe auto-fix (sliding a mounted piece would
+    fight `_repin_wall_furniture`, and shrinking it is the author's call). The fix is in the
+    program: move one to a different wall slot, change its `bottom=`, mark the drifting floor
+    piece `is_static`, or shrink it."""
+    scene = getattr(room, "scene", None)
+    wall_items = {id(w) for w in getattr(scene, "wall_objects", []) or []}   # doors/windows/curtains
+
+    def eligible(c):
+        return not (getattr(c, "is_proxy", False) or getattr(c, "is_light", False)
+                    or id(c) in wall_items)
+
+    children = [c for c in getattr(room, "children", []) if eligible(c)]
+    ignored = [c for c in children if getattr(c, "ignore_overlap", False)]
+    msgs, seen = [], set()
+    for a in ignored:
+        anc_a = _ancestry(a)
+        for b in children:
+            if a is b or id(b) in anc_a or id(a) in _ancestry(b):
+                continue
+            key = tuple(sorted((id(a), id(b))))
+            if key in seen:
+                continue
+            try:
+                (ax0, ay0, az0), (ax1, ay1, az1) = a.get_aabb()
+                (bx0, by0, bz0), (bx1, by1, bz1) = b.get_aabb()
+            except Exception:
+                continue
+            ox = float(min(ax1, bx1) - max(ax0, bx0))
+            oy = float(min(ay1, by1) - max(ay0, by0))
+            oz = float(min(az1, bz1) - max(az0, bz0))
+            if ox <= tol or oy <= tol or oz <= tol:
+                continue          # no 3D intersection (a shelf over a console lands here)
+            seen.add(key)
+            both = getattr(b, "ignore_overlap", False)
+            msgs.append(
+                f"'{_label(a)[:36]}' (wall-mounted/ignore_overlap) is EMBEDDED IN "
+                f"'{_label(b)[:36]}'{' (also ignore_overlap)' if both else ''} — they "
+                f"interpenetrate {ox:.2f}x{oy:.2f}x{oz:.2f} m (w x h x d). ignore_overlap "
+                f"items are invisible to the overlap solver, so NOTHING pushed them apart. "
+                f"Fix in the program: move one to a different wall slot, change its bottom= "
+                f"height, mark the floor piece is_static (it drifted), or shrink one of them.")
+    return msgs
+
+
 def run_room_lints(room):
     """Run all geometric lints; print + record in scene.vlm_feedback. Returns msgs."""
     if not lints_enabled():
         return []
-    msgs = lint_floaters(room) + lint_lighting(room)
+    msgs = lint_floaters(room) + lint_lighting(room) + lint_embedded_wall_objects(room)
     if not msgs:
         return []
     text = "\n".join(f"[Lint] {m}" for m in msgs)

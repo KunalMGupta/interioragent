@@ -682,11 +682,25 @@ class SceneRendererWorker:
     # what you want for inspecting a layout and iterating on it.
     # -----------------------------------------------------------------
 
+    # Sky strength for interior views. The default world (0.7 grey @ 1.0) reads white on camera but
+    # is only 0.7 radiance, so it lights almost nothing: with the film now opaque, glazing rendered
+    # as a blown-white pane above a DIM room ("dark barn with bright windows"). Interiors get their
+    # daylight from the sky, and a scene program has no brightness lever of its own — add_lighting's
+    # budget is a fixed 500 W split across N fixtures (object.py: per_light_energy = 500/N), so
+    # density only ever adds MORE, DIMMER fixtures. Raising the sky for interior views is the lever,
+    # and it is the physically right one: a greenhouse is lit by the sky, not by ceiling bulbs.
+    # Override per scene with IDSDL_SKY (e.g. IDSDL_SKY=0.7 restores the old dim sky for a
+    # deliberately moody room — a bar, a wine cellar — without touching this file).
+    INTERIOR_SKY_STRENGTH = float(os.environ.get("IDSDL_SKY", 3.0))
+
     def _setup_interior(self, path, hide_ceiling=True, lens=22.0):
-        """Load the scene, hide the ceiling, widen the lens, return (cam, room box)."""
+        """Load the scene, hide the ceiling, raise the sky, widen the lens, return (cam, room box)."""
         cam_ob = self.init(path)
         if hide_ceiling:
             set_shell_visibility("ceiling", False)
+        # The ceiling is hide_render'd, so the sky lights every interior from above (and through any
+        # glazing) — this is what makes a daylit room read as daylit.
+        set_white_world_background(strength=self.INTERIOR_SKY_STRENGTH)
         cam_ob.data.lens = lens          # wide-angle so interiors fit the frame
         return cam_ob, compute_room_box()
 
@@ -698,7 +712,15 @@ class SceneRendererWorker:
             resolution_y=self.resolution_y,
             samples=self.samples,
             use_cuda=self.cuda,
-            transparent=True,
+            # OPAQUE film for interior views (was transparent=True). A transparent film records
+            # zero alpha wherever no geometry is hit, so every window opening and the hidden
+            # ceiling flattened to BLACK in the PNG — the "black night void" that scenes have
+            # worked around for months (executive_office/retail/florist) and the "black ceiling"
+            # artifact (classroom) are the SAME bug. The world IS lit (set_white_world_background,
+            # 0.7 grey @ strength 1.0); an opaque film simply lets it be seen, so glazing now
+            # reads as daylight beyond the glass. Asset previews/tournaments still render
+            # transparent (they want a cutout) — this changes only the room views.
+            transparent=False,
         )
         render_image()
 

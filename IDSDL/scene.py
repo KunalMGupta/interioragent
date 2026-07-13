@@ -58,6 +58,10 @@ class SceneProgRoom:
         self.wall_objects = []
         self.unique_assets = {}
         self.ceiling_lights = []
+        # Total ceiling-light wattage, split across however many fixtures add_lighting places
+        # (density = fixture COUNT, never brightness). Lower it for a deliberately dim room —
+        # a wine cellar / bar / cinema reads warm and moody at ~200 W, blown out at 500 W.
+        self.light_budget = 500.0
         self.exec = SceneProgExec()
         self.object_retriever = SceneProgAssetRetriever(seed=seed)
         self.vlm_feedback = ""
