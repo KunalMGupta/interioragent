@@ -866,5 +866,187 @@
   "freetop": true,
   "on_top_or_inside": false,
   "scale": 1.5
+ },
+ "custom/824392f9d01a55020ede50d24ac38383c3bda76b": {
+  "description": "Tall grey metal medical equipment stand on a blue wheeled base with an adjustable curved arm.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.65
+ },
+ "custom/9454f43e4434d7a47fab37508830d2a252917ea0": {
+  "description": "Minimalist black plastic lounge chair with armrests.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.75
+ },
+ "custom/0b1d04c0e678f3e9bea36300d36ab2144fac6a44": {
+  "description": "White molded-plastic dining chair with chrome-plated steel legs.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.52
+ },
+ "custom/5f92a4aa9e0b16a5aac1370d2a7b89085300b4bd": {
+  "description": "White minimalist cube pedestal with a matte ceramic finish.",
+  "placement": "NA",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.5
+ },
+ "custom/8a17c15535dc39ed921f9d856ce139cc0a6b37d3": {
+  "description": "Curved grey laminate reception desk with a dark countertop.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.5
+ },
+ "custom/ca5d9b4c77231bd1757743237d7fe72bdb86680f": {
+  "description": "Industrial-style gray metal-framed side table with a lower shelf.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.65
+ },
+ "custom/defceb36046a9ac8bfb0e0cbf1e99a248fcea613": {
+  "description": "Small grey metal rectangular block.",
+  "placement": "NA",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.05
+ },
+ "custom/66cdc7bab8ad57951b4cf15df04fb367eb88ea03": {
+  "description": "Industrial laboratory gas delivery system on a stainless-steel cart with two red gas cylinders and a control console.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.8
+ },
+ "custom/23791b62e98e76788a4b41fa405eae9167cbbf73": {
+  "description": "Rectangular plastic drawer organizer tray in grey with a light-blue interior and multiple compartments.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.32
+ },
+ "custom/f373c9e23143f0bd35db7f4e4c6fe8de6fa2a017": {
+  "description": "Small black metal minimalist standing figurine sculpture.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.04
+ },
+ "custom/18ff73a8d9f5285559a31643ca206fbcba674160": {
+  "description": "Grey aluminium two-gang wall plate with two circular electrical outlet holes.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.12
+ },
+ "custom/d0b407b0d9f123f5b1b105f5980c910d3da4cabf": {
+  "description": "Light gray metal desktop binocular surgical microscope on a stand.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.25
+ },
+ "custom/167a1ae682ea918048245e36d769daa33c0a1c7b": {
+  "description": "Digital blood pressure monitor with blue cuff in white plastic housing.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.18
+ },
+ "custom/94f65b520adb3f928b9471b45478eaa4a7771799": {
+  "description": "Blue glass decorative sphere with a smooth finish.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.08
+ },
+ "custom/c2e7919c5875db913e7a4973a0998ead3bde40f3": {
+  "description": "Blue fabric rolling laundry cart with a steel frame.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.5
+ },
+ "custom/5493f701627cd3a3e6942cf3912275a6e86fa6e4": {
+  "description": "Blue sterile drape-covered surgical instrument table on a mobile stainless-steel base.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.8
+ },
+ "custom/5757fcba99deb7b8625bf5cca7e1664e7afc7ac3": {
+  "description": "Blue fabric-covered hospital patient transfer gurney with a metal frame.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.7
+ },
+ "custom/fff9d40bcc0780163ad5eebfc5d708fc824f4baa": {
+  "description": "Minimalist blue glass sphere decorative ornament.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.08
+ },
+ "custom/371ddbf457cc4892cf8e767711de8bcea8c4195a": {
+  "description": "Blue powder-coated steel drill press on a metal stand.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.6
+ },
+ "custom/0783b7834971d8733a3f48ef264e414857775112": {
+  "description": "Blue-gray plastic and metal medical ultrasound cart on wheels with a large display and control panel.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.75
+ },
+ "custom/e6e171912392d15999e34590299eaab0f78c9de9": {
+  "description": "Grey metal portable medical cart on a blue wheeled base with a vertical cabinet and an attached manual resuscitation bulb.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.6
+ },
+ "custom/7db820c55be6991b9b5541b094c4e5fef152f0aa": {
+  "description": "Blue vinyl-covered hospital stretcher (gurney) on a metal wheeled frame.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.75
+ },
+ "custom/c9cbd96abf664f10c79d47f05f0da85c9e438329": {
+  "description": "Long gray concrete-look plastic trough planter.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 1.2
+ },
+ "custom/aec28f56f031931bc434b6f1689224d7000cb5ee": {
+  "description": "Large stainless steel laboratory autoclave with an open-front chamber and two red gas cylinders beneath.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.0
+ },
+ "custom/d295f3ed29959a4b8336630adbb8362dff267487": {
+  "description": "Portable medical ultrasound machine on a wheeled cart with a blue-gray plastic body and a large monitor.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.75
+ },
+ "custom/c7966f1817cabdecbb6961d40d0ae3586d666bb6": {
+  "description": "Blue-padded surgical operating table with a stainless-steel frame and caster wheels.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.0
  }
 }
