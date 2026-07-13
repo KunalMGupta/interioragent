@@ -72,7 +72,15 @@ into the room over the solve; nothing pins wall placements despite the documente
 world AABB, **not** recomputed `wall_deltas` (rotation-aware `get_whd` double-swaps w/d for
 90°-rotated items). The VLM loop never checks wall flushness — verify gaps in the blend.
 
-### 7. (v2) Wall art that "faces the other way" = reversed mesh front; compare with the catalog preview
+### 7. (v3) `place_on_top` targets the group ANCHOR — the lamp-on-the-chair bug
+`nook.place_on_top(table_lamp)` with the armchair as the nook's anchor seated the lamp on the
+chair's CUSHION — the tournament treats any horizontal surface as valid, and no constraint knows
+"a lamp doesn't belong on a seat". The side table being in the same group is irrelevant;
+`place_on_top` always stacks on the anchor. Fix = the bedroom unit rule: build `side_unit`
+(anchor = the TABLE, `place_on_top(lamp)`), then place the unit into the nook. Before any
+`place_on_top`/`place_inside`, ask "what is this group's anchor?"
+
+### 8. (v2) Wall art that "faces the other way" = reversed mesh front; compare with the catalog preview
 The photo-grid mesh (`future/09f28392…`) hung with its image side INTO the wall — the render showed
 its brown backing boards, which read as plausible sepia frames, so `RotationConstraint` stayed
 silent. The catalog preview (`3D-FUTURE-images/<id>.png`) shows the true front — which is also four

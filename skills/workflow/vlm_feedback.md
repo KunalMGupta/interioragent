@@ -513,3 +513,13 @@ rotation issue you can *see*; the VLM rotation text is just a hint.
   bare boards/mats in the render, compare against the catalog preview (`3D-FUTURE-images/<id>.png`)
   — a reversed front and an empty-frame asset LOOK identical from behind; and an empty-frame
   "gallery set" fails the jewelry-shop product rule even when correctly oriented.
+- **[living_room_cozy v3, place_on_top seats items on the group ANCHOR — a lamp on the chair]**
+  `nook.place_on_top(table_lamp)` inside the reading-nook group (anchor = the armchair) put the
+  lamp on the chair's SEAT — the placement tournament happily picks the cushion as a valid surface,
+  and no check objects (geometry is fine; "a lamp doesn't belong on a seat" is semantics). The side
+  table being a child of the group doesn't matter: `place_on_top` ALWAYS targets the anchor. →
+  Restructured per the bedroom/design-principles unit rule: a `side_unit` RelativeGroup with the
+  TABLE as anchor + `place_on_top(lamp)`, then `nook.place_on_left(side_unit)`. Rule: before any
+  `place_on_top`/`place_inside`, ask "what is this group's anchor?" — if the intended surface isn't
+  the anchor, compose a sub-unit around the surface first. (User catch #3 this scene that the clean
+  VLM loop missed.)

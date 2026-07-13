@@ -50,18 +50,25 @@ scene.prefetch_assets([
     "a flat round LED flush mount ceiling light",
 ])
 
-# --- leather reading nook: chair + ottoman + side table + task light, one unit ---
+# --- side table + its lamp as ONE unit: the TABLE must be the anchor, because
+# place_on_top seats items on the group's ANCHOR — calling nook.place_on_top(lamp)
+# with the chair as anchor put the lamp on the chair's SEAT (v2 user catch; no
+# check flags it — the tournament happily picks the cushion as a "surface") ---
+side_table = scene.AddAsset("a small round dark wood side table")
+with scene.RelativeGroup() as side_unit:
+    side_unit.set_anchor(side_table)
+    if PHASE >= 2:
+        side_unit.place_on_top(scene.AddAsset("a modern table lamp with a warm fabric shade"))
+
+# --- leather reading nook: chair + ottoman + side-table unit + task light ---
 lchair = scene.AddAsset("a vintage tan leather club armchair", asset_id=LCHAIR)
 with scene.RelativeGroup() as nook:
     nook.set_anchor(lchair)
     nook.place_on_front_adjacent(
         scene.AddAsset("a cognac leather ottoman footstool", asset_id=OTTOMAN,
                        modulate_scale=0.7))   # phase-1 render: near chair-sized; shrink uniformly
-    side_table = scene.AddAsset("a small round dark wood side table")
-    nook.place_on_left(side_table)
+    nook.place_on_left(side_unit)
     nook.place_on_back(scene.AddAsset("a warm brass floor lamp with a fabric shade"))
-    if PHASE >= 2:
-        nook.place_on_top(scene.AddAsset("a modern table lamp with a warm fabric shade"))
 
 # --- seating hero: sectional faces the hearth across the coffee table ---
 sectional = scene.AddAsset("a cream three-piece sectional corner sofa",
