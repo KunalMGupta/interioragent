@@ -75,3 +75,6 @@ tools/dsl_place_test.py
 
 # Manual isolated repro for place_on_top surface/sizing (scratch, like dsl_place_test.py)
 tools/lamp_ontop_test.py
+
+# secrets (reload_credentials reads this at runtime; never commit)
+.env
