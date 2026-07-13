@@ -218,8 +218,44 @@ deeper than ~0.25 m (shelving, a veneer panel, any cabinet) renders as furniture
 FLOATING in mid-air. The DSL now warns (print + `scene.vlm_feedback`) when a deep
 mesh is hung — fix by using `place_on_<wall>_wall_<pos>` (floor, against the wall)
 or pinning a genuinely thin canvas/mirror/board mesh.
+
+**Mounting a DEEP mesh UP the wall (a range hood, upper cabinets, a wall-hung TV
+unit).** Some fixtures are genuinely deep AND genuinely up the wall — `place_on_wall_*`
+floats them, and leaving them out guts the scene (a kitchen without its hood fails the
+reads-as test). Use the wall-ADJACENT path with the **`bottom=` lift**, available on
+every `place_on_<wall>_wall_<pos>`: `room.place_on_back_wall_center(hood, bottom=1.55)`.
+Two things then bite, because that path registers the piece as **floor furniture**:
+```python
+hood.ignore_overlap = True   # else the 2D-footprint OverlapConstraint sees the hood and
+                             # the range BENEATH it as interpenetrating and shoves them
+                             # apart along the wall (skipped by the gradient,
+                             # _snap_overlaps, _clamp_to_bounds and _warn_overlaps)
+hood.is_static = True        # else the GradSolver's exploration floor (max(grad·dir,0.01)
+                             # * free_space / area) random-walks a small-footprint piece
+                             # along the wall — the living_room_cozy fireplace drift
+```
+`_repin_wall_furniture` still snaps it flush and **preserves the Y lift** (it translates
+in x/z only). If several such pieces must line up over a run, mount them as ONE
+`GridGroup` row in the **same wall slot as the run below** — a wall's `left`/`right`
+slots are thirds of the WALL, not of your run, so separately-slotted uppers hang out
+past the run's ends over bare floor. Worked example: [examples/kitchen.md](examples/kitchen.md).
+
 Openings: `place_door(wall, position)`, `place_window_floor_to_ceiling`,
 `place_window_picture`, `place_window_standard(wall, position, curtain)`.
+
+**Windows show DAYLIGHT — glaze freely (fixed 2026-07-12, greenhouse).** Older examples warn that
+any opening renders as a "black night void" and prescribe workarounds (small panes only, a foreground
+object to mask the void, all-black wall renders are "camera artifacts"). **That was a bug and it is
+fixed** — interior views rendered with a *transparent film*, so a ray that hit no geometry (through an
+opening, or above the hidden ceiling) wrote alpha 0 and flattened to black; the same bug is why
+ceilings rendered black. Interior views are now opaque-film with a raised sky
+(`renderer/utils.py`: `INTERIOR_SKY_STRENGTH`, override per build with `IDSDL_SKY`). Treat those
+workarounds as obsolete. See [examples/greenhouse.md](examples/greenhouse.md).
+
+**Brightness is a SKY setting, never an `add_lighting` setting.** `add_lighting` spends a **fixed
+500 W split across N fixtures** (`object.py`: `per_light_energy = 500.0 / max(1, N)`), so raising
+`density` buys *more, dimmer* fixtures and can never make a room brighter. For a "bright"/"sunlit"
+brief, glaze a wall and let the sky in; for a deliberately dim room, build with `IDSDL_SKY=0.7`.
 
 **`facing` — leave it OFF for wall furniture (the default already faces the room).** `facing` names
 the direction the asset points. For `place_on_<wall>_wall_*`, **omitting `facing`** applies the
@@ -302,10 +338,24 @@ is deterministic (no solve), so keep its `randomness` modest. Good defaults: sea
   invented verbs (`place_on_left_adjacent`) and kwargs (`add_lighting(asset_id=…)`)
   before a build. `workbench run` lints first and refuses to build on errors.
 - **Compile lints** (`IDSDL/lints.py`, auto): floor objects floating/sunk (AABB
-  bottom off y=0 — usual cause: off-center mesh origin, SWAP the mesh) and lighting
-  starfield (fixture count far over the room's area budget) are flagged as `[Lint]`
-  lines in `scene.vlm_feedback`/the report. Keep them clean per phase; disable with
-  `IDSDL_LINTS=0`.
+  bottom off y=0 — usual cause: off-center mesh origin, SWAP the mesh), lighting
+  starfield (fixture count far over the room's area budget), and **embedded wall
+  objects** (below) are flagged as `[Lint]` lines in `scene.vlm_feedback`/the report.
+  Keep them clean per phase; disable with `IDSDL_LINTS=0`.
+- **`[Lint] … is EMBEDDED IN …` — the overlap solver's BLIND SPOT.** Every overlap
+  check in the room is 2D-footprint *and* drops `ignore_overlap` items
+  (`GradSolver.overlap_pairs` filters them by construction), so an object you mark
+  `ignore_overlap` — which you MUST do for anything mounted with `bottom=`, or the 2D
+  solver shoves the shelf and the cabinet under it apart — becomes invisible to every
+  overlap pass, and a floor cabinet can end up **inside** it with nothing complaining.
+  `lint_embedded_wall_objects` closes that hole: a full **3D** AABB test (a shelf ABOVE
+  a console stays legal) over exactly the pairs the solver refuses to look at.
+  There is no auto-fix — act in the program: move one to a different wall slot, change
+  its `bottom=`, or shrink it. **Why this bites: wall furniture is placed at
+  `row_centers[1..3]`, and the row centres are sized by each row's FLOOR occupants, not
+  by the wall items — so the gap between two adjacent wall slots can be SMALLER than the
+  two wall items sitting in them need.** Three long items on one wall is an arithmetic
+  to check ((wᵢ + wⱼ)/2 ≤ the row-centre pitch), never a slot count to assume.
 
 ## Export
 

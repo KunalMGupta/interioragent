@@ -196,6 +196,32 @@ are routed/ranked/previewed/picked/`AddAsset`-loaded exactly like dataset assets
 (`--workers`), idempotent (sha1 dedup). A `manifest.json` (`{"<file.glb>": {"description":...,
 "scale":..., "placement":...}}`) overrides any field; `--category` appends the ids to a pool.
 
+## Reusing ANOTHER scene's ingested meshes (check the glb bounds first)
+Ingested assets are a shared library — the operating room's `hospital.zip` handed the laboratory a
+real microscope, autoclave and gas-cylinder cart. Two rules before you pin one:
+
+1. **A `custom/` mesh can be invisible to NL retrieval.** Ingested meshes only surface through
+   retrievers that merge the `custom` kind, so **a query can score `0.000` against a dataset that
+   contains the object** ("a laboratory microscope" → empty candidate list, while the microscope
+   sits in the pool). **Grep the custom pool's descriptions by hand before concluding a category
+   needs an ingest round**, and pin by id — that is mandatory, not a preference.
+2. **An ingest batch's UNUSED meshes never got its repair pass.** A batch gets fixed (join, unit
+   normalize, recenter) for the assets its own scene *ships*; the rest stay broken in the pool.
+   Of the operating room's 20 ingested glbs it used 6 — and the laboratory hit TWO broken leftovers:
+   the microscope's origin was **+118% of its height off-centre** (→ it SANK 0.23 m through the
+   bench it was placed on and read as floor-standing, with a **fully clean VLM loop**), the gas
+   cart's was −26% (→ `[Lint] FLOATS 0.62 m`). **Read the glb bounds before you build** — it is a
+   5-second offline check:
+   ```python
+   m = trimesh.load(path, force="mesh", process=False)   # measuring only — never SAVE from this
+   lo, hi = m.bounds; h = hi[1] - lo[1]
+   print((lo[1] + hi[1]) / 2 / h)      # want ~0.0; anything else will sink or float
+   ```
+   Repair at the SOURCE with `tools/fix_ingest_origins.py` (Blender: `join` → `origin_set
+   ORIGIN_GEOMETRY/BOUNDS` → zero the location). It preserves material slots, which a trimesh
+   round-trip strips (→ flat white). Write back under the **same filename** and the asset id, its
+   embedding and every existing pin stay valid — no re-ingest, no re-pin.
+
 ## Building / curating a category pool (the reliable way)
 Pools are best built by **over-generating then hand-curating**, not by trusting one search:
 

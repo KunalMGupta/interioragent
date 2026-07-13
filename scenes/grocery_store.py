@@ -1,37 +1,27 @@
 """
-Grocery store — "Neighborhood Market".
-Phase 1: gondola shelving aisles stocked with goods (GridGroup).
-Phase 2: produce bins piled near the entrance; a checkout counter carries the lighting.
-Phase 3: refrigerated cases along a wall, signage, window, door.
+Grocery store — SUPERSEDED.
+
+The worked, built, VLM-clean grocery store is `scenes/work/grocery_store_v1.py` (seed=23); the
+recipe is `skills/examples/grocery_store.md`. This file was a never-built first draft, and nearly
+every move in it was wrong in a way worth remembering:
+
+  - It hung the aisles on `GridGroup.place_grid(..., cols=3)`. A grid CANNOT open a shopper aisle:
+    its inter-row gap is `sparsity * row_depth`, and a gondola is only ~0.38 m deep (warehouse's
+    forklift-aisle lesson). Aisles come from the ROOM's slots, not from a grid.
+  - It placed the gondola run and the fridge case at wall CENTRES. The interior wall-cameras stand
+    at each wall's centre at ~1.4 m, so a 1.93 m gondola there literally contains the camera: both
+    side views render PURE BLACK, while the VLM still reports a clean `no rotation / no wall
+    overlap`. The worked scene keeps every wall centre short (a 0.93 m counter), empty, or an
+    OPENING (the door), and puts the gondolas in the side slots — where, flanking the counter, they
+    also became the money shot from the entrance.
+  - It used a `PileGroup` of "a crate of fresh produce" on a produce bin. Produce props do exist,
+    but every produce FIXTURE in the dataset is EMPTY, and the picker's top "crate of fruit"
+    (hssd/2c751d20…) renders as a near-empty WHITE BLOB. Produce has to be MASSED as product on a
+    low market table (jewelry_shop's rule).
+  - It anchored the lighting to a shopping cart. There IS no supermarket shopping cart in the
+    dataset (the best hit is a pink personal granny-trolley), and `add_lighting` on a floor prop is
+    not how a shop's ceiling is lit.
+  - `place_grid`/`place_row` of anything wide dropped into ONE room slot inflates the WHOLE shell:
+    the room is the SUM of 5 column maxima (`groups.py:compute_grid_dims`), so a 4 m row in the
+    centre column adds 4 m of width outright.
 """
-from IDSDL.scene import SceneProgRoom
-
-scene = SceneProgRoom("GroceryStore", seed=46)
-
-with scene.GridGroup(sparsity=0.7) as aisles:
-    aisles.place_grid(6 * scene.AddAsset("a grocery gondola shelf stocked with products"), cols=3)
-
-with scene.PileGroup() as produce:
-    produce.set_anchor(scene.AddAsset("a wooden produce display bin"))
-    produce.place_pile(5 * scene.AddAsset("a crate of fresh produce"), spread=0.7)
-
-with scene.GridGroup(sparsity=0.3) as checkouts:
-    checkouts.place_row(2 * scene.AddAsset("a grocery checkout counter"))
-
-with scene.RelativeGroup() as light_anchor:
-    light_anchor.set_anchor(scene.AddAsset("a shopping cart"))
-    light_anchor.add_lighting("a grid of bright fluorescent ceiling lights", density=0)
-
-with scene.RoomGroup(modulate_scale=1.15, randomness=0.15) as room:
-    room.place_walls(floor_texture="white vinyl floor tiles",
-                     ceiling_texture="white drop ceiling", wall_texture="light grey")
-    room.place_on_center(aisles, facing="front")
-    room.place_on_back(light_anchor)
-    room.place_on_front_left(produce, facing="front")
-    room.place_on_front(checkouts, facing="back")
-    room.place_on_back_wall_center(scene.AddAsset("a refrigerated grocery display case"))
-    room.place_on_wall_left_center(scene.AddAsset("a grocery aisle sign"))
-    room.place_window_floor_to_ceiling("front_wall", curtain=None)
-    room.place_door("front_wall", position="right")
-
-scene.export("grocery_store.blend")

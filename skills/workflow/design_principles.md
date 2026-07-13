@@ -44,6 +44,65 @@ the units separately sizes their on-top items *differently* (a mismatched pair) 
 work twice. `N * group` deep-copies the anchor + its already-placed children (`SceneProgObject.copy`),
 giving identical units for free. This applies to any repeated *composed* unit, not just nightstands.
 
+## A desk/counter SCREEN faces the wall the desk stands against (Kunal, 2026-07-13)
+A reception desk, service counter, POS station or check-in desk is worked from the **wall side** —
+the operator stands between the desk and the wall it backs onto. So its **monitor faces that wall**,
+and the customer sees the screen's BACK. A screen turned broadside to the room (or out at the
+customer) reads instantly wrong to anyone who has stood at a counter.
+
+`place_on_top`'s VLM tournament optimizes *position on the surface*, not semantic orientation — it
+will happily leave a monitor side-on. Fix it explicitly, on the **RoomGroup** (wall targets are
+RoomGroup-only and 90°-snapped), which applies at the end of compile and so overrides the rotation
+the placement baked in:
+```python
+pos = scene.AddAsset("a touchscreen point of sale terminal", asset_id=POS)
+with scene.RelativeGroup() as counter_group:
+    counter_group.set_anchor(counter)
+    counter_group.place_on_top([pos, ...])
+...
+with scene.RoomGroup() as room:
+    room.place_on_back(counter_station, facing="front")   # counter stands against the BACK wall
+    room.face(pos, toward="back_wall")                    # so its screen faces the BACK wall
+```
+Generalizes to anything with a working face on a wall-backed surface: a monitor, a till display, a
+staff terminal. Worked example: [../examples/fast_food.md](../examples/fast_food.md).
+
+## A table's HEIGHT must be fit explicitly — `width=` is a SINGLE-AXIS pin (Kunal, 2026-07-13)
+`AddAsset(..., width=0.8)` stretches the **width only**. It does not touch the height, so a mesh that
+ships at bar height stays at bar height and **towers over its own seats** — the fast_food cafe table
+shipped **0.96 m** tall while its molded chairs are **0.68–0.71 m in TOTAL** (seat ≈ 0.43 m), i.e. the
+tabletop sat above the chair backs. The VLM loop is blind to it (`no rescale` every build); a human sees
+it immediately.
+
+**Seat height tracks the surface it serves, and the surface must be fit to human dining height** —
+dining table ≈ 0.75 m, seat ≈ 0.45 m, bar counter ≈ 1.05 m with a 0.75 m stool. Measure both offline
+(`obj.get_whd()` on a pinned id needs no network) and fit the table uniformly:
+```python
+def _fit_height(obj, h):          # uniform: preserves the mesh's own proportions
+    W, H, D = (float(v) for v in obj.get_whd())
+    f = h / H
+    obj.scale_only_width(W * f); obj.scale_only_height(H * f); obj.scale_only_depth(D * f)
+    return obj
+
+table = _fit_height(scene.AddAsset("a cafe table", asset_id=TABLE), 0.75)   # NOT width=0.8
+```
+The mirror of restaurant's bar-stool rule (a 1.25 m stool at a 0.67 m counter), hit from the table side.
+
+## Wall-backed seating goes on the WALL verbs, never a floor slot (Kunal, 2026-07-13)
+A booth, banquette, bench or sofa whose whole point is that it **backs a wall** must be placed with
+`place_on_<wall>_wall_<left|center|right>` — the wall-adjacent family, which pins it flush and re-snaps
+it after the solve. A floor slot (`place_on_left`, `place_on_front_left`) leaves a **visible gap behind
+the seat**: the slot is a third of the ROOM, not of the wall, and `randomness` + the gradient solve
+drift the group off it. **A booth backed by air is not a booth.** Omit `facing` — the wall heuristic
+already turns wall furniture into the room.
+```python
+room.place_on_left_wall_left(booth_1)      # RIGHT — flush against the wall
+room.place_on_left_wall_right(booth_2)
+room.place_on_left(booth_1, facing="right")   # WRONG — floats a bench's back off the wall
+```
+Same family as bakery's window-bar ("a front SLOT drifts") and kindergarten's "a nook is a corner, not
+an island" — stated here as the general seating rule.
+
 ## Related
 - Grouping mechanics, `place_on_*`, `face`, and the `place_on_top` behavior these rely on:
   [../dsl_reference.md](../dsl_reference.md).
