@@ -311,9 +311,205 @@ rotation issue you can *see*; the VLM rotation text is just a hint.
   omitted `facing` (the heuristic faces the room), art hung over the LOW machine run
   (not a tall spine), window `standard` on a slot the door doesn't claim. Copying the
   worked-example defaults collapsed the feedback loop to a single room-size thread.
+- **[hospital_room v1, half-scale hero mesh]** The pinned hospital bed rendered TOY-sized
+  next to the armchairs. `get_whd()` (offline) showed native length 1.0 m vs a real
+  ~2.1 m bed. → `modulate_scale=2.1` (UNIFORM — `width=` alone would squash the
+  proportions; children_room bean-bag lesson) → true scale, IV arm at ~1.75 m.
+  Reconfirms the garage-car rule: for any uncurated hero, pin the id AND verify a
+  real-world dimension with `get_whd()` before the first build.
+- **[hospital_room v1, floating vanity]** `[Lint] vanity FLOATS 0.14 m` on the first
+  phase-1 build (off-center mesh origin, the coffee_shop bench failure class). →
+  Swapped to a sibling pick from the same browse (`future/a521cb7a…`) → clean next
+  build. Swap the mesh, never compensate with translate hacks in a v1.
+- **[hospital_room v1, place_arc chairs]** `rotate left/right armchair to face the
+  coffee table` — accepted (render agreed: the two `place_arc` visitor chairs sat
+  angled away from their table). → `face(chair, toward=table)` on both inside the
+  AroundGroup → `no rotation`. Same class as living_room's flanking chairs: arc/side
+  placements orient sideways by default; aim seating at the cluster anchor explicitly.
+- **[hospital_room v1, ONE overloaded wall inflates the room — the shrink vote can't fix it]**
+  Wheelchair + wardrobe + vanity + med cart queued along the left wall → RoomGroup grew
+  the depth to fit the queue; shrink votes (0.8→0.85→0.94) never truly converged and the
+  USER called the room oversized (the VLM's occupancy metric can't localize *which wall*
+  is the cause). → **Redistributed** (wardrobe → front wall) + `modulate_scale=0.75` →
+  `no rescale`. General rule now in coarse_to_fine.md / dsl_reference.md: cap a wall at
+  ~2–3 items unless it's a deliberate hero run; when a room "feels too big", check for a
+  wall queue BEFORE reaching for modulate_scale.
+- **[hospital_room v1, REVERSED-front vanity — user catch, VLM-invisible]** The sink
+  vanity (`future/a521cb7a…`) rendered its blank back to the room under the correct
+  default facing; every VLM pass said nothing (and later noise votes asked it to "face
+  the BED", which is wrong anyway). Bad ASSET, not bad code → fixed once, durably, with
+  `python -m IDSDL.front_cache set a521cb7a… 180` (constraints.md's prescribed path; a
+  per-scene `facing=` hack would leak the bug into every other scene using this mesh).
+  Reconfirms: eyeball each wall face in the render yourself — orientation of function
+  surfaces (sinks, drawers) is invisible to the loop.
+- **[hospital_room v1, tall furniture occluding wall art → NEW auto constraint]** After the
+  wall-load redistribution, the tall wardrobe (front-wall left) stood partly in front of
+  the front-wall-center botanical print — no signal fired (WallOverlap only compares wall
+  items to each other; the occluder was FLOOR furniture; user catch). → Added the
+  **wall-object clearance** auto pass (`RoomGroup._enforce_wall_object_clearances`,
+  Kunal's design: use the wall object's AABB): floor objects whose AABB top rises above
+  the wall object's AABB bottom, within a 0.75 m band in front of its along-wall span,
+  are slid ALONG the wall out of the span (sideways — a perpendicular push would be
+  undone by `_repin_wall_furniture`); consoles below the art stay; unresolvable cases
+  emit a `[RoomGroup] WARNING`. Rebuild: wardrobe beside the print, art fully visible,
+  no new votes. Details in workflow/constraints.md.
 - **[TOOLING GOTCHA — `run_scene` mtime-fallback]** `mcp__idsdl__run_scene` reports whichever
   `report.json` is **newest by mtime across all `tmp/*` dirs**, so when a build **errors before writing
   its own report** (or another run finished more recently) it surfaces a *different scene's* renders +
   feedback — I got a full **garage** back for a retail program (`ok=False`, but the images/asset-list
   were garage). **Tell by the printed asset list**: if it isn't your program's assets, ignore the
   render and re-run directly (`python workbench.py run <prog>`) to see the real build output/traceback.
+- **[music_studio v1, room size — a flip across neutral after acting = STOP]** `rescale room by
+  0.85` (Ph1) → `0.8` (Ph2), held per render-wins-early; applied `modulate_scale=0.85` in the
+  final phase → the next full render voted `1.1` (slight enlarge). → **Declined the 1.1** — a vote
+  that crosses neutral right after you act is the oscillation signal (converge-don't-chase), same
+  as casino's declined 1.05. One decisive change, then stop.
+- **[music_studio v1, lighting lint at the "safe" density]** `add_lighting(flush, density=0.02)`
+  tripped the starfield lint: 12 fixtures on a 38 m² room (area budget ~11). The 0.01–0.02
+  small-room band is not flat — ~38 m² already needs the bottom of it. → `0.01` → clean. When in
+  doubt start at 0.01; the lint tells you if the ceiling is starved (it won't be).
+- **[music_studio v1, clean rotation by construction]** `no rotation` every build on an
+  orientation-heavy scene (chair↔mixer, angled monitors, wall furniture): built the console as ONE
+  RelativeGroup with explicit `face(chair, toward=mixer)` + `face(monitor, toward=chair)`, omitted
+  `facing` on all wall placements, and let `place_on_front(console, facing="back")` produce the
+  engineer pose. Explicit `face()` inside the unit + facing defaults at the walls = zero VLM
+  rotation churn.
+- **[music_studio v1, texture accent didn't take — carry the accent with a prop]** Wall texture
+  "dark charcoal grey with one deep red accent wall" resolved to plain dark grey (accent phrasing
+  is not reliably honored by the texture embedding). The plan's red accent arrived via the red
+  Persian rugs instead, and read better. If a palette accent matters, put it on a pinnable PROP
+  (rug/chair/art), not in the wall-texture string. (Extends computer_room's plain-words texture
+  lesson and jewelry_shop's pin-for-palette.)
+- **[living_room_cozy v1, room size — a vote that NEVER flips is signal]** `RoomProportions` voted
+  ENLARGE in every phase (`1.2` → `1.25` → `1.1` → `1.1`), decaying but never flipping direction —
+  unlike living_room v1's enlarge→shrink drift that founded the hold-early rule. Held through
+  phases 1–2 per the rule, applied the final-phase `modulate_scale=1.1` → immediate `no rescale`.
+  Refinement: hold early always, but read the vote TRAIN — unidirectional+decaying converges in one
+  final application; flip-flopping means the early votes were premature noise.
+- **[living_room_cozy v1, phantom-object rotation noise]** Phase 1 emitted `rotate left accent
+  chair / rotate right accent chair to face the coffee table` — the scene has ONE accent chair, and
+  `seating.face(nook, toward=coffee)` had already angled it (confirmed in the render). → Declined;
+  the vote never recurred. A rotation vote naming objects that don't exist is self-identifying noise.
+- **[living_room_cozy v1, corner mesh at a wall center]** The audit-pinned fireplace (best fire
+  glow) was a **corner** unit; its straight-on preview hid it, and the phase-1 render showed V-angled
+  wings at the back-wall center. → Swapped to a straight wood-mantel fireplace. Lesson: a mesh's
+  FORM FACTOR (corner vs straight) is a layout property — the caption word "corner" matters, and the
+  cheap phase-1 loop is where it surfaces. Not a VLM signal (rotation/wall-overlap stayed clean);
+  caught by eye.
+- **[living_room_cozy v1, rug size vs cluster bbox]** `place_rug(size=1.0)` under a seating group
+  whose bbox spans sofa + nook + coffee table covered nearly the whole auto-sized floor → read as
+  wall-to-wall carpet. → `size=0.75` framed the seating zone with visible walnut floor. For a
+  room-dominating cluster keep rug size ≤ 0.8; not a VLM signal (no lint fires) — judged by eye.
+- **[classroom v1, room size — oscillation ends the thread]** `RoomProportions` walked `0.96` →
+  `0.92` → `0.85` across the phases (held per render-wins-early), applied `modulate_scale=0.85`
+  in the final phase, and the re-run vote flipped to **`1.1`** (enlarge). → Declined: a flip
+  ACROSS neutral right after one decisive application is the converge signal (the living_room
+  flip-flop rule seen post-apply); the render read well-filled at 0.85. Contrast laundromat
+  (same-direction persistence → second shrink) and living_room_cozy (unidirectional decay → one
+  application, done): read the vote TRAIN, not the last vote.
+- **[classroom v1, accent color in a texture string]** `wall_texture="white painted wall with one
+  teal accent wall"` embedded to a GREEN TILE texture on ALL FOUR walls — the accent clause
+  dominated the embedding match (worse than computer_room's jargon-drift: it recolored the whole
+  room). → Plain `"smooth white painted plaster wall"` → correct white. Rule: texture strings take
+  ONE color + material; an accent color the texture library can't express is better dropped or
+  carried by props (posters/chairs) than smuggled into the wall string.
+- **[classroom v1, black ceiling is the renderer, not a texture]** The ceiling rendered BLACK in
+  every interior strip; re-wording `ceiling_texture` ("plain white ceiling" → "smooth white
+  plaster") changed nothing — the interior views render the room open-topped, so the black is
+  void, not a texture failure. Don't burn iterations re-wording the ceiling string when the walls
+  and floor came back correct.
+- **[classroom v1, clean-by-construction orientation]** `no rotation` + `no wall overlap` from the
+  FIRST phase-1 build to the last: `place_desk_chair` unit (pose correct by construction) +
+  `room.face(grid, toward="front_wall")` (place_desk_chair grids face the FRONT wall — opposite of
+  a WorkstationGroup grid) + default wall-facing everywhere + door and wall fixtures in disjoint
+  slots. Copying the worked-example defaults collapsed the whole feedback loop to the single
+  room-size thread (same effect as laundromat).
+- **[bookstore v1, decaying rescale vote = converged]** `rescale room by 0.75` (Ph1) → `0.8` (Ph2)
+  → held per render-wins-early → applied ONE decisive `modulate_scale=0.85` in the final phase →
+  the vote decayed to `0.9` and repeated there across two full builds while the render read
+  well-filled with clear browsing aisles. → **Declined the residual 0.9** — a vote that decays
+  toward neutral after you act is the converge signal (executive_office), and stacking it would
+  have been laundromat's two-step only if the render had *agreed* it was still sparse (it didn't).
+  Render is the arbiter of whether a persisting mild vote is signal or noise.
+- **[bookstore v1, lighting density mid-size calibration]** `density=0.04` — chosen as "medium
+  room" per the retail ladder — tripped the deterministic starfield lint: **35 fixtures on a
+  56 m² room (budget ~17)**. → **0.015** → clean. Refines the area ladder with a real datapoint:
+  small café ≈ 0.01, **~50-60 m² shop ≈ 0.015-0.02**, only genuinely large floors 0.05-0.08.
+  The lint line states the budget — trust it over the remembered ladder.
+- **[corridor v1, the shrink vote NEVER goes quiet on a passage room]** `rescale room by
+  0.69–0.76` every phase → held per render-wins-early. Final phase: applied **0.75** → the render
+  went CRAMPED (cameras jammed against the cabinet run) and the vote flipped to `0.95`; backed off
+  to **0.85** → the vote resettled at `0.8` on a render that read as a real hallway with a clear
+  lane. → **Declined the residual** — a corridor's open center lane IS the category (garage's
+  "circulation lane reads as empty" at full strength); expect the occupancy vote to persist
+  forever and let the two-sided render evidence (cramped at 0.75, right at 0.85) pick the point.
+- **[corridor v1, oversized wall furniture is an EYE catch, not a VLM signal]** Phase-1 render:
+  the green `future/` cabinets loaded ~2× (bad scale metadata) and dominated every view; VLM said
+  only `rescale room 0.76` / `no rotation`. → Fixed in two eye-driven steps: uniform `_cab.scale(1.0)`
+  (metadata), then **scale-by-height** `_cab.scale(_cab.get_width()*0.9/_cab.get_height())` —
+  wardrobe-tall furniture crowds a corridor; sideboard height leaves the wall band to art.
+- **[corridor v1, texture-library gap: no b/w checkerboard]** Four floor wordings: "glossy black
+  and white checkerboard marble tile floor" → pale planks; "black and white checkered tile floor"
+  → plain dark grey; "black and white checkerboard floor tiles" and "black white checkerboard
+  tiles" → a MULTICOLOR checker. → Settled the **dark reflective tile** (keeps the plan's
+  "reflective spine", drops its pattern) — classroom's "drop the accent, don't smuggle it" applied
+  to floors. When two wordings return different WRONG things, the library lacks the texture.
+- **[corridor v1, add_lighting has no asset_id]** Static lint caught `add_lighting(...,
+  asset_id=…)` (accepts only desc/density/modulate_scale). → Audit the fixture with `inspect`,
+  then write the query specific enough ("a slim linear black LED flush mount ceiling light bar")
+  that the audited mesh is the top pick anyway.
+- **[corridor v1, a mirror reflecting the room looks like a wrong asset]** The round wall mirror
+  rendered as a green/white half-disc and looked like a mis-picked shelf — it was correctly
+  REFLECTING the opposite green cabinet wall. Before swapping a "weird" mirror mesh, ask what a
+  real mirror would show from that camera.
+- **[bakery v1, garbage interior view → hallucinated rotation flags]** A build whose back-wall
+  interior camera sat INSIDE the tall wire rack (one view = black shelf tiers) emitted 8 rotation
+  flags (`rotate stool/chair/counter/console to face the central seating area`) on a layout that
+  read correct in every other view; the same layout with the rack lowered below camera height
+  came back `no rotation`. → Lesson: interior wall cameras sit at ~1.4-1.5 m at each wall's
+  center; any fixture taller than that near a wall center both blinds that view AND corrupts the
+  VLM constraints judged from the strip. Keep wall-center fixtures ≤ ~1.25 m (or offset them);
+  treat rotation storms that coincide with a garbage view as camera artifacts, not layout errors.
+- **[bakery v1, room size — sparse-shop shrink, one step]** `rescale room by 0.87→0.77` drifting
+  down through phase-1 iterations, `0.76` (Ph2), `0.75` (full). Held per render-wins-early,
+  applied ONE decisive `modulate_scale=0.78` in the final phase → `0.92` then `0.95` = noise,
+  declined. (Laundromat's two-step convergence wasn't needed — picking a value near the vote,
+  not above it, converged immediately.)
+- **[bakery v1, texture "wrong color" that ISN'T a wording problem]** Walls rendered pale blush
+  for "warm red brick" AND for caption-exact wording. Verified the retrieval directly (embed the
+  query against `IDSDL/assets/wall_textures_embeddings.npz`, open the winning texture.png): a
+  genuine deep-red brick was matched and applied — the room-scale tiling + light budget washes
+  it out. → Lesson: before iterating on texture WORDING (computer_room lesson), check whether
+  the match is already right; if it is, the pale render is a renderer limit — converge. The
+  wording fix and the renderer limit are different failure modes with the same symptom.
+- **[bakery v1, window-bar drift]** `place_on_front(window_bar_group)` (front SLOT) left the
+  glass-front ledge drifting mid-floor (door clearance + randomness push slot groups around).
+  → `place_on_front_wall_center(window_bar_group)` pins the console flush to the storefront
+  with the stool row on the room side (default wall-facing heuristic, no `face()` per the
+  bar.md straight-row rule) → `no rotation` every subsequent build. Wall placements accept
+  composed groups; use them whenever "flush to a wall" is the intent.
+- **[living_room_cozy v2, THIN wall furniture drifts off its wall — core fix]** The wall-centered
+  fireplace ended 1.6 m off the back wall while the FULL VLM loop read clean (`no rescale / no
+  rotation / no wall overlap`, no lints) — the USER caught it in the blend. Root cause (probed
+  stage-by-stage, clearances and randomness ruled out): `GradSolver.compute_action` scores every
+  direction `max(grad·dir, 0.01) * free_space_affinity / area` — an exploration floor that moves
+  objects with NO constraint pressure toward open space, damped by footprint area. A fireplace is
+  the worst case (0.24 m deep = tiny area, a whole room of free space in front), so it random-walks
+  off the wall over the 100-step solve; deep/heavy wall pieces (counters, machine rows) never showed
+  it. **Fixed in core**: `RoomGroup._repin_wall_furniture()` (groups.py) — a deterministic post-solve
+  pass (mirrors `_enforce_door_clearances`) that snaps every `place_on_<wall>_wall_*` item flush by
+  its world AABB, keeping along-wall drift, running before the doorway pass so doors still win.
+  NOTE: snap by AABB, not by re-running `wall_deltas` — `get_whd()` is rotation-aware post-solve, so
+  recomputed deltas double-swap w/d for 90°-rotated items (the bookcase got pushed OFF its wall by
+  the first draft of the fix). Meta-lesson: the VLM loop verifies proportions/rotation/wall-slots,
+  NOT wall flushness — check wall gaps in the blend (`aabb` vs wall plane), like the jewelry-shop
+  "converged ≠ correct" lesson.
+- **[living_room_cozy v2, wall art faced the wall — caption≠front]** The back-wall photo grid
+  (`future/09f28392…`) rendered as brown rectangles: its mesh FRONT pointed into the wall (what the
+  interior render showed was the wooden backing), and `RotationConstraint` never flagged it (the
+  backing reads as plausible frames). Its catalog preview also revealed the true front is four EMPTY
+  frames. → Both fixes: `front_cache set 09f28392… 180` (fix-once-per-asset, helps future users) AND
+  swapped to a collage with real photo content (`future/e2b0dcb4…`). Lesson: if wall art looks like
+  bare boards/mats in the render, compare against the catalog preview (`3D-FUTURE-images/<id>.png`)
+  — a reversed front and an empty-frame asset LOOK identical from behind; and an empty-frame
+  "gallery set" fails the jewelry-shop product rule even when correctly oriented.

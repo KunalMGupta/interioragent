@@ -57,6 +57,17 @@ shape from the room type, then load accordingly:
   footprint and everything later fits inside it. A long strip stranded on a short
   wall, or a heavy asset on every wall, fights the proportions you want.
 
+**Don't overload a single wall (Kunal, 2026-07-12).** The complement of the rule
+above: `RoomGroup` grows the shell until the *longest* wall run fits, so queueing
+many separate items along one wall (or one direction) inflates the whole room to
+fit that queue — the other walls then read empty and no `modulate_scale` can fix
+it cleanly. Cap a wall at ~2–3 items (its three slots) UNLESS that wall is a
+deliberate hero run (a locker spine, a machine bank); spread the rest across the
+other walls, corners, or the floor. Worked example: hospital_room v1 had
+wheelchair + wardrobe + vanity + med cart queued on the left wall → the room
+depth ballooned and the VLM's shrink votes couldn't converge; moving the wardrobe
+to the front wall let the shell drop to a believable patient-room size.
+
 Check:
 - Room **shape** matches intent (long runs landed on the long walls, short walls light).
 - Layout reads correctly from the interior renders (circulation, facing, grouping).

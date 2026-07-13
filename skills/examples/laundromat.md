@@ -71,6 +71,21 @@ economy for the "small" brief (coffee_shop lesson): 4 floor slots only.
 ## Manual constraints used
 - None. Auto overlap/bounds + door clearance + the appliance category clearance sufficed.
 
+## v2 — the same aesthetic at real coin-op scale (user iteration)
+`scenes/work/laundromat_v2.py` ("needs a lot more machines"): 9 machines on TWO
+walls — a 5-washer bank (+ cart) on the back wall, a 4-dryer bank on the right
+wall, waiting nook moved to the front wall (clock above the bench — floor vs
+wall-hung occupy independently). Converged lint-clean at `modulate_scale=0.9`,
+`density=0.01`. Two v2-specific notes:
+- **Lighting density does NOT transfer across versions of the same scene.** v1's
+  clean `0.01` was bumped to `0.02` for the bigger floor — that tiled 14 fixtures
+  onto 39 m² (starfield lint). The count already scales with area; keep the small
+  number and let the budget spread.
+- **Declined the persistent `rescale room by 0.8` at 0.9** — three walls loaded
+  (locker_room packed-room rule) and the open centre is the customer aisle, which
+  reads correctly. A centre wood-top folding island is the right move if the
+  floor must fill (also the authentic fixture), not a deeper shrink.
+
 ## Possible refinements (not blocking)
 - The washers render silver-grey; for a strict all-white plan palette, rebrowse and pin a
   whiter front-loader (e.g. `hssd/16c33cffd5b62d0d5df5ed6dd607f690ce2ee7c7`).

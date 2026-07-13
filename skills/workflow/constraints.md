@@ -15,6 +15,7 @@ them and never tune them.
 | `OutOfBoundsConstraint` | objects stay within group WIDTH/DEPTH | RoomGroup, BasicRoomGroup |
 | **door clearance** (auto) | floor furniture is kept ~0.9 m clear of every doorway | RoomGroup, automatically per `place_door` |
 | `CategoryClearanceConstraint` (auto) | functional clearance in front of counters/reception desks (0.9), display cases (0.75), cabinets/wardrobes/shelving (0.6), appliances (0.9), fireplaces (0.8), pianos (0.9) — matched by keywords in the asset description (for a composed group, its anchor's), each match expanding into a standard `ClearanceConstraint` | RoomGroup compile (any group can add it explicitly); table in `IDSDL/default_constraints.py`; disable with `RoomGroup(auto_clearances=False)` or `IDSDL_AUTO_CLEARANCES=0` |
+| **wall-object clearance** (auto) | the wall surface occupied by every wall-HUNG object (art/mirror/clock/display) stays visible: floor furniture tall enough to occlude it (AABB top above the wall object's AABB bottom) inside a 0.75 m band is slid ALONG the wall out of the object's span; short furniture below it (a console under a painting) stays | RoomGroup, automatically per `place_on_wall_*` (`_enforce_wall_object_clearances`, deterministic post-solve — see below) |
 
 > Grow the category table in `IDSDL/default_constraints.py` as new categories earn a
 > rule — that file is the single list of "hardcoded" usage constraints. Note the door
@@ -48,16 +49,52 @@ walk through and the door can swing. Two layers, both automatic:
    the doorway (facing into the room, `ignore_overlap=True`, never rendered/exported) and runs
    the same `ClearanceConstraint` (`distance=RoomGroup.DOOR_CLEARANCE`, default 0.9 m,
    `dir="front"`) you'd add by hand, so the gradient solve moves furniture out as it settles.
-2. **Deterministic guarantee** — after the solve, `_enforce_door_clearances()` pushes any
-   item still intruding into the doorway band straight out along the wall normal and repairs
-   resulting overlaps (the same belt-and-suspenders pattern as `_snap_overlaps`/`_clamp_to_bounds`).
-   This is needed because the area-weighted solver moves large/heavy furniture (a sofa) slowly,
-   so the nudge alone can leave a big piece in the doorway.
+2. **Deterministic guarantee** — after the solve, `_enforce_door_clearances()` moves any
+   item still intruding into the doorway band and repairs resulting overlaps (the same
+   belt-and-suspenders pattern as `_snap_overlaps`/`_clamp_to_bounds`). Wall-FLUSH furniture
+   on the door's own wall (a cabinet run, a locker spine) **slides ALONG the wall** out of
+   the doorway span — pushing it along the normal would strand it floating mid-room (the
+   corridor bug, 2026-07-12); everything else is pushed out along the inward wall normal.
+   This is needed because the area-weighted solver moves large/heavy furniture (a sofa)
+   slowly, so the nudge alone can leave a big piece in the doorway.
+
+   > The band and the leaf are guaranteed to AGREE: wall meshes are centered by **bbox
+   > midpoint** on translate (`SceneProgObjectWall.translate`). They used to center by
+   > vertex MEAN, so the door glb (dense hinge-side geometry, mean ~0.18 m off center)
+   > landed offset from the partition center the clearance band is computed from —
+   > furniture could sit "legally" outside the band while visibly covering the leaf.
 
 No author action, no new constraint type. **Do not** add your own clearance for a door; just
 place the door. Wall-mounted items and the door leaf itself are unaffected — only floor
 furniture moves. (Caveat: a doorway is a no-furniture zone ~0.9 m deep × door-width wide — so
 don't *design* a layout that needs that floor; put the door where the traffic lane already is.)
+
+### Wall-object clearance is automatic — hung art stays visible (added 2026-07-12, Kunal's ask)
+
+Every wall-HUNG placement (`place_on_wall_*`: art, mirrors, clocks, displays) now keeps
+its patch of wall visible. After the wall ops execute, `_enforce_wall_object_clearances()`
+takes each wall object's **AABB** and slides away any floor object that would occlude it —
+one that (a) overlaps the object's along-wall span, (b) stands inside the
+`WALL_OBJECT_CLEARANCE` band (0.75 m) in front of that wall, and (c) is **tall enough to
+block it** (its AABB top rises above the wall object's AABB bottom). Three deliberate
+design points:
+
+- **Deterministic-only, no in-solve proxy** (unlike the doorway's two layers): wall-hung
+  ops execute *after* the gradient solve, so the object's final AABB doesn't exist during
+  the solve — there is nothing for a gradient to aim at.
+- **The push is ALONG the wall, sideways** — never perpendicular. Wall-adjacent furniture
+  is re-pinned flush to its wall every compile (`_repin_wall_furniture`), so a
+  perpendicular push would be undone; a sideways slide survives and reads natural (the
+  wardrobe ends up *beside* the painting). Overlaps/OOB introduced by a slide are
+  repaired by `_settle()` and the doorway guarantee re-runs afterwards.
+- **The height filter keeps legal compositions legal**: a low console/cabinet *under* a
+  painting is untouched (its top is below the art's bottom edge). Only genuine occluders
+  move.
+
+If neither along-wall direction can clear the span (wall is full), it does not force it —
+you get a `[RoomGroup] WARNING: '<obj>' occludes wall-hung '<art>' …` line and should move
+one of them to a different wall/slot yourself. Worked example: hospital_room v1's tall
+wardrobe slid off the front-wall botanical print.
 
 ## 2. Manual gradient constraints — you add these, they move objects
 
@@ -193,6 +230,13 @@ other or with a window/door opening. It **does not move anything**; resolving it
 scene author's responsibility. The collisions come from the wall-slot occupancy model:
 each wall has **three slots** (`left` / `center` / `right`), and every wall fixture, window,
 and **door** registers the slot(s) it occupies. Two things in the same wall+slot overlap.
+
+> Items in DIFFERENT slots can no longer overlap geometrically: `_place_on_wall` clamps
+> every wall-hung piece's span (shrink + center-clamp) to its named slot's third of the
+> wall (2026-07-12). Before that, a support-anchored piece (a mirror over a console)
+> inherited its support's SOLVE-DRIFTED position unclamped, so it could invade the
+> neighbouring slot and overlap art there while the slot model — and the VLM check —
+> reported no collision (the corridor mirror-over-painting bug).
 
 How to resolve a flagged overlap:
 - **Different slot.** Move one item to a free slot — `place_on_wall_back_left` instead of

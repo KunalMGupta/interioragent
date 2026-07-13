@@ -204,6 +204,10 @@ multi-cluster composed group into a single slot, forces a cavernous shell that n
 decor can fill (the coffee-shop lesson). `modulate_scale` only scales that computed
 size — it cannot rescue a footprint the placements dictate, and raising it above 1.0
 to dodge overlaps just inflates the room (shrink/remove furniture instead).
+The same applies per WALL: many separate items queued along one wall (or one
+direction) stretch that whole axis to fit the queue — cap a wall at ~2–3 items
+unless it's a deliberate hero run, and spread the rest (see the "don't overload
+a single wall" rule in workflow/coarse_to_fine.md; hospital_room lesson).
 
 Floor placement: `place_on_center/back/front/left/right`, `*_left/right`, and
 `*_corner` variants — all take optional `facing`. Wall-adjacent furniture:
@@ -255,7 +259,10 @@ is deterministic (no solve), so keep its `randomness` modest. Good defaults: sea
   cases/cabinets/appliances/fireplaces/pianos automatically get their functional
   front clearance from the table in `IDSDL/default_constraints.py`, matched on the
   asset's description (for a composed group, its anchor chain's). Disable per room
-  with `RoomGroup(auto_clearances=False)`.
+  with `RoomGroup(auto_clearances=False)`. Also **wall-object clearance** — every
+  `place_on_wall_*` object keeps its wall patch visible: floor furniture tall enough
+  to occlude it (AABB top above the object's AABB bottom, within a 0.75 m band) is
+  slid along the wall out of its span post-solve; a console below a painting stays.
 - **Manual gradient** (you add, they move objects): add them *inside* the group's
   `with` block via the native convenience methods (available on every group).
   `compile()` (on `__exit__`) re-runs them after the auto constraints and before
