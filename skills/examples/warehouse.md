@@ -3,8 +3,7 @@
 Status: **built & VLM-clean** (`scenes/work/warehouse.py`, seed=31). Final compile: `no rescale`,
 `no rotation`, `no wall overlap`. Built coarse-to-fine through the workbench. Built as
 `scenes/work/warehouse.py`; [`warehouse_v1.py`](warehouse_v1.py) is that program phase-gated
-(2026-07-13), `lint_program`-clean, and **NOT re-rendered since the retrofit**, so the phase splits
-are unverified.
+(2026-07-13), `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).
 
 > **v2 (2026-07-06):** rebuilt around Kunal's **ingested custom warehouse gear** — a real forklift,
 > pallet jack, traffic cones, roller-shutter dock door, exit sign, gas cylinder, wooden crates, and a

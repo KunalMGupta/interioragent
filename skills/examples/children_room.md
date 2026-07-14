@@ -4,7 +4,7 @@ Status: **built & VLM-clean** (`scenes/work/children_room.py`, seed=7). Final co
 `no rescale` / `no rotation` / `no wall overlap`; RoomProportions converged to ~0.9. Planner-driven,
 built coarse-to-fine through the workbench. Built as `scenes/work/children_room.py`;
 [`children_room_v1.py`](children_room_v1.py) is that program phase-gated (2026-07-13),
-`lint_program`-clean, and **NOT re-rendered since the retrofit**, so the phase splits are unverified.
+`lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).
 
 ## Prompt / plan
 "A bright, playful children's bedroom for a young kid: single bed with colorful bedding, a soft play

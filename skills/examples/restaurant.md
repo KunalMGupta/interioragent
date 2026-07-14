@@ -4,7 +4,7 @@ Status: **built & essentially VLM-clean** (`scenes/work/restaurant.py`, seed=37)
 `no rescale`, `no room-rescale`, `no wall overlap`; only the noisy `RotationConstraint` remained
 (declined). Built asset-first (a retrieval STRESS TEST before any placement) then coarse-to-fine.
 Built as `scenes/work/restaurant.py`; `restaurant_v1.py` is that program phase-gated (2026-07-13),
-lint-clean, and **NOT re-rendered since the retrofit**, so the phase splits are unverified.
+lint-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record) — after UNGATING the olive tree (floor mass; the phase-2 gate shrank the phase-1 shell into dining-cluster overlaps, then re-ran clean).
 
 ## Prompt this covers
 - "an upscale but warm sit-down restaurant / bistro: several dining tables with chairs, booth/

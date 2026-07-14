@@ -1,6 +1,6 @@
 # Hair salon — worked example (the canonical coarse-to-fine build)
 
-Status: built as `scenes/hair_salon.py`. [`hair_salon_v1.py`](hair_salon_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **not re-rendered since the retrofit** — the phase splits are unverified. Retrofit judgement calls are logged in [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md).
+Status: built as `scenes/hair_salon.py`. [`hair_salon_v1.py`](hair_salon_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).
 
 The first scene built end-to-end with the **asset-first kickoff** + a **new placement group**, and
 the reference example for the **three-phase build** in `../workflow/coarse_to_fine.md`. Read this

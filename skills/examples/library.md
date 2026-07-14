@@ -2,8 +2,7 @@
 
 Status: **built as `scenes/work/library.py`** (seed=36). [`library_v1.py`](library_v1.py) is that
 program **phase-gated** (2026-07-13): same layout, same pinned ids, same seed. It is
-**`lint_program`-clean**, and it has **NOT been re-rendered since the retrofit**, so *the phase
-splits are unverified*.
+**`lint_program`-clean**, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).
 
 Built end-to-end coarse-to-fine from the planner target (`tmp/library/plan/plan.png`). The working
 program is `scenes/work/library.py` (seed=36). Read alongside `../workflow/coarse_to_fine.md`. This

@@ -8,8 +8,7 @@ carried the scene, so the rest was ordinary dataset retrieval + placement. Read 
 ## Status
 
 Status: **built** as `scenes/dental_office.py` (seed=35). [`dental_office_v1.py`](dental_office_v1.py)
-is that same program, phase-gated (2026-07-13) — lint-clean, but **NOT re-rendered since the
-retrofit**; the phase splits are unverified.
+is that same program, phase-gated (2026-07-13) — lint-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record) (the rotate-vote storm reproduced exactly as documented below — declined).
 
 ## Prompt(s) this covers
 - "a dental office" / "a dentist exam room / operatory" (pediatric or adult).

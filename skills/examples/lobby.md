@@ -1,6 +1,16 @@
 # Lobby (corporate reception) — worked example
 
-Status: built as `scenes/lobby.py`. [`lobby_v1.py`](lobby_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **not re-rendered since the retrofit** — the phase splits are unverified. Retrofit judgement calls are logged in [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md).
+Status: built as `scenes/lobby.py`. [`lobby_v1.py`](lobby_v1.py) is that program **phase-gated**
+and **verified 2026-07-13**: phase-1 layout pass, then a full rebuild converged clean
+(`no rescale / no rotation / no wall overlap`). Two findings from that rebuild:
+- **The focal art behind reception hangs CLEAR of the monitor** (the suspected
+  art-crosses-the-monitor collision from waiting_room does not occur here — eyeballed in the
+  render).
+- **A front-wall TV + a lounge FACING it triggers the wall-occlusion WARNING by construction**
+  ("AroundGroup occludes wall-hung TV … no along-wall slot can clear it"): seating that watches
+  a screen necessarily stands in its wall patch. The render shows the TV fully visible above the
+  seat backs — treat this warning as benign FOR A TV + ITS AUDIENCE specifically (it is real for
+  art vs tall furniture), and don't let it block a flow gate.
 
 Scene: `scenes/lobby.py` (seed=13), planner-driven **"Polished Corporate Lobby: Reception Anchor +
 Open Lounge."** The **single-room, zoned** pattern (same bones as `executive_office.md`): a

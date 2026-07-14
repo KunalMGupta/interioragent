@@ -134,9 +134,10 @@ with scene.RoomGroup(modulate_scale=0.88, randomness=0.1) as room:   # settled: 
     # would change the layout phase 1 is supposed to validate.
     room.place_door("right_wall", position="right")
 
-    if PHASE >= 2:
-        # the greenery — floor detail, created inside its gate
-        room.place_on_back_right(scene.AddAsset("a large potted indoor plant in a modern planter"))
+    # UNGATED: the plant is FLOOR-standing and its back-right footprint feeds the auto-size —
+    # gating it to phase 2 shrank the phase-1 shell until a counter pair could no longer
+    # separate (RoomGroup overlap WARNING in the 2026-07-13 verification round).
+    room.place_on_back_right(scene.AddAsset("a large potted indoor plant in a modern planter"))
 
     if PHASE >= 3:
         # wall decor: the ornate focal mirror over the cash-wrap; the neon brand sign on the left wall.

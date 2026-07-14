@@ -1,6 +1,6 @@
 # Casino — worked example ("Red-Gold Opulent Gaming Floor")
 
-Status: built as `scenes/work/casino.py`. [`casino_v1.py`](casino_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **not re-rendered since the retrofit** — the phase splits are unverified. Retrofit judgement calls are logged in [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md).
+Status: built as `scenes/work/casino.py`. [`casino_v1.py`](casino_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).
 
 Built end-to-end coarse-to-fine from the planner target (`tmp/casino/plan/plan.png`). Read
 alongside `../workflow/coarse_to_fine.md`. The audited asset picks live in

@@ -5,8 +5,7 @@ Final compile: `no rescale`, `no room-rescale`, `no wall overlap`, no overlap wa
 `RotationConstraint` on two tiny on-top props remained (declined). Built asset-first (retrieval stress
 test) then coarse-to-fine.
 Built as `scenes/work/meeting_room.py`; [`meeting_room_v1.py`](meeting_room_v1.py) is that program
-**phase-gated** (2026-07-13) — same layout, same pinned ids, same seed. It is **`lint_program`-clean**
-and has **NOT been re-rendered since the retrofit**, so *the phase splits are unverified*.
+**phase-gated** (2026-07-13) — same layout, same pinned ids, same seed. It is **`lint_program`-clean**, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record) — fully clean: `no rescale / no rotation / no wall overlap`.
 
 ## Prompt this covers
 - "a professional corporate meeting / conference / board room: a long central table ringed with office

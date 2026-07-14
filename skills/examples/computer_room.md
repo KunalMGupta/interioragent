@@ -1,6 +1,6 @@
 # Computer room — example
 
-Status: built as `scenes/computer_room.py`. [`computer_room_v1.py`](computer_room_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **not re-rendered since the retrofit** — the phase splits are unverified. Retrofit judgement calls are logged in [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md).
+Status: built as `scenes/computer_room.py`. [`computer_room_v1.py`](computer_room_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record) — fully clean: `no rescale / no rotation / no wall overlap`.
 
 Status: **built & converged** (`scenes/computer_room.py`, seed=11). Front-facing modular
 computer lab, built coarse-to-fine through the workbench. Final compile: rotation clean,

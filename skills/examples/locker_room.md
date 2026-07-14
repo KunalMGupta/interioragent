@@ -6,8 +6,7 @@ Flow". The reference for a **wide corridor room whose long rows go flush-on-wall
 
 ## Status
 Built as `scenes/locker_room.py`. `locker_room_v1.py` is that same program, phase-gated
-(2026-07-13) and lint-clean — but it has **NOT been re-rendered since the retrofit**, so the
-phase 1/2/3 splits are unverified.
+(2026-07-13), lint-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record); a FULL rebuild the same day reproduced the original (clean signals, the documented occupancy 0.8 vote declined per the lesson below).
 
 ## Prompt(s) this covers
 - "a team sports locker room" / gym changing rooms / spa locker rooms.

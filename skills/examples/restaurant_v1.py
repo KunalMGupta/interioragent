@@ -172,9 +172,11 @@ with scene.RoomGroup(modulate_scale=0.8, randomness=0.2, max_height=3.4) as room
     # right wall = brick fireplace focal (floor furniture: place_on_<wall>_wall_<pos>)
     room.place_on_right_wall_center(scene.AddAsset("a classic brick fireplace", width=1.6))
 
-    if PHASE >= 2:
-        room.place_on_back_left_corner(scene.AddAsset("a tall potted indoor olive tree", width=0.9),
-                                       facing="front")
+    # UNGATED: the olive tree is FLOOR-standing and its corner footprint feeds the auto-size —
+    # gating it to phase 2 shrank the phase-1 shell until two dining clusters could no longer
+    # separate (RoomGroup overlap WARNING in the 2026-07-13 verification round).
+    room.place_on_back_left_corner(scene.AddAsset("a tall potted indoor olive tree", width=0.9),
+                                   facing="front")
 
     if PHASE >= 3:
         # hung art: place_on_wall_<wall>_<pos> — a different method family from the fireplace above

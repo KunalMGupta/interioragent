@@ -11,8 +11,7 @@ retrieval **stress test**) and `../workflow/vlm_feedback.md`.
 
 ## Status
 Built as `scenes/retail_store.py`. [`retail_store_v1.py`](retail_store_v1.py) is that same program
-phase-gated (2026-07-13) and is lint-clean, but it has **NOT been re-rendered since the retrofit**
-— the phase 1/2/3 splits are unverified.
+phase-gated (2026-07-13), lint-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record) (the two `[Lint] FLOATS` lines are the deliberately wall-mounted shelves).
 
 ## Prompt(s) this covers
 - "a retail store", "a clothing / apparel store", "a boutique", "a shop", "a showroom".

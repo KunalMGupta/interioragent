@@ -81,6 +81,15 @@ Add what sits on or beside the anchors: table-top items, plants, rugs, floor and
 table lamps, small props. Use `place_on_top`, `place_rug`, nested RelativeGroups
 (e.g. lamp on a side table on the front-left of the sofa).
 
+**Gate SURFACES here, never floor mass.** A FLOOR-standing object gated to phase ≥2
+shrinks the phase-1 shell — the auto-size never sees its footprint — and in a tight
+room that pushes the phase-1 content into overlaps the solver cannot undo. The
+2026-07-13 verification round caught this twice: jewelry_shop's potted plant and
+restaurant's olive tree were "greenery = detail"-gated to phase 2, and both scenes
+WARNED with interpenetrating furniture at phase 1; ungating them fixed both. A plant
+in an open floor slot is layout, not dressing. (Corner-slot pieces are exempt in
+practice — the shell already reserves their corners; museum's palms stay gated.)
+
 Check:
 - Details sit where intended (top surfaces, beside anchors) and don't float/clip.
 - Proportions of the new small items (`ObjectProportionsConstraint`).

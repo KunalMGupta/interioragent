@@ -1,6 +1,6 @@
 # Bathroom (spa master bath) — worked example
 
-Status: built as `scenes/work/bath_spa.py`. [`bathroom_v1.py`](bathroom_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **not re-rendered since the retrofit** — the phase splits are unverified. Retrofit judgement calls are logged in [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md).
+Status: built as `scenes/work/bath_spa.py`. [`bathroom_v1.py`](bathroom_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).
 
 The scene that taught **asset/fixture QUALITY** — not layout — is where the work lives. Unlike the
 salon (which needed ingests + a new placement group), the bathroom dataset was already rich; the hard

@@ -1,6 +1,6 @@
 # Worked example: a game room / rec lounge (`scenes/work/game_room.py`)
 
-Status: built as `scenes/work/game_room.py`. [`game_room_v1.py`](game_room_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **not re-rendered since the retrofit** — the phase splits are unverified. Retrofit judgement calls are logged in [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md).
+Status: built as `scenes/work/game_room.py`. [`game_room_v1.py`](game_room_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record) — rotation-clean WITH the back-bar cabinet present (evidence against the camera-blind hypothesis).
 
 A moody home game room built entirely by **composition** — no new DSL, no asset ingestion. The
 `GameEquipmentRetriever` pool is deep enough to cover every game piece off the shelf.

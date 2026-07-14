@@ -7,8 +7,7 @@ what the dataset can and can't give you. Read alongside `../workflow/asset_selec
 
 ## Status
 Built as `scenes/florist_shop.py` (seed=48). `florist_shop_v1.py` is that same program, phase-gated
-(2026-07-13) and lint-clean, but **NOT re-rendered since the retrofit** — the phase splits are
-unverified.
+(2026-07-13), lint-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record) (the six bare bloom tables voted a huge shell shrink, as predicted — ignored).
 
 ## Prompt(s) this covers
 - "a flower shop" / florist / flower market / bloom boutique.

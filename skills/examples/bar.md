@@ -4,8 +4,7 @@ Status: **built & essentially VLM-clean** ("Moody Luxe Bar & Lounge", `scenes/wo
 seed=26). Final compile: objects `no rescale`, stools `no rotation`, `no wall overlap`,
 RoomProportions converged 0.8→0.95 after the final-phase shrink. Built coarse-to-fine through the
 workbench (3 render passes). Built as `scenes/work/bar_lounge.py`; `bar_v1.py` is that program
-phase-gated (2026-07-13), `lint_program`-clean, and **NOT re-rendered since the retrofit**, so the
-phase splits are unverified.
+phase-gated (2026-07-13), `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).
 
 ## Prompt this covers
 - "a stylish, moody cocktail bar / lounge: a long bar counter with a row of stools, a mirrored

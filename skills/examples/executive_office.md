@@ -2,9 +2,7 @@
 
 Status: **built as `scenes/executive_office.py`** (seed=42), planner-driven, iterated on VLM
 feedback. [`executive_office_v1.py`](executive_office_v1.py) is that program **phase-gated**
-(2026-07-13): a retrofit only — same layout, same pinned ids, same seed. It is **lint-clean**, but
-it has **NOT been re-rendered since the retrofit**, so the *phase splits are unverified*; treat the
-phase boundaries as a proposal that still needs one `--phase 1` build to confirm.
+(2026-07-13): a retrofit only — same layout, same pinned ids, same seed. It is **lint-clean**, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).
 
 A single private/executive office. Its defining moves: a **wide bookcase as the storage
 backbone** on the back wall (the visual anchor), a **warm-wood desk WorkstationGroup** in

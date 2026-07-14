@@ -2,8 +2,7 @@
 
 Status: **built as `scenes/toy_shop.py`** (seed=42). [`toy_shop_v1.py`](toy_shop_v1.py) is that
 program **phase-gated** (2026-07-13): same layout, same pinned ids, same seed. It is
-**`lint_program`-clean**, and it has **NOT been re-rendered since the retrofit**, so *the phase
-splits are unverified*.
+**`lint_program`-clean**, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record) (both rotate votes checked by eye — counter facing correct).
 
 A bright children's **toy / comic / book shop**, from the planner target "Bright Primary-Play Toy
 Store". The reference for **building a shop's identity out of PRE-STOCKED shop fixtures** (the new
