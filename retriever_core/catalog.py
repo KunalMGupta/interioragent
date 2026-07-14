@@ -24,7 +24,7 @@ PROGRAM_ALIASES = {
     "bathroom": ["scenes/work/bath_spa.py"],
     "florist_shop": ["scenes/work/flower_shop.py"],
     "garage": ["scenes/work/garage_workshop.py"],
-    "hair_salon": ["scenes/work/salon_pretty.py", "scenes/hair_salon.py"],
+    "hair_salon": ["scenes/hair_salon.py"],
     "kitchen": ["scenes/work/kitchen_eatin.py"],
 }
 
