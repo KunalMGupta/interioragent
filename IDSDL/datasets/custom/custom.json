@@ -1048,5 +1048,481 @@
   "freetop": true,
   "on_top_or_inside": false,
   "scale": 1.0
+ },
+ "custom/a13c3149240ba92774603cbedf618b83be161bd0": {
+  "description": "a set of antique carving chisels",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.201
+ },
+ "custom/db834a3c3281660e2fc3168697a4324d44be2be5": {
+  "description": "a suit of medieval armour for a knight and horse",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.992
+ },
+ "custom/0c7b1762cc4c5ab833714a8f99916a5af95a4bee": {
+  "description": "an ornate antique astronomical clock",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.242
+ },
+ "custom/1d3219dbf754424b33f76c91e97e575539824283": {
+  "description": "an adjustable drafting table with a tilted top",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 2.004
+ },
+ "custom/26c6b052a92476ba5b5c8ac6cb214949cfbcfb72": {
+  "description": "a photography studio backdrop screen on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 3.636
+ },
+ "custom/cd21f3766b760d9991bcee0c9afaacc64d4102b5": {
+  "description": "a blank stretched canvas on a wooden stretcher frame",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.237
+ },
+ "custom/48c2b02eef15dd0828a000cd5d1d9a85837d1e22": {
+  "description": "an antique brass cash register",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.371
+ },
+ "custom/2b98dff8bc4561e3c61f0e208150fff1287c3c53": {
+  "description": "a vintage black and white television set",
+  "placement": "NA",
+  "freetop": true,
+  "on_top_or_inside": true,
+  "scale": 0.729
+ },
+ "custom/20bacd78e55e25c00da6b2f1c765209bd13eabe2": {
+  "description": "a carved ship figurehead of a cat's head",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.6
+ },
+ "custom/dac1727f6ae47e2f417f07f3e02eb8508cea8ac0": {
+  "description": "a folded canvas drop cloth tarp",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.5
+ },
+ "custom/754051e7678f6ee20330f3ea1139aa5e3dbf85d4": {
+  "description": "a classical marble bust of caesar on a base",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.734
+ },
+ "custom/b9cf02688b1f10f7cb6ae84c15153638d8db9f9e": {
+  "description": "a human skull specimen",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.174
+ },
+ "custom/a0002583456154bd751c49638ad2f87da0a103a4": {
+  "description": "an ancient chinese bronze ding censer vessel",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.331
+ },
+ "custom/3ae587371564779c57537d23392c240602aa70e7": {
+  "description": "a wooden artist easel holding a blank white canvas",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.961
+ },
+ "custom/3edbbf100cef2a81903d1bf390ea345a0bc7b822": {
+  "description": "an antique leather doctor's bag",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.42
+ },
+ "custom/ab63a413293446abf1aeac1ae1ec576aa19bc089": {
+  "description": "a taxidermy model of a dodo bird",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.559
+ },
+ "custom/ea406f15208abb0fcae3ccc5da2ac3f629ea3011": {
+  "description": "a darkroom photographic enlarger",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.806
+ },
+ "custom/f65f7c3d523fdd211abeb578d48a7f7d7a199ea5": {
+  "description": "a bare wooden artist easel with no canvas",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.804
+ },
+ "custom/fa1ed2452840e6ccdbd1d6245c1873894686df04": {
+  "description": "a wooden artist easel holding a painted canvas in progress",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.961
+ },
+ "custom/bbe6683f1fe0b9e00665cae0ab0ca8f750918ac1": {
+  "description": "an artist stool with canvases leaning against it",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.438
+ },
+ "custom/63565116b963084056b60b2d3e9d850f8442d5d8": {
+  "description": "a paint splattered canvas drop cloth spread on the floor",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.003
+ },
+ "custom/4fa035b921ad4d203505487f3d315295e8206ee7": {
+  "description": "a detailed model of a historic sailing ship",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.443
+ },
+ "custom/2e46da4c7fee7935328a2d1673d63e8443f12872": {
+  "description": "a wooden weaving loom",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.49
+ },
+ "custom/f2b09d35275927c6a126f84d47e90d2c2f659f4a": {
+  "description": "a bronze sculpture of a horse",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.008
+ },
+ "custom/d9e196d59e4026b42d503aba272a0c4b1a4d98f4": {
+  "description": "a japanese samurai armour suit on a display stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.504
+ },
+ "custom/bbbedccda8504eb1f4bb7a0b6190de9effcf4f26": {
+  "description": "a lion skull specimen",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.242
+ },
+ "custom/a8da28bf374f984be15ba212d14ac11b071939d6": {
+  "description": "an ancient ceremonial mask in a museum display",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.351
+ },
+ "custom/a8b7110549688b39669638aea7c89faa8aefc0bf": {
+  "description": "a taxidermy display of birds",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.532
+ },
+ "custom/4d5c0810966a3a085ad0b1fa46e2a331a96ae9bf": {
+  "description": "a rolling metal art supply tool cart with drawers",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.581
+ },
+ "custom/8ef9db97a4cf049fd34230286e4621bc6225061c": {
+  "description": "a bust of nefertiti, an ancient egyptian sculpture",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.242
+ },
+ "custom/5e8ecba1a838a04b1dc80af98afe2dfa85b8bb78": {
+  "description": "a classical marble statue of neptune",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.784
+ },
+ "custom/5353f02fdc2f2e681d3a891841c87976e325f8ad": {
+  "description": "a tall classical marble statue of a standing man",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.752
+ },
+ "custom/c7ecabcc673d55473c76e794be0d4c2ff8cc583f": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.996
+ },
+ "custom/65b641003dcd65f9e65ff7388e35f3be67df4977": {
+  "description": "a set of paint tubes brushes and a palette",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.501
+ },
+ "custom/1679800ce8268d1c3b112d997d445d369da50482": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.288
+ },
+ "custom/f0619aea851a42cdd022bd9f8709289985893f5e": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.974
+ },
+ "custom/1358f71d5b2ebce5fc9f60c6e2062d9f149458bc": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.463
+ },
+ "custom/568078560c9b2bef56cca9c8a0a918497be77dd2": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.479
+ },
+ "custom/a0550f2330edfb3e9eeb36dc3fb58f4827212a41": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.616
+ },
+ "custom/a88349a6169353b5fe2adf8036bd6d11149ef80a": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.881
+ },
+ "custom/8e277d16c8842d77ce32dbb5bbbe2df36450f55e": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.301
+ },
+ "custom/072181548920bcf98e6042af011408c34c3e6780": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.425
+ },
+ "custom/be407c90aeca66ea5b3ad6d955d8cf0188fa4e9f": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.473
+ },
+ "custom/bf97f510664b8d6f7031c4cadba428fb8d2211a7": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.66
+ },
+ "custom/b2a6fafe3b64a51d66403351df493dabc5ba84b8": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.644
+ },
+ "custom/22d118de42281882eb6c5a91e23d4e3ff791b97a": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.049
+ },
+ "custom/1c33edea34555fca72b68cda2d835766b947283d": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "ceiling",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.62
+ },
+ "custom/24dc61b0455f3f8890cc1bfa6aa5fd56df5aac78": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.829
+ },
+ "custom/bb2e2e781ef3bb36d8875815cbc58324a204be42": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "ceiling",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.545
+ },
+ "custom/35090f92b2289270db1972237c9ceb12798a7216": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.865
+ },
+ "custom/e8d469ba7670cc45e8a5edc467887c882ee84161": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.773
+ },
+ "custom/b55edfd5bdee2294c84c33c5691ba288809d6862": {
+  "description": "photography studio lighting equipment on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.24
+ },
+ "custom/6c67d07168e6fa6c6259734db71233b9eedc6658": {
+  "description": "a museum rope barrier stanchion post",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.833
+ },
+ "custom/b18f98d6c5ba560a3669d3e7e6a8e1f14e0c5241": {
+  "description": "a potter's wheel",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.059
+ },
+ "custom/faba13a524f465b7ede045ca7b86baa3a6b0aaef": {
+  "description": "a mounted dinosaur skeleton fossil",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.689
+ },
+ "custom/d39ba4cd970d300db3ab2d1077fce7f7f290548f": {
+  "description": "a marble portrait bust of a woman on a pedestal",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.284
+ },
+ "custom/fe9cc6a736b7c06aebc01971e4dbe52389522284": {
+  "description": "a mounted dinosaur skeleton fossil on a plinth",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.575
+ },
+ "custom/e9a321942fa2f70368e6514a67575ca3dbf7c7aa": {
+  "description": "a spray paint can",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.234
+ },
+ "custom/44d62d6f85d06fb26c5aa6ab379aee7f9d98d0d4": {
+  "description": "a tall spray paint can",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.201
+ },
+ "custom/75fae38e2c9825c70b0866978cd01f629de20920": {
+  "description": "an ancient egyptian stone statue of a priest",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.48
+ },
+ "custom/add534935babce1c23ebee330694fa11ad6b9460": {
+  "description": "a model of stephenson's rocket steam locomotive",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.119
+ },
+ "custom/3608fb256a82612b2f0c901e09288614b4cac5d4": {
+  "description": "a photography studio softbox light on a stand",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.921
+ },
+ "custom/edb4327a7d4fde2f42693e365331175a88562f6c": {
+  "description": "the rosetta stone, an ancient inscribed stone tablet",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.768
+ },
+ "custom/6240c055b1a06d88b8af99f387969fb9f4147e18": {
+  "description": "a cast iron letterpress printing press",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.056
+ },
+ "custom/6733b1985471c1dfd88eddafc89b1eaaae751208": {
+  "description": "a vintage military pilot's uniform jacket on a stand",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.533
+ },
+ "custom/b1b89b40c0321f59bf7ffdc09810cc76abb6cb78": {
+  "description": "a wooden paint box case with an artist palette and paint tubes",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.509
+ },
+ "custom/bc1152a33b3faf4479b4b4a6c024de0bcf1f4bd0": {
+  "description": "a modern sculpture of a figure with a cabbage head",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.702
+ },
+ "custom/d3946ca9c317ffdace99a98825fa0addf438861d": {
+  "description": "an antique wooden bicycle",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.61
  }
 }
