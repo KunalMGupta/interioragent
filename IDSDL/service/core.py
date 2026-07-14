@@ -20,7 +20,10 @@ import threading
 
 import numpy as np
 
-_TMP = "/work/tmp"
+# Repo root: IDSDL_ROOT env override > two levels above this file (IDSDL/service/core.py).
+REPO_ROOT = os.environ.get("IDSDL_ROOT") or os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_TMP = os.path.join(REPO_ROOT, "tmp")
 
 # ---- warm singletons -------------------------------------------------------
 _LOCK = threading.Lock()          # serialize the router (LLM client + any mutable state)
@@ -76,14 +79,14 @@ def reload_credentials(key=None):
 
     The server process snapshots env at launch, so a rotated/stale key otherwise
     401s every LLM-backed tool until restart. Source order: explicit ``key`` arg >
-    an ``OPENAI_API_KEY=...`` line in /work/.env > fail with instructions. Every
+    an ``OPENAI_API_KEY=...`` line in <repo>/.env > fail with instructions. Every
     singleton that captured an OpenAI client at construction (router, planner,
     trace retriever, the module retriever list) is rebuilt; the embedding arrays
     stay cached, so this is seconds, not a cold start. Subprocess tools
     (run_scene / generate_*) inherit os.environ and are fixed automatically."""
     source = "argument"
     if not key:
-        env_file = "/work/.env"
+        env_file = os.path.join(REPO_ROOT, ".env")
         if os.path.isfile(env_file):
             for line in open(env_file):
                 line = line.strip()
@@ -94,7 +97,7 @@ def reload_credentials(key=None):
     if not key:
         return {"ok": False,
                 "error": "no key found — pass key=..., or write OPENAI_API_KEY=... "
-                         "to /work/.env and call reload_credentials() again"}
+                         "to <repo>/.env and call reload_credentials() again"}
     os.environ["OPENAI_API_KEY"] = key
     global _base, _router, _planner, _trace_retriever
     with _LOCK:
@@ -114,7 +117,7 @@ def stale_key_hint(exc):
     if any(m in s for m in markers):
         return ("OPENAI_API_KEY is invalid or stale for this warm server (it snapshots "
                 "env at launch). Fix WITHOUT restarting: call reload_credentials(key=...) "
-                "— or write OPENAI_API_KEY=... to /work/.env and call reload_credentials().")
+                "— or write OPENAI_API_KEY=... to <repo>/.env and call reload_credentials().")
     return None
 
 
@@ -240,7 +243,7 @@ def _safe(s):
 
 
 def _scratch_dir():
-    return os.path.join(os.environ.get("WORKBENCH_OUT", "/work/tmp"), "browse")
+    return os.path.join(os.environ.get("WORKBENCH_OUT", _TMP), "browse")
 
 
 # ---- Tier B: curation / pools / ingest (warm, in-process) ------------------
@@ -305,9 +308,9 @@ def plan(prompt, top_k=3, out=None):
     """Run the planner (RAG + skill synthesis + collage). Subprocess-isolated. Returns
     ``{prompt, out_dir, plan_png, skill, retrieved}``."""
     out = out or os.path.join(_TMP, f"plan_{_safe(prompt)}")
-    env = {**os.environ, "PYTHONPATH": "/work"}
+    env = {**os.environ, "PYTHONPATH": REPO_ROOT}
     p = subprocess.run([sys.executable, "-m", "planner_core", prompt, "--out", out, "--top-k", str(top_k)],
-                       cwd="/work", env=env, capture_output=True, text=True, timeout=900)
+                       cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=900)
     sp = os.path.join(out, "skill.txt"); rp = os.path.join(out, "retrieved.json")
     return {"prompt": prompt, "out_dir": out, "ok": p.returncode == 0,
             "plan_png": os.path.join(out, "plan.png"),
@@ -328,8 +331,8 @@ def plan_refine(prompt, renders, prior=None, instruction=None, top_k=3, out=None
         args += ["--prior", *prior]
     if instruction:
         args += ["--instruction", instruction]
-    env = {**os.environ, "PYTHONPATH": "/work"}
-    p = subprocess.run(args, cwd="/work", env=env, capture_output=True, text=True, timeout=900)
+    env = {**os.environ, "PYTHONPATH": REPO_ROOT}
+    p = subprocess.run(args, cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=900)
     sp = os.path.join(out, "skill.txt"); rp = os.path.join(out, "retrieved.json")
     return {"prompt": prompt, "out_dir": out, "ok": p.returncode == 0,
             "refined_png": os.path.join(out, "refined_target.png"),
@@ -352,12 +355,12 @@ def run_scene(program_path, timeout=2400, phase=None):
     in vlm_views/ are returned instead."""
     import time as _time
     start = _time.time()
-    env = {**os.environ, "PYTHONPATH": "/work"}
+    env = {**os.environ, "PYTHONPATH": REPO_ROOT}
     cmd = [sys.executable, "workbench.py", "run", program_path]
     if phase is not None:
         cmd += ["--phase", str(int(phase))]
     p = subprocess.run(cmd,
-                       cwd="/work", env=env, capture_output=True, text=True, timeout=timeout)
+                       cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=timeout)
     out = p.stdout + "\n" + p.stderr
     report, run_dir = {}, None
     for rp in sorted(glob.glob(os.path.join(_TMP, "*", "report.json")),
@@ -368,9 +371,9 @@ def run_scene(program_path, timeout=2400, phase=None):
             break
     views = []
     if run_dir:
-        views = sorted(glob.glob(os.path.join("/work", run_dir, "room_views", "*.png")))
+        views = sorted(glob.glob(os.path.join(REPO_ROOT, run_dir, "room_views", "*.png")))
         if not views:   # minimal render policy: only the VLM strip exists
-            views = sorted(glob.glob(os.path.join("/work", run_dir, "vlm_views", "combined_*.png")),
+            views = sorted(glob.glob(os.path.join(REPO_ROOT, run_dir, "vlm_views", "combined_*.png")),
                            key=os.path.getmtime)
     return {"program": program_path, "ok": p.returncode == 0 and bool(report), "run_dir": run_dir,
             "report": report, "room_views": views,
@@ -428,7 +431,7 @@ def generate_start(prompt, seed=42, max_inner=3, max_outer=2, threshold=8.0,
     Returns ``{job_id, out_dir, log_path}``; poll with generate_status()."""
     import time as _time
     job_id = f"gen_{int(_time.time())}_{_safe(prompt)[:16]}"
-    out_dir = out or os.path.join("/work", "results", job_id)
+    out_dir = out or os.path.join(REPO_ROOT, "results", job_id)
     os.makedirs(out_dir, exist_ok=True)
     log_path = os.path.join(out_dir, "generate.log")
     args = [sys.executable, "main.py", prompt, "--out", out_dir, "--seed", str(seed),
@@ -436,9 +439,9 @@ def generate_start(prompt, seed=42, max_inner=3, max_outer=2, threshold=8.0,
             "--threshold", str(threshold), "--model", model]
     if skip_stress:
         args.append("--skip-stress")
-    env = {**os.environ, "PYTHONPATH": "/work"}
+    env = {**os.environ, "PYTHONPATH": REPO_ROOT}
     logf = open(log_path, "w")
-    proc = subprocess.Popen(args, cwd="/work", env=env, stdout=logf,
+    proc = subprocess.Popen(args, cwd=REPO_ROOT, env=env, stdout=logf,
                             stderr=subprocess.STDOUT)
     _JOBS[job_id] = {"proc": proc, "out_dir": out_dir, "log_path": log_path,
                      "prompt": prompt}

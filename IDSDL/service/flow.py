@@ -18,7 +18,9 @@ import re
 import time
 import uuid
 
-_FLOWS_DIR = "/work/tmp/flows"
+from IDSDL.service.core import REPO_ROOT
+
+_FLOWS_DIR = os.path.join(REPO_ROOT, "tmp", "flows")
 
 # lines in vlm_feedback that block a build gate until fixed or overridden
 _BLOCKING = re.compile(r"\[Lint\]|WARNING", re.IGNORECASE)
@@ -33,7 +35,7 @@ STEPS = [
         "key": "plan",
         "title": "1/9 PLAN — get the design target",
         "card": """Produce the design plan for the prompt.
-  Command : PYTHONPATH=/work python -m planner_core "<prompt>" --out tmp/<run>/plan
+  Command : (from the repo root) PYTHONPATH=. python -m planner_core "<prompt>" --out tmp/<run>/plan
   (or the MCP `plan` tool)
 Read skill.txt and look at plan.png: extract anchors, secondary items, wall/decor,
 palette, lighting mood. The plan image is the target every later judgement
@@ -44,7 +46,7 @@ EVIDENCE: {"plan_dir": "<dir containing skill.txt (+ plan.png)>"}""",
         "key": "retrieve",
         "title": "2/9 RETRIEVE — reason over the knowledge catalog",
         "card": """Retrieve procedurally-similar recipes/lessons (NOT by category name).
-  Command : PYTHONPATH=/work python -m retriever_core "<prompt>" --plan <plan_dir>/skill.txt --out tmp/<run>/ctx
+  Command : (from the repo root) PYTHONPATH=. python -m retriever_core "<prompt>" --plan <plan_dir>/skill.txt --out tmp/<run>/ctx
   (or the MCP `retrieve_context` tool)
 Then READ the returned bundle.md IN FULL — matched recipes, their programs, and
 the atomic lessons selected for this scene.
@@ -194,7 +196,7 @@ def _card(state):
 
 def _fresh_report(run_dir, since):
     """Load run_dir/report.json, requiring it newer than the step's start."""
-    rp = os.path.join("/work", run_dir) if not os.path.isabs(run_dir) else run_dir
+    rp = os.path.join(REPO_ROOT, run_dir) if not os.path.isabs(run_dir) else run_dir
     rp = os.path.join(rp, "report.json")
     if not os.path.isfile(rp):
         return None, f"no report.json under {run_dir} (was it a `workbench run`?)"
@@ -252,7 +254,7 @@ def _validate(step_key, evidence, state):
             # convenience: resolve the newest run — the freshness check below
             # still guarantees it was built after this step started
             import glob as _glob
-            reports = sorted(_glob.glob("/work/tmp/*/report.json"),
+            reports = sorted(_glob.glob(os.path.join(REPO_ROOT, "tmp", "*", "report.json")),
                              key=os.path.getmtime, reverse=True)
             run_dir = os.path.dirname(reports[0]) if reports else ""
             ev["run_dir"] = run_dir   # record the resolved dir in provenance
@@ -289,7 +291,7 @@ def _validate(step_key, evidence, state):
             errs.append(f"example_md does not exist: {md!r}")
         if not py or not os.path.isfile(py):
             errs.append(f"program_copy does not exist: {py!r}")
-        readme = "/work/skills/examples/README.md"
+        readme = os.path.join(REPO_ROOT, "skills", "examples", "README.md")
         if md and os.path.isfile(md) and os.path.isfile(readme):
             stem = os.path.splitext(os.path.basename(md))[0]
             if stem not in open(readme).read():
@@ -392,4 +394,4 @@ flow_status(flow_id) — state survives disconnects.
 Key tools while inside the flow: plan, retrieve_context, inspect/browse/show
 (asset audit), lint_program (instant API check), run_scene (build; phase=1 for
 the cheap layout check). One-command automatic mode instead: generate_scene_start.
-The DSL reference: /work/skills/dsl_reference.md."""
+The DSL reference: skills/dsl_reference.md (repo root)."""

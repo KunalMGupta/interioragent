@@ -12,7 +12,7 @@ Usage:
     python workbench.py report                 # re-print the latest run's saved report
 
 Run under the project env:
-    PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python workbench.py run scene.py
+    (from the repo root, in the project env)  PYTHONPATH=. python workbench.py run scene.py
 
 The program is executed as a normal script (its `scene.export(...)` etc. run as
 written). Afterwards the workbench finds the SceneProgRoom in its namespace and
@@ -393,7 +393,7 @@ def cmd_gallery(source, n=None, page=0, out=None, hint=None):
         name = os.path.basename(path)[:-5]
         title = f"{name} — {len(models)} assets"
 
-    out = out or os.path.join("/work", f"gallery_{_safe_name(name)}.html")
+    out = out or os.path.join(_svc.REPO_ROOT, f"gallery_{_safe_name(name)}.html")
     return _emit_select_html(models, title, out, hint)
 
 
@@ -532,7 +532,7 @@ def cmd_candidates(category, topk=10, out=None):
         picks.extend(r.all_models[i] for i in top)
     uniq = sorted(set(picks))
 
-    out = out or os.path.join("/work", f"candidates_{_safe_name(category)}.json")
+    out = out or os.path.join(_svc.REPO_ROOT, f"candidates_{_safe_name(category)}.json")
     _json.dump(uniq, open(out, "w"), indent=1)
     print(f"{len(prompts)} prompts × top{topk} = {len(picks)} picks → {len(uniq)} unique")
     print(f"wrote {out}")

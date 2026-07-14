@@ -1,10 +1,8 @@
 {
   "mcpServers": {
     "idsdl": {
-      "command": "/opt/conda/envs/interioragent/bin/python",
-      "args": ["-m", "IDSDL.service.mcp_server"],
+      "command": "./tools/idsdl_mcp.sh",
       "env": {
-        "PYTHONPATH": "/work",
         "OPENAI_API_KEY": "${OPENAI_API_KEY}"
       }
     }

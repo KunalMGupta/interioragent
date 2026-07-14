@@ -1,0 +1,12 @@
+# Core scene DSL + retrieval
+numpy
+scipy
+matplotlib
+trimesh
+tqdm
+pillow
+sceneprogllm
+sceneprogexec
+
+# MCP server (IDSDL/service/mcp_server.py); 1.28.x is the tested line
+mcp==1.28.1

@@ -40,7 +40,7 @@ conda create -n interioragent python=3.12 -y
 conda activate interioragent
 
 # 3. Python dependencies
-pip install numpy matplotlib trimesh scipy tqdm sceneprogllm
+pip install -r requirements.txt
 ```
 
 A few external pieces are required:
@@ -152,12 +152,8 @@ turns.
 
 ### Extra setup
 
-`planner_core` reuses `sceneprogllm` and your `OPENAI_API_KEY` (set above), and additionally
-needs:
-
-```bash
-pip install tqdm
-```
+`planner_core` reuses `sceneprogllm` and your `OPENAI_API_KEY` (set above); its dependencies
+are covered by `requirements.txt`.
 
 Its data lives in `assets/`:
 - `skills.json` — the design skills library (committed).
@@ -257,14 +253,13 @@ images** — so an agent (e.g. Claude Code) drives the asset-discovery loop with
 the ~687 MB embeddings on every CLI call. The shared logic lives in `IDSDL/service/core.py`
 (warm singletons: base retriever, router, planner); the workbench CLI uses the same core.
 
-Setup:
-```bash
-/opt/conda/envs/interioragent/bin/pip install mcp        # one-time dependency
-```
-Registration is `/.mcp.json` (project-scoped; Claude Code discovers it on session start and
-prompts to approve `idsdl`). Requires `OPENAI_API_KEY` in the environment **at launch** — the
-warm process snapshots it. If the key rotates mid-session, call the **reload_credentials**
-tool (pass the fresh key, or write `OPENAI_API_KEY=...` to `/work/.env` and call it bare)
+The `mcp` dependency is covered by `pip install -r requirements.txt`.
+Registration is `.mcp.json` (project-scoped; Claude Code discovers it on session start and
+prompts to approve `idsdl` — it launches `tools/idsdl_mcp.sh`, which picks `$IDSDL_PYTHON`,
+then the `interioragent` conda env if present, then `python3`). Requires `OPENAI_API_KEY` in
+the environment **at launch** — the warm process snapshots it. If the key rotates mid-session,
+call the **reload_credentials** tool (pass the fresh key, or write `OPENAI_API_KEY=...` to
+`<repo>/.env` and call it bare)
 instead of restarting; LLM-backed tools also detect a stale key and point you there rather
 than dumping a 401 traceback.
 

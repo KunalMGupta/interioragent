@@ -1,7 +1,7 @@
 """IDSDL MCP server (stdio) — warm, typed tools for the asset-discovery loop.
 
-Run:  PYTHONPATH=/work /opt/conda/envs/interioragent/bin/python -m IDSDL.service.mcp_server
-Registered via /work/.mcp.json so Claude Code exposes the tools as mcp__idsdl__*.
+Run:  (from the repo root, in the project env)  PYTHONPATH=. python -m IDSDL.service.mcp_server
+Registered via the repo's .mcp.json so Claude Code exposes the tools as mcp__idsdl__*.
 
 The heavy state (687MB embeddings + retrievers + router) loads ONCE here and is reused across
 all tool calls. Tools return a short text summary PLUS inline preview images, and the server
@@ -370,7 +370,7 @@ def retrieve_context(prompt: str, plan: str | None = None,
 def reload_credentials(key: str | None = None) -> str:
     """Fix a stale/rotated OPENAI_API_KEY WITHOUT restarting the server. The warm process
     snapshots env at launch, so a rotated key otherwise 401s every LLM-backed tool. Pass the
-    fresh key directly, or write `OPENAI_API_KEY=...` to /work/.env and call with no args.
+    fresh key directly, or write `OPENAI_API_KEY=...` to <repo>/.env and call with no args.
     Rebuilds the LLM-holding singletons in seconds (embedding arrays stay cached)."""
     with _quiet():
         d = core.reload_credentials(key)
