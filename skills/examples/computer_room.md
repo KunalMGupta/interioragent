@@ -95,8 +95,11 @@ scene.export("computer_room.blend")
   "cool blue-grey anti-static vinyl flooring" embedded closest to a *wood* texture (brown floor).
   Dropping the jargon to "smooth cool grey concrete floor" hit the grey concrete/vinyl textures.
   When a floor/wall renders the wrong color, simplify to plain color + material words.
-- **Room enlarge: applied `1.1` in the final phase** (the lab brief wants wide circulation aisles;
-  VLM asked for 1.2 twice). Held it through phases 1–2 per the render-wins-early rule.
+- **Room enlarge: DECLINED — shipped `modulate_scale=1.0`** although the VLM asked for 1.2 twice
+  (the lab brief wants wide circulation aisles). An earlier draft of this lesson claimed a 1.1 was
+  applied in the final phase; the program and its entire git history show 1.0, so the claim was
+  session-memory drift — the program is the record. If a rebuild reads cramped, 1.1 is the first
+  knob to try.
 - **Wall-slot hygiene (front wall):** display center, whiteboard left, door right — three slots,
   no collision. Window (left wall) claims all three of its wall's slots; back wall carries the
   server rack + shelf. WallOverlap stayed clean.

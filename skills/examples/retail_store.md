@@ -70,8 +70,9 @@ rug, plant, the POS rotate), phase 3 the brand sign, the storefront pane and the
   across the middle + perimeter loop" recipe for any shop/showroom.
 - **LIGHTING density scales with FLOOR AREA, not just the count knob.** `density=0.3` — fine in a
   small office — tiled **~40 flush discs into a dense ceiling grid** on this large retail floor.
-  Dropped to **0.08** for a clean ~5. Rule: `add_lighting` density is a fixture *count*, and the
-  count grows with room footprint, so a **big room wants density ~0.05–0.1**. (Still a FLUSH
+  Dropped to **0.08** for a clean ~5, then to the shipped **0.06** when the iteration-2 enlarge
+  (0.9 → 1.2, below) grew the floor again. Rule: `add_lighting` density is a fixture *count*, and
+  the count grows with room footprint, so a **big room wants density ~0.05–0.1**. (Still a FLUSH
   fixture, never a chandelier/track rig — see `executive_office.md`.)
 - **A storefront window is the WORST case of the black-void limit.** `place_window_floor_to_ceiling`
   on the front wall rendered a **wall-sized pure-black void** (no exterior env). Switched to
@@ -90,9 +91,18 @@ rug, plant, the POS rotate), phase 3 the brand sign, the storefront pane and the
 ## VLM feedback we hit and how we resolved it
 - render 1: storefront black void + ~40-disc ceiling grid → `place_window_standard` + density 0.08.
 - render 2: `rescale room by 0.9` (one vote; floor visibly empty) → applied `modulate_scale=0.9`.
-  `rotate checkout counter / POS to face customer` → **declined** (ambiguous: a back-wall cash-wrap
-  facing into the store already faces approaching customers).
-- render 3: `no rescale / no rotation / no wall overlap` everywhere → **converged**, stopped.
+  `rotate checkout counter / POS to face customer` → **declined at the time** (ambiguous: a
+  back-wall cash-wrap facing into the store already faces approaching customers).
+- render 3: `no rescale / no rotation / no wall overlap` everywhere → converged; VLM loop stopped.
+- **iteration 2 (human feedback pass — this is what SHIPPED, and it reversed two of the calls
+  above):** "more spacious" pushed `modulate_scale` 0.9 → **1.2** (back row + back-right kept open
+  so the fuller merch still reads airy) and lighting density to **0.06**; the POS-rotate vote was
+  **applied after all** (`room.rotate(pos, 180)` — the render showed the screen genuinely faced
+  away); garment rails scaled to 0.7 height via a `rail()` helper; a second rack row per side +
+  second folded-clothes table + folded-jeans stack ("more clothing"); the wall-merch overrun got a
+  general DSL fix (`place_on_*_wall_*` now clamps to wall span + ceiling). Full list in the source
+  docstring. Takeaway: a *declined* VLM vote is a deferral, not a verdict — a later human pass can
+  overturn it, and the program is the record of what finally happened.
 
 ## Manual constraints used
 - None. Auto overlap/bounds + door clearance sufficed. (`bottom=0.4` on the two left-wall shelves is
