@@ -1,117 +1,78 @@
-# Classroom — example
+# Classroom — worked example
 
-Status: **built & rotation-clean** ([classroom_v1.py](classroom_v1.py), seed=7). Bright daylit
-classroom, built coarse-to-fine through the workbench. Final compile: rotation
-clean at every level, no wall overlap, room proportions converged.
+Status: **built & converged** (`scenes/classroom_v1.py`, seed=21, 4 builds: 2× phase-1, 1× phase-2,
+2× full). Final compile: `no rotation`, `no wall overlap`, no `[Lint]`/WARNING lines; room size
+converged at `modulate_scale=0.85` (the post-apply vote flipped to 1.1 = oscillation across neutral,
+declined per converge-don't-chase). Built through the guided 9-gate flow (flow_0712_171017_8858).
+Supersedes the thin pre-workflow `scenes/classroom.py` build (this lesson replaced that draft's).
 
 ## Prompt this covers
-- "a bright, friendly elementary school classroom with rows of student desks and
-  chairs facing a teacher's desk and a large chalkboard on the front wall, tall
-  windows with curtains, open storage shelves, a cozy reading nook, and warm
-  ceiling lighting"
+- "a classroom": rows of student desks with chairs all facing a front teaching wall (chalkboard +
+  wall display), a teacher desk facing the class, perimeter storage + bookshelf, window with blinds,
+  educational wall decor, bright even lighting.
 
 ## Plan summary (from the planner)
-"Chalkboard-Centered Daylit Classroom": light wood floors, warm-cream walls.
-Wood-topped student desks + blue chairs in rows facing the front; wall chalkboard;
-teacher's desk facing the students; tall windows + curtains; white open storage
-with colorful bins; reading nook with a teal rug + bean-bag poufs. Warm ceiling
-panels. Retrieved skills were all strong classroom/kindergarten matches (0.72–0.77).
+"Front-Focused Flexible Classroom Core": instruction-driven front zone (chalkboard wall + wall-mounted
+monitor), rows of wood-topped desks on metal frames facing front, orange chairs + teal accent panels as
+the palette, perimeter storage keeping desk surfaces clean, side window with blinds, dark acoustic
+flooring, linear ceiling lights.
 
-## Working program (coarse-to-fine)
+## The layout idea: the repeated desk+chair unit, tiled toward a teaching wall
+A classroom is the computer_room grid with the workstation swapped for a bare desk+chair unit and the
+front wall promoted to the teaching anchor:
+- **CENTER = the seating field** — ONE `place_desk_chair` unit (desk + tucked orange chair), built once,
+  `6 *` duplicated into a `GridGroup(sparsity=0.5, randomness=0.25)`, 2 cols × 3 rows, then
+  `room.face(desks, toward="front_wall")`.
+- **FRONT wall = teaching anchor** — black chalkboard (wall-hung, center) + pre-scaled wall display
+  (left) + door (right); teacher desk+chair front-LEFT on the floor, faced `toward="back_wall"` so the
+  teacher looks at the class.
+- **BACK wall = storage zone** — white sideboard (dressed: plant + books) center + stocked bookshelf left,
+  wall clock hung above the LOW sideboard run (laundromat art-over-a-low-run rule).
+- **RIGHT wall = identity decor** — framed world map center + educational poster left; plant in the
+  back-right corner. **LEFT wall = daylight** — `place_window_standard` (never full glazing: black void).
 
-```python
-from IDSDL.scene import SceneProgRoom
-scene = SceneProgRoom("ClassroomV1", seed=7)
-
-# desk unit = desk + chair on the BACK of the desk (seat-behind convention);
-# gridded into rows WITH AISLES via sparsity
-with scene.RelativeGroup() as desk_unit:
-    desk = scene.AddAsset("a wooden student desk with metal frame")
-    desk_unit.set_anchor(desk)
-    desk_unit.place_on_back_adjacent(scene.AddAsset("a small blue plastic school chair"))
-
-with scene.GridGroup(sparsity=0.5) as student_grid:     # 0 = merged benches; 0.5 = aisles
-    student_grid.place_grid(6 * desk_unit, cols=3)
-
-with scene.RelativeGroup() as teacher_area:
-    teacher_desk = scene.AddAsset("a large teachers desk")
-    teacher_area.set_anchor(teacher_desk)
-    teacher_area.place_on_back_adjacent(scene.AddAsset("a grey office chair"))
-    teacher_area.place_on_top(scene.AddAsset("a small desk task lamp"))
-    teacher_area.add_lighting("a warm rectangular ceiling panel light", density=0)
-
-with scene.RelativeGroup() as reading_nook:
-    reading_nook.set_anchor(scene.AddAsset("a low kids bookshelf with picture books"))
-    poufs = 2 * scene.AddAsset("a colorful round bean bag pouf")
-    reading_nook.place_on_front_left(poufs[0]); reading_nook.place_on_front_right(poufs[1])
-    reading_nook.place_rug("a teal patterned area rug", size=0.5)   # 0.85 was flagged too big
-    reading_nook.add_lighting("a warm rectangular ceiling panel light", density=0)
-
-with scene.RoomGroup() as room:
-    room.place_walls(floor_texture="light wood planks", ceiling_texture="white", wall_texture="warm cream")
-    room.place_on_front(teacher_area, facing="back")
-    room.face(teacher_area, toward="back_wall")          # teacher faces students (90-snapped)
-    room.place_on_center(student_grid, facing="front")
-    room.face(student_grid, toward="front_wall")         # grid faces the teaching wall
-    # teacher-desk asset is front-reversed → corrected once in the front cache
-    # (IDSDL/datasets/front_offsets.json), not per scene.
-    room.place_on_wall_front_center(scene.AddAsset("a large green chalkboard", width=2.5))  # width forces a board
-    room.place_on_right_wall_center(scene.AddAsset("a white open storage shelf with colorful bins and books"))
-    room.place_on_back_left_corner(reading_nook)
-    room.place_window_floor_to_ceiling("left_wall", curtain="white classroom curtains")
-    room.place_door("back_wall", position="right")
-
-scene.export("classroom_v1.blend")
-```
+## Step 0 — asset audit (gate 3)
+All heroes eyeballed via `inspect`/`browse` before any placement. Pins:
+STUDENT_DESK `hssd/c67c6e75…` (light-wood flat top, slim metal legs — the flat-top rule),
+STUDENT_CHAIR `hssd/d96243bc…` (orange plastic stacker — **pinned because its color carries the
+palette**, the jewelry_shop pin-for-palette rule), TEACHER_DESK `hssd/99e2a3e3…` (classic wood, drawers,
+flat top), CHALKBOARD `hssd/3a39fbaa…` (routes via `PresentationFixtureRetriever`), WALL_TV
+`hssd/576f0a57…` (reused meeting_room pin, 1.2 m native → `modulate_scale=1.4` BEFORE hanging),
+STORAGE `hssd/56366c90…` (white sideboard, dark wood top), BOOKSHELF `hssd/2db50fb1…` (pre-filled with
+books = stocked for free), GLOBE `hssd/55c813d9…`, WORLD_MAP `hssd/b22e386790…` (genuinely flat print).
+**Gaps:** teal acoustic panels — no dataset match (same as computer_room's teal screens) → dropped
+rather than forcing a wrong color; no true cork bulletin board (closest is a custom 3-panel green
+chalkboard) → skipped, the front wall already carries a board.
 
 ## What worked / gotchas
-- **GridGroup `sparsity` is the desk-spacing knob.** Default 0 packs desks edge-to-edge
-  into long benches; `sparsity=0.5` adds both column and row gaps → individual desks
-  with aisles. (Sparsity applies to columns *and* rows.)
-- **Asset retrieval can return an undersized item.** "a large green chalkboard" came
-  back tabletop-sized; `AddAsset(..., width=2.5)` forces a wall-spanning board. Check
-  big wall items in the render and pin `width`/`depth` when retrieval undershoots.
-- **Lighting must hang off an AnchorGroup.** `add_lighting` is a Relative/Around method;
-  `GridGroup` and `RoomGroup` don't have it. The student grid is a GridGroup, so light
-  the room by calling `add_lighting` on the `teacher_area` and `reading_nook`
-  RelativeGroups (front + back coverage) — plus the daylight window.
-- **Wall-slot hygiene:** chalkboard front, storage right, window left, door back —
-  one per wall, WallOverlap stayed clean.
-- **Gotcha — reading nook got occluded** in the back-left corner behind the desk grid.
-  A zone you want visible should go where the main cluster won't block it (or shrink the
-  grid). Left as-is here; flag for v2.
-- **Fixed a RoomGroup spacing bug here.** The student grid (`center`) nearly touched the
-  teacher desk (`front`). Cause: floor placements used fixed depth fractions (`D/4,D/2,
-  3D/4`) while `DEPTH` is the sum of independently-sized rows — a deep item bled into the
-  neighbor slot. Now placements land at true cumulative **row/column centers**
-  (`init_dims` builds `row_centers`/`col_centers`); adjacent slots can't overlap by
-  construction. (The grid pulled back ~0.26 m, opening a real aisle to the teacher.)
+- **`place_desk_chair` grid faces the FRONT wall** — `room.face(desks, toward="front_wall")` is correct
+  for this unit type (the OPPOSITE of a `WorkstationGroup` grid, which faces `back_wall`). Verified in
+  the interior render: chair backs to the viewer from the back of the room.
+- **Build the unit ONCE, `6 *` it** — the notebook `place_on_top` tournament ran once; all six desks got
+  identical notebooks. Same lesson as computer_room's `8 * ws`.
+- **Texture strings bite twice.** (1) `"white painted wall with one teal accent wall"` embedded to a
+  GREEN TILE texture on ALL walls — the accent-clause dragged the whole match; plain
+  `"smooth white painted plaster wall"` fixed it. An accent COLOR the texture library can't express is
+  better dropped (or carried by props) than smuggled into the texture string. (2) The ceiling renders
+  black in interior strips regardless of ceiling texture wording — that's the renderer's open-top
+  interior view, not a texture failure; don't chase it.
+- **Room size: hold early, apply once, stop on oscillation.** RoomProportions walked 0.96 → 0.92 → 0.85
+  across the phases (held per render-wins-early), applied `modulate_scale=0.85` in the final phase, and
+  the next vote flipped to **1.1** — crossing neutral = converged; declined the enlarge and kept 0.85.
+- **Teacher desk front-LEFT, door front-RIGHT** — the teaching wall's three slots stay clean
+  (chalkboard center, display left as wall-hung; door right as floor opening) and the door's auto
+  clearance never fights the teacher zone.
+- **Identity at surface height** — notebooks on every student desk, globe + book stack + pen cup on the
+  teacher desk, plant + books on the sideboard. The desks reading "in use" is what separates a classroom
+  from a furniture showroom (jewelry_shop product-not-fixtures, applied to desks).
 
-## Orientation — the debugging story (the whole point of this scene)
-This took three layers to get right; all three matter:
-1. **Seat-behind-desk convention.** First pass used `place_on_front_adjacent` → students
-   looked *away* from the teacher. Flipping the chair to the **back** of the desk
-   (`place_on_back_adjacent`) made each unit's look-direction = chair→desk = correct.
-2. **Wall-facing.** `room.face(student_grid, toward="front_wall")` and
-   `room.face(teacher_area, toward="back_wall")` — face the *wall*, 90°-snapped, so rows
-   stay orthogonal. (`facing=` alone happened to give the same angle here, but wall-facing
-   is the deterministic, intent-revealing lever.)
-3. **Front-correction cache (the systemic fix).** Even after 1+2 the **teacher desk** still
-   rendered backwards — because asset meshes carry no canonical front (see
-   ../workflow/constraints.md). It's a *different* asset from the student desks and is
-   modeled reversed. Recorded once: `python -m IDSDL.front_cache set <id> 180`; now applied
-   automatically on load, no per-scene `rotate()`.
-
-**Trust your eye, not the VLM, for rotation.** The room-level `RotationConstraint` said
-`no rotation` on the *mis-oriented* scene (false negative); the per-unit check correctly
-flagged `rotate desk by 180` (true positive) but we initially dismissed it. Visual
-inspection was the arbiter — it caught the reversed teacher desk both VLM levels disagreed on.
-
-## Other VLM feedback
-- **ObjectProportions:** reading-nook rug flagged too big → reduced `place_rug` 0.85 → 0.5;
-  cleared. Ceiling panel light flagged slightly big — left (cosmetic).
-- **RoomProportions:** hovered around 1.0 (1.1 → 0.99) — noise; held (no resize).
+## VLM feedback log (chronological)
+- Ph1 `rescale room by 0.96` → held (noise, render fine). `no rotation`/`no wall overlap` from the
+  first build — correct-by-construction orientation collapsed the loop to the size thread only.
+- Ph2 `rescale room by 0.92` → held (occupancy still rising).
+- Ph3 full `rescale room by 0.85` → applied `RoomGroup(modulate_scale=0.85)` (final phase).
+- Ph3 re-run `rescale room by 1.1` → **declined** (oscillation across neutral after one decisive
+  application = converge signal; render reads well-filled).
 
 ## Manual constraints used
-- None. Candidates for v2: `AccessConstraint(desk, chair, dir="front")` to tuck chairs;
-  `ClearanceConstraint` along the front for teacher circulation.
+- None. Door auto-clearance + grid aisles + `CategoryClearanceConstraint` on the storage run were enough.
