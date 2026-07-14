@@ -44,6 +44,28 @@ no potter's wheel, no amount of visual picking will conjure one.**
 
 ---
 
+> ## ✅ STATUS 2026-07-13: TIER 1 IS INGESTED (`art_done.zip`, 68 meshes, Kunal)
+> Every Tier-1 item below has now been sourced and ingested as `custom/*`. Highlights, all
+> preview-verified: **three real 2.00 m floor easels** — painted canvas `custom/fa1ed245`, blank
+> canvas `custom/3ae58737`, bare `custom/f65f7c3d` — plus a paint-box/palette prop set
+> `custom/65b64100`, an art supply cart `custom/4d5c0810`, a drafting desk `custom/1d3219db`,
+> **a potter's wheel, a Vandercook letterpress, a Greco-Roman loom, a Durst enlarger, a softbox +
+> backdrop + 19 photo rigs, a queue-barrier stanchion**, and a museum trove (Rosetta Stone,
+> Nefertiti, three Louvre statues, samurai + knight armour, two dinosaur skeletons, a dodo).
+> `scenes/art_studio.py` is REBUILT on the real easels — see `../examples/art_studio.md` §0.
+>
+> **Two ingested meshes were REJECTED at the contact sheet** (filenames lie; the preview is the
+> evidence): `canvas_stretcher` renders as a grey tapered MONOLITH, not a canvas; and
+> `easel_stool_and_canvases` is flat-shaded STYLISED red/blue art that clashes with a photoreal
+> room. Yield 11/13 on the art meshes — better than operating_room's 6/20, because the source glbs
+> were already correctly scaled.
+>
+> **Still missing after this ingest:** paint-stocked SHELVING (the studio shelf is still a
+> book-filled bookcase), a museum wall-label placard, and a bare stretched canvas.
+> **Still to do:** a `CreativeStudioRetriever` pool — until it exists, "an artist easel" routes to
+> `PresentationFixtureRetriever` (boards/projectors) and these meshes are invisible to plain
+> `AddAsset`. **Pin them by id.**
+
 # TIER 1 — source these (each one unblocks a scene; no acceptable substitute)
 
 1. **A floor-standing artist easel — one BARE, one HOLDING A CANVAS.** *The single highest-value

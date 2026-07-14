@@ -1521,3 +1521,33 @@ rotation issue you can *see*; the VLM rotation text is just a hint.
   each counter (can you see the screen? can the operator?), lean back in each booth (is the wall there?).
   Same standing as the jewelry_shop "the loop verifies geometry, not category legibility" rule, one level
   down — from "does it read as the category" to "does the furniture work".
+
+- **[art_studio v2, THE INGEST FIX PASS SILENTLY NO-OPS IF YOU SKIP `parent_clear` — and the
+  audit that "verifies" it lies to you twice]** Ran operating_room v2's prescribed Blender pass over
+  `art_done.zip` (join → origin_set(BOUNDS) → zero the location). It reported `OK ... joined N
+  mesh(es)` for all 68 glbs. **Nothing had changed** — the re-audit showed every object exactly as
+  off-centre as it went in (the easels still at 1.35× their own bbox). Two distinct traps, both worth
+  knowing before you trust an ingest:
+  **(1) The glTF importer PARENTS meshes to EMPTIES.** Setting `obj.location = (0,0,0)` sets the
+  object's *local* location; the parent empty's transform still offsets it in world space, and the
+  exporter writes the hierarchy out. Worse, `transform_apply(location=False)` — the natural reading of
+  "don't move it" — never bakes that offset in. **Fix: `parent_clear(CLEAR_KEEP_TRANSFORM)` + delete
+  the non-mesh objects + `transform_apply(location=True, ...)` BEFORE `origin_set`.** After that all
+  68 came out at `center_off = 0.000`.
+  **(2) trimesh's geometry count is PRIMITIVES, not OBJECTS.** A joined object with 6 material slots
+  still loads as `len(scene.geometry) == 6`, so a mesh-count audit reports MULTIMESH on a file that is
+  already correctly a single object — a false positive that sends you fixing what is not broken. The
+  thing that actually matters (the loaders keep `imported_objs[0]`) is the **Blender object** count.
+  Judge centring from the world AABB and object count from Blender, not from trimesh's geometry dict.
+
+- **[art_studio v2, ONE CORRECT MESH DELETED ~40 LINES OF WORKAROUND — "clean but unconvincing"
+  really does mean ASSETS, not placement]** v1 was VLM-clean and still needed: a silhouette hunt to
+  dodge the picker's KIDS' crayon easel; a 1.65 m height-fit because the only real easel was a 1.00 m
+  *tabletop* one; a `place_on_top` that shattered on the skeletal A-frame (postage-stamp canvases on
+  the crossbar); a geometric fallback standing the canvas on the FLOOR against the easel; and a
+  canvas-as-anchor inversion to stop the placement verb showing the canvas's blank BACK to the room.
+  Ingesting **one** mesh — a 2.00 m floor easel with the painting modelled in — collapsed all of it to
+  `scene.AddAsset(..., asset_id=EASEL_ART)` + one `place_on_*`. **Generalises operating_room's rule:
+  when the loop is clean and the room still doesn't convince, stop iterating on placement — the
+  workaround pile IS the signal that the asset is wrong.** Corollary: the workarounds are worth
+  writing down anyway, because they are what you do while the ingest does not exist.
