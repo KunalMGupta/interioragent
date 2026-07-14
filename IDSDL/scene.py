@@ -9,7 +9,7 @@ from IDSDL.datasets.retrievers import SceneProgAssetRetriever
 from IDSDL.groups import *
 from IDSDL.groups_extra import (
     StackGroup, PyramidGroup, PileGroup, SymmetryGroup, FacingGroup, RingsGroup,
-    MirrorStationGroup, WorkstationGroup,
+    MirrorStationGroup, WorkstationGroup, KitchenIslandGroup,
 )
 
 
@@ -265,6 +265,9 @@ class SceneProgRoom:
 
     def WorkstationGroup(self):
         return WorkstationGroup(self)
+
+    def KitchenIslandGroup(self, cell=0.06):
+        return KitchenIslandGroup(self, cell=cell)
 
     def RoomGroup(self, modulate_scale: float = 1.0, randomness: float = 0.0,
                   auto_render: bool = True,

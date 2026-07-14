@@ -19,6 +19,11 @@
 > 5. **ALIGN THE UNIT TO THE WALLS — put it in a CORNER, never a wall centre.** A fitted kitchen
 >    is *joinery*: every run of it that can touch a wall, must. See the next section — this is
 >    what separates a kitchen that looks installed from one that looks dropped in the room.
+> 6. **ATTACH the island to the set with `KitchenIslandGroup` — never float it at
+>    `place_on_center`.** (Kunal, 2026-07-14.) A U's island belongs at the frontal tip of its
+>    LONGER wing, across the mouth; an L's island belongs in the concave MIDDLE of its AABB.
+>    Both positions are *inside* the set's AABB, which no AABB-relative verb can express — see
+>    "The ISLAND rules" below.
 
 ## The ALIGNMENT rules — read the `shape` tag, then pick the corner (Kunal, 2026-07-13)
 
@@ -43,6 +48,58 @@ the corner placement legible.
 **Windows go on a wall OPPOSITE the unit's corner.** Unit in the back-right corner ⇒ window on the
 **LEFT** wall. Daylight then rakes ACROSS the cabinetry and models it; a window behind or beside the
 unit just backlights it into a silhouette.
+
+## The ISLAND rules — attach it, never float it (Kunal, 2026-07-14)
+
+v2's breakfast counter at `place_on_center` converged VLM-clean and still read as furniture adrift:
+a real island is positioned BY the cabinetry's shape. Those positions are *inside* the set's AABB
+(the mouth of a U, the pocket of an L), so they earned a group — **`scene.KitchenIslandGroup()`**
+(`IDSDL/groups_extra.py`; third worked precedent in `skills/add-placement-group/SKILL.md`). It
+rasterises the set's REAL footprint from the mesh (area-weighted surface samples, base-height band
+≤ 1 m, ~48-cell grid), classifies the shape, prints the ASCII raster + every measurement, and:
+
+| set `shape` | mode (auto) | placement |
+|---|---|---|
+| **U** | `tip` | island attaches FLUSH with the frontal tip of the **LONGER wing**, runs across the mouth → a covered cook zone with ONE walk-in entry at the other wing. `min_entry=0.9` is guarded by SHRINKING the island rather than sealing the mouth |
+| **L** | `pocket` | island floats in the **concave middle of the L's AABB**, long axis parallel to the base run, stools facing the open room; `min_aisle` warnings against both runs |
+| **straight** | `front` | the classic galley — parallel island `min_aisle` in front of the run |
+
+```python
+counter = scene.AddAsset("...", asset_id=COUNTER)
+with scene.AroundGroup(sparsity=0.0, jitter=0.0) as island_unit:
+    island_unit.set_anchor(counter)
+    island_unit.add_lighting("a warm brass dome pendant light", density=0.0)  # exactly one
+with scene.KitchenIslandGroup() as kz:
+    kz.set_anchor(kitchen)                 # the fitted set (scaled BY HEIGHT first)
+    kz.place_island(island_unit)           # mode/wing auto from the raster; overridable
+    kz.place_stools(2 * scene.AddAsset("...", asset_id=STOOL))
+kz.is_static = True
+...
+room.place_on_back_right_corner(kz, facing="front")   # ONE corner op moves the whole block
+```
+
+- **The island unit carries its own pendant.** Lights are `is_light` children (skipped by every
+  AABB), so wrapping counter + `add_lighting` in a small AroundGroup gives a pendant that rides to
+  wherever the analysis puts the counter — while the entry-gap math still sees only the counter.
+  This finally solves "a pendant over the island, never anchored to the set".
+- **The guards are part of the design — read the prints, don't fight them.** For `3c2bf09e` the
+  raster measures wings -x 2.49 / +x 2.99 m and a **1.56 m mouth**: a 1.5 m island would leave an
+  0.11 m entry, so the group shrinks it to **0.71 m** (entry back to 0.90) and seats **1** of the
+  2 stools, dropping the other with a print. That stubby peninsula is the honest geometry of this
+  narrow U — not a bug. Want a grander island? Pick a wider-mouthed set, not a bigger island.
+- **The island + stools are floor mass → phase 1 ALWAYS** (the floor-mass gating rule); only the
+  pendant is phase-3.
+- **All of THIS FILE's alignment + camera rules apply to the composed block unchanged**: one
+  corner op, `facing=` mandatory, `is_static` on the GROUP, and the interior-camera bound
+  `W > 2 x run width` still governs the shell (the group only adds stool depth).
+- **Compose the anchor only from EQUAL-DEPTH modules.** The L build first anchored a GridGroup
+  `[fridge | set]`: the deeper fridge rastered the back border ragged (base-run detection flipped
+  to the leg and the island laid out 90° wrong) AND pushed the run to 4.11 m — camera bound 8.2 m,
+  i.e. never satisfiable — the front view rendered solid black. A standalone tall appliance goes
+  in a camera-safe CORNER instead (cameras sit at wall CENTRES).
+- Worked programs beside this file: **`kitchen_set_v3.py`** (U tip peninsula; supersedes v2's
+  floating counter) and **`kitchen_l_v1.py`** (L pocket island + corner fridge). Numeric tests
+  52–53 in `tests.py` assert the geometry via `group.analysis`.
 
 ### Two API traps that will silently break the alignment
 
@@ -163,13 +220,18 @@ clean pendant trio over just the island isn't reliably placeable on a bundled-is
 
 # Recipe A, worked end-to-end — "Navy Anchor Kitchen, open-plan"
 
-Status: **built & converged** — `scenes/work/kitchen_set_v2.py` + `kitchen_set_v2.py` beside this
-file, seed=3. Final: `no rotation / no wall overlap`, no `[Lint]`/WARNING lines, at
-`modulate_scale=0.92`. Room 5.9 × 6.7 × 3.0 m. Set = `future/3c2bf09e` (10/11 comps, navy U).
+Status: **superseded by v3 for the island** — `kitchen_set_v3.py` is v2 with the breakfast
+counter replaced by a `KitchenIslandGroup` peninsula ATTACHED at the U's longer wing (see "The
+ISLAND rules" above). v3 full build 2026-07-14: `no rotation / no wall overlap`, no lints, the
+`rescale 0.9 → 0.95` train DECAYED toward neutral (held per render-wins-early; 0.92 × 0.95 would
+also breach the 0.90 camera floor below). v2 remains the reference for everything non-island:
+built & converged as `scenes/work/kitchen_set_v2.py` + `kitchen_set_v2.py`, seed=3,
+`no rotation / no wall overlap`, no lints, `modulate_scale=0.92`, room 5.9 × 6.7 × 3.0 m.
+Set = `future/3c2bf09e` (10/11 comps, navy U).
 
 > **v1 (`kitchen_set_v1.py`) is kept only as the counter-example.** It put the same set at
 > `place_on_back_wall_center`, converged VLM-clean, and looked like a kitchen dropped in a field.
-> v2 is the same scene, corner-aligned. If you are copying a skeleton, copy **v2**.
+> v2 corner-aligned it; v3 attached the island. If you are copying a skeleton, copy **v3**.
 
 ## The layout — corner-aligned U + an open-plan zone beyond the peninsula
 Set-piece hero (dental_office's pattern), aligned per the rules at the top of this file:
@@ -247,6 +309,13 @@ see cameras. And note the depth bound is *why* the dining zone exists: a front-r
 pushes D past 5.98 m, which is a cleaner lever than inflating with `modulate_scale` (that would
 grow the width too, and the width was already right).
 
+> **Refinement (kitchen_l_v1, 2026-07-14): the margin the bound needs depends on the HEIGHT of
+> the run's inner end.** This U's few-cm margin works because its inner end is the counter-height
+> peninsula wing — the 1.65 m camera hovers OVER it and the view stays usable. The L set's run
+> ends in a FULL-HEIGHT larder column: at a nominal 8 cm margin the front view still rendered
+> solid black. When the end of the run nearest the room's centreline is tall, treat the bound as
+> `W > 2 x run width + ~0.5 m` — the camera needs real lateral clearance it cannot see over.
+
 > **Corollary — prefer a `straight` set (49 of 68) when you can.** A straight run is ~0.6 m deep,
 > so it never traps a camera and imposes no depth bound at all. The U's 3 m-deep wings are what
 > caused all of the above. Take the U only when you actually want the wrap.
@@ -274,6 +343,36 @@ grow the width too, and the width was already right).
 - **You cannot fix the set's colours.** Its larder column renders taupe, not navy, and both
   worktops are dark where the plan wanted light. A set is ONE mesh — the only lever is swapping the
   whole set. Don't try to edit it.
+
+---
+
+# The L-shaped worked example — "Greige L-Kitchen with a Pocket Island" (`kitchen_l_v1.py`)
+
+Status: **built & converged 2026-07-14** (build 5, seed=7): `no rotation / no wall overlap`, no
+lints, all four views verified clear by eye. Set = `future/b3e7e64f` (the most complete L, 8/11)
+at **2.1 m height**, back-right corner, leg along the right wall; walnut+marble island
+(`hssd/559f21c7`, 1.2 m) pocketed in the concave middle with 2 stools; fridge standalone in the
+back-LEFT corner; dining nook front-left; window left; `modulate_scale=0.95`.
+
+What its five builds taught (each is in the program's comments):
+- **The fridge does NOT compose into the analysed run** — see "The ISLAND rules" above (raster
+  ragged + camera bound 8.2 m). Standalone, camera-safe corner.
+- **The camera bound is HEIGHT-SENSITIVE and the SET SCALE is its lever.** This run ends in a
+  full-height larder column: at nominal margins of 8 cm (0.85) and even at 0.90 the front view
+  rendered SOLID BLACK (measured: camera at W/2 = 2.85 sat 6 cm inside the column). Rule:
+  a wall-flush run with a TALL inner end must satisfy `run <= W/2 - 0.3`. Don't buy that with an
+  empty barn of a room — shrink the SET's height (run width follows, ~1.27 x h for this mesh):
+  2.1 m is a real upper-cabinet line and clears the camera by 0.23 m at the 0.95 shell.
+- **The pocket island rides the guards**: pocket measured 2.10 x 1.32 m, island kept at 1.20 m
+  (shrinking further would go under the 0.6 m floor), aisles 0.45/0.39 m — narrow, but that IS
+  the "island in the middle of the L" design and the render reads right. Both stools seat.
+- **Starfield, seed-dependent**: the same `add_lighting` call that was clean in v3 (seed 3)
+  picked a TINY flush disc at seed 7 → 38 fixtures. Fixed by ENLARGING the fixture
+  (`modulate_scale=2.0`, quarters `max_lights`) at `density=0.02` — lobby's rule, re-confirmed.
+- The `rescale 0.82 -> 0.7 -> 0.75` train is permanent occupancy noise here: every shrink below
+  0.95 re-blinds the front camera, so it is refused on arithmetic, exactly like v2/v3.
+- Honest gap: "soft sage green" walls render pale pastel (the room-scale wash-out class, bakery
+  v1) — not worth iterations.
 
 ---
 

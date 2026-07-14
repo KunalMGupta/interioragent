@@ -539,11 +539,29 @@ def extra_mirror_station():
     return scene
 
 
+def extra_kitchen_island():
+    scene = SceneProgRoom("extra_kitchen_island", seed=SEED)
+    with scene.KitchenIslandGroup() as kz:
+        kitchen = scene.AddAsset("a complete navy fitted kitchen unit",
+                                 asset_id="future/3c2bf09e-eb79-4a8f-a3f4-36446e9ea656")
+        kitchen.scale(kitchen.get_width() * 2.4 / kitchen.get_height())
+        kz.set_anchor(kitchen)
+        kz.place_island(scene.AddAsset(
+            "a navy kitchen island counter with a marble top",
+            asset_id="hssd/f8b8235c6e241b3ef1922a7560736535d9c9219c"))
+        kz.place_stools(2 * scene.AddAsset(
+            "a rustic wooden bar stool",
+            asset_id="hssd/ce64089b08a3ba3e5a2c4c8e70c627c71c64cccc"))
+    scene.bind(kz)
+    return scene
+
+
 FIGURES = {
     # new motif groups
     "extra_stack": extra_stack, "extra_pyramid": extra_pyramid, "extra_pile": extra_pile,
     "extra_symmetry": extra_symmetry, "extra_facing": extra_facing, "extra_rings": extra_rings,
     "extra_mirror_station": extra_mirror_station,
+    "extra_kitchen_island": extra_kitchen_island,
     # registration
     "reg_single": reg_single, "reg_scaling": reg_scaling,
     "reg_copies": reg_copies, "reg_rotation": reg_rotation,

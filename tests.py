@@ -1427,6 +1427,84 @@ def test_51():
     scene.export("results/test51_workstation.blend")
 
 
+def test_52():
+    """KitchenIslandGroup / tip mode: a U set's footprint is rasterised, the island attaches
+    flush with the LONGER wing's frontal tip across the mouth, the entry gap is protected by
+    shrinking the island, and the stools sit in a row on the OUTWARD face facing back. The
+    raster/classification numbers are exposed on group.analysis, so assert on those plus
+    relative geometry (never absolute coords — __exit__ recenters the group)."""
+    header(52, "KitchenIslandGroup U set -> tip peninsula + entry gap + stool row")
+    scene = SceneProgRoom("test52", seed=SEED)
+    U_SET = "future/3c2bf09e-eb79-4a8f-a3f4-36446e9ea656"     # navy U: wings -x 2.49 / +x 2.99 m
+    COUNTER = "hssd/f8b8235c6e241b3ef1922a7560736535d9c9219c" # bare-marble-top island
+    STOOL = "hssd/ce64089b08a3ba3e5a2c4c8e70c627c71c64cccc"
+    with scene.KitchenIslandGroup() as kz:
+        kitchen = scene.AddAsset("a complete navy fitted kitchen unit", asset_id=U_SET)
+        kitchen.scale(kitchen.get_width() * 2.4 / kitchen.get_height())
+        kz.set_anchor(kitchen)
+        island = kz.place_island(
+            scene.AddAsset("a navy kitchen island counter", asset_id=COUNTER))
+        stools = kz.place_stools(
+            2 * scene.AddAsset("a rustic wooden bar stool", asset_id=STOOL))
+    scene.bind(kz)
+
+    a = kz.analysis
+    print(f"  analysis: shape={a['shape']} mode={a['mode']} wing={a.get('wing')} "
+          f"mouth={a.get('mouth', 0):.2f} entry={a.get('entry', 0):.2f}")
+    assert a["shape"] == "U" and a["mode"] == "tip", f"expected U/tip, got {a['shape']}/{a['mode']}"
+    assert a["wing"] == "+x", f"should attach at the LONGER (+x, 2.99 m) wing: {a['wing']}"
+    assert a["entry"] >= 0.85, f"entry gap must stay walkable: {a['entry']:.2f}"
+
+    k_aabb, i_aabb = kitchen.get_aabb(), island.get_aabb()
+    cellish = a["cell"] * 2 + 0.02
+    print(f"  set z_max={k_aabb[1,2]:.2f} island z=[{i_aabb[0,2]:.2f},{i_aabb[1,2]:.2f}] "
+          f"x=[{i_aabb[0,0]:.2f},{i_aabb[1,0]:.2f}] (set x_max={k_aabb[1,0]:.2f})")
+    # flush with the wing's frontal tip (opening is +z for this set), inside the mouth
+    assert abs(i_aabb[1, 2] - k_aabb[1, 2]) < cellish, "island far face should be flush with the wing tip"
+    assert i_aabb[1, 0] < k_aabb[1, 0] - 0.3, "island must sit INSIDE the mouth, not on the wing"
+    assert abs(float(i_aabb[0, 1]) - float(k_aabb[0, 1])) < 0.06, "island stands on the floor"
+    surviving = [s for s in stools if s in kz.children]     # the fit guard may drop overflow
+    assert surviving, "at least one stool must survive the fit guard"
+    for s in surviving:
+        s_aabb = s.get_aabb()
+        assert s_aabb[0, 2] > i_aabb[1, 2] - 0.05, "stools sit BEYOND the island's outward face"
+        assert abs(float(s.get_rotation()) % 360.0 - 180.0) < 5, "stools face the island"
+    scene.export("results/test52_kitchen_island_tip.blend")
+
+
+def test_53():
+    """KitchenIslandGroup / pocket mode: an L set's island floats in the concave middle of the
+    L's AABB — past the base run, clear of the leg — long axis parallel to the base run, with
+    the pocket dimensions exposed on group.analysis."""
+    header(53, "KitchenIslandGroup L set -> pocket island in the concave middle")
+    scene = SceneProgRoom("test53", seed=SEED)
+    L_SET = "future/b3e7e64f-417f-4da5-b4ce-cb2bfd06e039"     # warm-grey L: base -z, leg +x
+    ISLAND = "hssd/559f21c7f5628a83b31d616e90bdcc02e7744731"  # walnut base cab, marble top
+    with scene.KitchenIslandGroup() as kz:
+        kitchen = scene.AddAsset("a complete grey fitted kitchen unit", asset_id=L_SET)
+        kitchen.scale(kitchen.get_width() * 2.5 / kitchen.get_height())
+        kz.set_anchor(kitchen)
+        island = kz.place_island(
+            scene.AddAsset("a walnut kitchen island with a marble top", asset_id=ISLAND, width=1.2))
+    scene.bind(kz)
+
+    a = kz.analysis
+    print(f"  analysis: shape={a['shape']} mode={a['mode']} pocket={a.get('pocket')} "
+          f"aisle_base={a.get('aisle_base', 0):.2f}")
+    assert a["shape"] == "L" and a["mode"] == "pocket", f"expected L/pocket, got {a['shape']}/{a['mode']}"
+    k_aabb, i_aabb = kitchen.get_aabb(), island.get_aabb()
+    print(f"  set x=[{k_aabb[0,0]:.2f},{k_aabb[1,0]:.2f}] z=[{k_aabb[0,2]:.2f},{k_aabb[1,2]:.2f}]  "
+          f"island x=[{i_aabb[0,0]:.2f},{i_aabb[1,0]:.2f}] z=[{i_aabb[0,2]:.2f},{i_aabb[1,2]:.2f}]")
+    # inside the L's AABB, past the base run (-z), clear of the leg (+x)
+    assert i_aabb[0, 0] > k_aabb[0, 0] and i_aabb[1, 0] < k_aabb[1, 0] - 0.4, \
+        "pocket island must sit inside the AABB, clear of the +x leg"
+    assert i_aabb[0, 2] > k_aabb[0, 2] + 0.3, "pocket island must sit PAST the base run"
+    assert i_aabb[1, 2] <= k_aabb[1, 2] + 0.05, "pocket island stays within the AABB depth"
+    pw, pd = a["pocket"]
+    assert float(island.get_width()) <= pw + 0.01, "island must fit the pocket span"
+    scene.export("results/test53_kitchen_island_pocket.blend")
+
+
 # ---------------------------------------------------------------------------
 # Registry + runner
 # ---------------------------------------------------------------------------
@@ -1488,6 +1566,8 @@ TESTS = {
     49: test_49,   # RingsGroup (concentric surround)
     50: test_50,   # MirrorStationGroup (mirror + counter + facing anchor)
     51: test_51,   # WorkstationGroup (desk + chair + computer + accessories)
+    52: test_52,   # KitchenIslandGroup tip mode (U set peninsula + entry gap + stools)
+    53: test_53,   # KitchenIslandGroup pocket mode (L set concave-middle island)
 }
 
 
