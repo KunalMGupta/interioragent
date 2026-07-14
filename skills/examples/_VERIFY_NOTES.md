@@ -41,14 +41,13 @@ surfaces and walls, never floor mass.
 - restaurant — **FAILED then FIXED**: two overlap pairs among the dining clusters. Cause:
   the olive tree (floor, back-left corner) was gated to phase 2. Ungated; re-run FULLY CLEAN
   (`no rescale / no rotation / no wall overlap`, no warnings).
-- jewelry_shop — **FAILED, partially fixed, still open at phase 1**: one counter pair
-  overlapped 0.70×0.36 m; ungating the phase-2 plant (floor, back-right) reduced the
-  penetration to 0.70×0.20 m but did not clear it — every floor object is now phase 1, so the
-  residual difference vs the (clean) original full build is the phase-3 wall layer (art/window
-  change slot geometry) and/or the RNG stream shifting with fewer creations. A full v1 build
-  was run for comparison — see the round log; if the full build is clean, the phase-1 overlap
-  is an artifact of this deliberately-tight room (0.88 shell) and is documented in the lesson
-  rather than "fixed" by loosening a converged scene.
+- jewelry_shop — **RESOLVED: phase-1-only artifact, full build CLEAN.** One counter pair
+  overlapped 0.70×0.36 m at phase 1; ungating the phase-2 plant (floor mass) reduced it to
+  0.70×0.20 m, and the FULL v1 rebuild came back clean (`no rescale / no rotation / no wall
+  overlap`, no overlap warnings) — the deliberately tight 0.88 shell is simply tighter still
+  when auto-sized without the phase-3 wall layer. Documented in the lesson as a known
+  read-past-it warning at phase 1. Bonus find: the rebuild's lint flagged the 0.06 lighting
+  density as a 28-disc starfield on 30 m² — v1 now ships 0.02 (lesson updated).
 
 ## Cross-scene flags — resolved
 - **gym 0.60 m reception desk**: eyeballed in the (fully clean) phase-1 render — reads as a

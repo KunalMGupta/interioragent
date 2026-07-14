@@ -20,9 +20,17 @@
 
 Status: **built & iterated as `scenes/jewelry_shop.py` (seed=42)** — the v3 rebuild on the real
 `ShopFixtureRetriever` fixtures. [`jewelry_shop_v1.py`](jewelry_shop_v1.py) is that program
-**phase-gated** (2026-07-13): `lint_program`-clean, with the layout / pinned ids / seed / comments
-preserved. **It has NOT been re-run or re-rendered since the retrofit, so the phase splits are
-UNVERIFIED.**
+**phase-gated and verified 2026-07-13** (full rebuild: `no rescale / no rotation / no wall
+overlap`, no overlap warnings). Two findings from the verification round:
+- **A KNOWN phase-1-only artifact: one counter pair overlaps ~0.70×0.20 m at `--phase 1`.**
+  The room converged deliberately TIGHT (`modulate_scale=0.88`), and the phase-1 shell —
+  auto-sized without the phase-3 wall layer — comes out slightly tighter still; the FULL build
+  is clean. Ungating the back-right plant (floor mass belongs to phase 1 — coarse_to_fine.md)
+  reduced but could not clear it. Read past this specific warning at phase 1; do NOT "fix" it
+  by loosening a converged room.
+- **Lighting `density` dropped 0.06 → 0.02 in the v1** — the rebuild's lint counted 28 flush
+  discs on the 30 m² ceiling (a starfield; area budget ~9). The source shipped 0.06 unnoticed:
+  the VLM loop cannot see a ceiling grid (this lesson's own converged-is-not-sufficient law).
 
 ## (earlier) fine-jewelry boutique, "visible-jewelry display tables + calm vitrine backdrop"
 

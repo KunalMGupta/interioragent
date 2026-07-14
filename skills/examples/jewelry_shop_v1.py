@@ -143,7 +143,10 @@ with scene.RoomGroup(modulate_scale=0.88, randomness=0.1) as room:   # settled: 
         # wall decor: the ornate focal mirror over the cash-wrap; the neon brand sign on the left wall.
         room.place_on_wall_back_center(scene.AddAsset("an ornate gold-framed wall mirror"))
         room.place_on_wall_left_center(scene.AddAsset("a neon store brand sign with glowing tube lettering"))
-        room.add_lighting("a flat round LED flush mount ceiling light", density=0.06)   # medium room
+        # 0.02, NOT the source's 0.06: the 2026-07-13 full rebuild's lint counted 28 discs on a
+        # 30 m^2 ceiling (a STARFIELD; area budget ~9). The original shipped it unnoticed — the
+        # VLM loop can't see a ceiling grid (converged-is-not-sufficient, this lesson's own law).
+        room.add_lighting("a flat round LED flush mount ceiling light", density=0.02)
         room.place_window_standard("front_wall", position="center")   # storefront pane (full-height = black void)
 
 scene.export("jewelry_shop_v1.blend")

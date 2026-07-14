@@ -98,8 +98,15 @@ with scene.RelativeGroup() as prep_station:
 bain = scene.AddAsset("a stainless steel bain-marie service wagon", asset_id=BAIN)
 
 # ---- cold + storage + wash modules (all floor mass -> all phase 1) ----
-freezer = scene.AddAsset("a tall stainless steel commercial freezer", asset_id=FREEZER)
-fridge  = scene.AddAsset("a stainless steel side-by-side fridge freezer", asset_id=FRIDGE)
+# The COLD PAIR is one rigid run so it sits in ONE wall slot — and that slot is the wall's
+# LEFT (back) end, never the CENTRE: the interior camera sits at ~1.4 m at each wall's centre
+# and a tall fridge there blinds the whole view solid black (bakery rule; caught in this
+# scene's first phase-1 render — the right-wall view WAS black).
+with scene.GridGroup(sparsity=0.05, randomness=0.02) as cold_pair:
+    cold_pair.place_row([
+        scene.AddAsset("a tall stainless steel commercial freezer", asset_id=FREEZER),
+        scene.AddAsset("a stainless steel side-by-side fridge freezer", asset_id=FRIDGE),
+    ])
 rack_l  = scene.AddAsset("a chrome wire shelving storage rack", asset_id=RACK)
 rack_r  = scene.AddAsset("a chrome wire shelving storage rack", asset_id=RACK)
 sink_ct = scene.AddAsset("a commercial stainless steel counter with an integrated sink", asset_id=SINKCT)
@@ -120,9 +127,9 @@ with scene.RoomGroup(modulate_scale=1.0, randomness=0.08) as room:
     room.place_on_left_wall_left(rack_l, facing="right")
     room.place_on_left_wall_center(sink_ct, facing="right")
 
-    # RIGHT: the cold pair + the second rack
-    room.place_on_right_wall_left(freezer, facing="left")
-    room.place_on_right_wall_center(fridge, facing="left")
+    # RIGHT: the cold run at the back end, the rack at the front end — the CENTRE stays clear
+    # for the camera (see the cold_pair note above)
+    room.place_on_right_wall_left(cold_pair, facing="left")
     room.place_on_right_wall_right(rack_r, facing="left")
 
     # FRONT: the pass, and the door beside it
