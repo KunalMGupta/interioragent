@@ -1000,6 +1000,10 @@ class GridGroup(SceneProgObject):
 
 
 class RoomGroup(SceneProgObject):
+    # Headroom kept between the tallest asset's top and the ceiling when the ceiling must be
+    # raised past max_height to avoid clipping the asset (see init_dims).
+    CEILING_MARGIN = 0.15
+
     # Placement methods that take a `facing` argument and feed room-size computation.
     GRID_PLACEMENTS = frozenset({
         'place_on_center', 'place_on_back', 'place_on_front', 'place_on_left', 'place_on_right',
@@ -1283,8 +1287,21 @@ class RoomGroup(SceneProgObject):
         rd = np.asarray(row_depths, dtype=float) * self.modulate_scale
         self.WIDTH = float(np.sum(cw))
         self.DEPTH = float(np.sum(rd))
-        # grow with the tallest floor object (+ headroom), clamped to [3.0, max_height]
-        self.HEIGHT = float(np.clip(heights + 2.0, 3.0, self.max_height))
+        # grow with the tallest floor object (+ headroom), clamped to [3.0, max_height] — BUT the
+        # ceiling NEVER sits below the tallest asset (Kunal, 2026-07-14: no asset may ever pierce
+        # the roof). max_height is a soft author cap: an asset taller than it raises the ceiling
+        # anyway, with a loud print, because a clipped mesh is always worse than a tall room. The
+        # heights collected here are final AABBs (child groups froze their on-top stacks at their
+        # own with-exit), and this runs BEFORE the walls op, so the walls are built to match.
+        tallest = float(heights)
+        H = float(np.clip(tallest + 2.0, 3.0, self.max_height))
+        need = tallest + self.CEILING_MARGIN
+        if need > H:
+            print(f"[RoomGroup] tallest asset is {tallest:.2f} m — raising the ceiling to "
+                  f"{need:.2f} m (max_height={self.max_height:.2f} would clip it; if this is "
+                  f"a mis-scaled retrieval, fix the asset, not the room).")
+            H = need
+        self.HEIGHT = H
         # Cumulative center of each of the 5 columns / 5 rows. Placements land at
         # the center of their *sized* slot via these tables instead of fixed
         # W/4,W/2,3W/4 (and D/...) fractions — fractions assume evenly-sized rows,
@@ -2457,17 +2474,17 @@ class RoomGroup(SceneProgObject):
             self._enforce_door_clearances()
 
     def _warn_over_height(self, tol=0.02):
-        """Warn at compile time about any placed object whose top pokes through the ceiling.
+        """GUARANTEE: nothing pokes through the ceiling (warn + auto-shrink the stragglers).
 
-        The room auto-sizes its WIDTH/DEPTH from the furniture footprint, but its HEIGHT is
-        only grown to the tallest *floor* object (clamped to [3.0, max_height]). Wall-mounted
-        art/fixtures are positioned relative to their support (e.g. a clock stacked above a
-        locker bank) and their scale tracks the wall width, so in a wide room a big wall item
-        can end up above HEIGHT and clip through the ceiling — which no constraint catches.
-        There is no auto-fix (raising the ceiling changes the whole room), so we surface it:
-        print a warning and record it in scene.vlm_feedback so the workbench report shows it.
-        Fix by shrinking the offending asset (modulate_scale/width) or raising the ceiling with
-        RoomGroup(max_height=...)."""
+        The first line of defence is init_dims: HEIGHT grows to the tallest asset known before
+        the walls are built, raising past max_height (with a print) rather than clipping. What
+        can still exceed HEIGHT afterwards is geometry that grew LATE — typically a wall-hung
+        piece whose scale tracks the wall width (a clock stacked above a locker bank), placed
+        only after the walls exist. The ceiling can't be raised any more at that point, so each
+        offender is uniformly shrunk to fit with its AABB bottom held (a wall clock keeps its
+        mount height, just smaller), and the event is printed + recorded in scene.vlm_feedback
+        so the workbench report shows it. If the shrunk piece reads too small in the render, fix
+        the asset's scale or raise RoomGroup(max_height=...)."""
         offenders = []
         for obj in list(getattr(self.scene, "objects", [])):
             try:
@@ -2475,17 +2492,37 @@ class RoomGroup(SceneProgObject):
             except Exception:
                 continue
             if top > self.HEIGHT + tol:
-                offenders.append((getattr(obj, "name", "?"),
+                offenders.append((obj, getattr(obj, "name", "?"),
                                   getattr(obj, "retrieval_query", "") or "", top))
         if not offenders:
             return
-        need = max(t for _, _, t in offenders)
-        lines = [f"[RoomGroup] WARNING: {len(offenders)} object(s) exceed the room height "
-                 f"(HEIGHT={self.HEIGHT:.2f} m). They will clip through the ceiling."]
-        for name, q, top in sorted(offenders, key=lambda o: -o[2]):
-            lines.append(f"    - {name} '{q[:40]}' top={top:.2f} m (over by {top - self.HEIGHT:+.2f} m)")
-        lines.append(f"    Fix: shrink the asset (modulate_scale/width) or raise the ceiling with "
-                     f"RoomGroup(max_height={need + 0.2:.1f}).")
+        # AUTO-FIX (Kunal, 2026-07-14: no asset may ever pierce the roof). init_dims already
+        # raised the ceiling for everything known before the walls were built; whatever still
+        # pokes through here grew AFTER that (typically a wall-hung piece whose scale tracks the
+        # wall width, or an on-top stack re-seated late). The ceiling cannot be raised any more —
+        # the walls exist — so the offender is uniformly SHRUNK to fit, keeping its AABB bottom
+        # where it was (a wall clock stays at its mount height, just smaller).
+        lines = [f"[RoomGroup] {len(offenders)} object(s) exceeded the room height "
+                 f"(HEIGHT={self.HEIGHT:.2f} m) after the walls were built — auto-shrunk to fit:"]
+        for obj, name, q, top in sorted(offenders, key=lambda o: -o[3]):
+            fixed = ""
+            try:
+                aabb = obj.get_aabb()
+                bottom, otop = float(aabb[0, 1]), float(aabb[1, 1])
+                avail = self.HEIGHT - 0.05 - bottom
+                if avail > 1e-6 and otop > bottom:
+                    f = min(1.0, avail / (otop - bottom))
+                    obj.scale(float(obj.get_width()) * f)
+                    new_bottom = float(obj.get_aabb()[0, 1])
+                    loc = obj.get_location()
+                    obj.set_location(loc[0], loc[1] + (bottom - new_bottom), loc[2])
+                    fixed = f" -> shrunk x{f:.2f}, bottom kept at {bottom:.2f} m"
+            except Exception:
+                fixed = " (auto-shrink failed — left as-is)"
+            lines.append(f"    - {name} '{q[:40]}' top={top:.2f} m "
+                         f"(over by {top - self.HEIGHT:+.2f} m){fixed}")
+        lines.append("    If a shrunk piece reads too small, fix the ASSET's scale or raise "
+                     "RoomGroup(max_height=...).")
         msg = "\n".join(lines)
         print(msg)
         self.scene.vlm_feedback += ("\n" if self.scene.vlm_feedback else "") + msg

@@ -1505,6 +1505,48 @@ def test_53():
     scene.export("results/test53_kitchen_island_pocket.blend")
 
 
+def test_54():
+    """Room HEIGHT auto-fix (Kunal 2026-07-14): no asset may ever pierce the roof.
+    (a) A normal room stays at exactly 3.0 m (behaviour unchanged).
+    (b) A floor asset taller than max_height RAISES the ceiling to asset + CEILING_MARGIN
+        instead of clipping through it, and every object's top stays under HEIGHT."""
+    header(54, "RoomGroup auto ceiling: never below the tallest asset")
+    # (a) normal room: unchanged 3.0
+    scene_a = SceneProgRoom("test54a", seed=SEED)
+    sofa = scene_a.AddAsset("a modern 3-seat sofa")
+    with scene_a.RoomGroup() as room_a:
+        room_a.place_on_back_wall_center(sofa, facing="front")
+        room_a.place_walls(floor_texture="light oak wood floor",
+                           ceiling_texture="smooth white ceiling",
+                           wall_texture="warm off-white painted wall")
+        room_a.place_door("right_wall", position="right")
+    print(f"  normal room HEIGHT={room_a.HEIGHT:.2f}")
+    assert abs(room_a.HEIGHT - 3.0) < 1e-6, f"normal room must stay 3.0: {room_a.HEIGHT:.2f}"
+
+    # (b) over-tall floor asset: ceiling rises, nothing clips
+    scene_b = SceneProgRoom("test54b", seed=SEED)
+    shelf = scene_b.AddAsset("a tall industrial storage shelf")
+    shelf.scale_only_height(3.6)                     # deliberately over the 3.0 cap
+    tall_top = float(shelf.get_height())
+    with scene_b.RoomGroup() as room_b:
+        room_b.place_on_back_wall_center(shelf, facing="front")
+        room_b.place_walls(floor_texture="grey concrete floor",
+                           ceiling_texture="smooth white ceiling",
+                           wall_texture="plain grey painted wall")
+        room_b.place_door("right_wall", position="right")
+    print(f"  tall-asset room HEIGHT={room_b.HEIGHT:.2f} (asset {tall_top:.2f})")
+    assert room_b.HEIGHT >= tall_top + room_b.CEILING_MARGIN - 1e-3, \
+        f"ceiling must rise past the {tall_top:.2f} m asset: HEIGHT={room_b.HEIGHT:.2f}"
+    for obj in scene_b.objects:
+        try:
+            top = float(obj.get_aabb()[1, 1])
+        except Exception:
+            continue
+        assert top <= room_b.HEIGHT + 0.05, \
+            f"{obj.name} pierces the roof: top={top:.2f} vs HEIGHT={room_b.HEIGHT:.2f}"
+    scene_b.export("results/test54_tall_ceiling.blend")
+
+
 # ---------------------------------------------------------------------------
 # Registry + runner
 # ---------------------------------------------------------------------------
@@ -1568,6 +1610,7 @@ TESTS = {
     51: test_51,   # WorkstationGroup (desk + chair + computer + accessories)
     52: test_52,   # KitchenIslandGroup tip mode (U set peninsula + entry gap + stools)
     53: test_53,   # KitchenIslandGroup pocket mode (L set concave-middle island)
+    54: test_54,   # RoomGroup auto ceiling (never below the tallest asset)
 }
 
 

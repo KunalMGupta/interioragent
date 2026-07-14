@@ -13,12 +13,20 @@ REMAINING: kitchen_l_v1 build 5 running (set 2.1 m, shell 0.95 — builds 3/4 hi
 tall-inner-column camera bound, now sized per run <= W/2 - 0.3); on pass: promote program,
 append the L worked section to kitchen.md, commit + push.
 
-## 2. Scene batches for the six user-facing categories + feedback loop
-living room, dining room, bedroom, kitchen, bathroom, study room — Kunal expects users to
-test these heavily. 3–4 DIVERSE scenes per category (vary layout pattern / palette / brief,
-not just seeds). Can run builds in parallel. Then a REVIEW MECHANISM: something Kunal can go
-through scene by scene and leave feedback on (e.g. a review manifest MD/HTML gallery with
-per-scene slots for verdict + notes), which we then act on and fold into lessons.
+## 2. Scene batches for the six user-facing categories + feedback loop (IN PROGRESS)
+Mechanism BUILT: `tools/review_board.py` renders `reviews/<batch>/REVIEW.md` (one section per
+scene: brief/verdict/strip + an empty **Feedback** block Kunal writes into; regeneration
+preserves written feedback; `--pending` lists unreviewed). Batch dir: `reviews/2026-07-14/`.
+
+ROSTER (12 new programs in `scenes/batch_0714/`, + existing flagships re-rendered into the
+board): living: existing living_room + living_room_cozy + NEW lr_japandi, lr_midcentury |
+dining: existing dining_room + NEW dr_breakfast_nook, dr_farmhouse | bedroom: existing bedroom
++ NEW br_teen_study, br_guest_cozy | kitchen: existing kitchen_set_v3 (U), kitchen_l_v1 (L),
+kitchen_v1 (modular) + NEW kt_galley_straight (KitchenIslandGroup "front" mode, straight set
+future/4253258a incl fridge) | bathroom: existing bath_spa + NEW ba_powder_compact,
+ba_hotel_double | study: NEW st_home_office, st_library_study, st_writer_studio.
+Authoring: parallel subagents (lint-clean, pinned assets, phase-gated); builds sequential
+(phase-1 gate -> full); then meta.json + strip per scene into the batch dir; REVIEW.md last.
 
 ## 3. Room height must auto-fix at compile
 There should NEVER be an asset poking through the roof. `RoomGroup` should adjust room
