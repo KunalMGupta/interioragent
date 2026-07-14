@@ -209,6 +209,11 @@ def ingest_paths(glbs, category=None, manifest=None, manifest_path=None, workers
         if f"custom/{sha}" in have:
             print(f"  · {fname}: already ingested, skipping")
         else:
+            # Claim the sha NOW, not just at registration: two inputs with identical bytes (the
+            # same glb under two paths in a zip, or a duplicated file in a --from-dir) would
+            # otherwise both pass this check and both register, putting the id and its embedding
+            # into the npz TWICE — after which retrieval returns the same asset as two hits.
+            have.add(f"custom/{sha}")
             todo.append((glb, fname, sha))
     print(f"[ingest] {len(glbs)} glb(s); processing {len(todo)} new with {workers} workers")
 

@@ -65,10 +65,17 @@ def _fetch_all(batch, source, cands):
             m["src"] = src
             m["status"] = "fetched"
         except Unfetchable as e:
+            # Route by what the failure MEANS, not by "it failed". `skip` tells the user this file
+            # is mechanically unusable and not worth their minute; being out of Meshy credits or
+            # getting a 503 says nothing at all about the asset, and burying those under "skip"
+            # would quietly discard a whole batch as if the models were bad.
             if e.reason in ("needs_token", "http_401", "http_403"):
-                m.update(status="ask", reason="needs_download", needs_download=True)
-            else:
-                m.update(status="skip", reason=e.reason)
+                m.update(status="ask", reason="needs_download",
+                         needs_download=bool(c.url))       # a link only helps if there IS one
+            elif e.reason in ("no_gltf", "missing_file"):
+                m.update(status="skip", reason=e.reason)   # genuinely nothing we can use
+            else:                                          # transient / account / generation —
+                m.update(status="failed", reason=f"{e.reason}: {e.detail}"[:120])   # retryable
         except Exception as e:                              # noqa: BLE001 — the open internet
             m.update(status="failed", reason=f"fetch_error: {e}")
         metas.append(_write(batch, m))
@@ -196,9 +203,12 @@ def _ingest(batch, metas, category=None, workers=3):
     We measured the object's real width in Blender, so we override the caption VLM's `scale`
     guess with it — the only number in the library that is a measurement rather than an opinion.
     Provenance rides along so a licence can be traced back from any scene."""
-    from IDSDL.ingest import _sha1, ingest_paths
+    from IDSDL import ingest as I
 
-    todo = [m for m in metas if m["status"] == "normalized"]
+    # A dry run stops here on purpose. Without this guard, a later `apply` (to settle one asset
+    # you were asked about) would re-read the batch and quietly ingest the ENTIRE dry run —
+    # exactly the thing you used --dry-run to avoid.
+    todo = [m for m in metas if m["status"] == "normalized" and not m.get("dry_run")]
     if not todo:
         return metas
     paths, manifest = [], {}
@@ -209,11 +219,23 @@ def _ingest(batch, metas, category=None, workers=3):
             "scale": float(m["final"]["dims"]["w_x"]),
             "provenance": m["provenance"],
         }
-    ingest_paths(paths, category=category, manifest=manifest, workers=workers)
+    I.ingest_paths(paths, category=category, manifest=manifest, workers=workers)
+
+    # CHECK, do not assume. ingest_paths swallows per-asset failures (a preview render or a
+    # caption call can fail, which is a normal outcome for internet models) and reports them only
+    # in its return value. Claiming "ingested" for an asset that never registered would put an
+    # asset_id on the board that resolves to nothing, and — because "ingested" short-circuits
+    # apply() — it would never be retried. So we ask the library what it actually has.
+    registered = I._load_meta()
     for m in todo:
-        m["asset_id"] = "custom/" + _sha1(m["final"]["glb"])
-        m["status"] = "ingested"
-        m["reason"] = ""
+        mid = "custom/" + I._sha1(m["final"]["glb"])
+        if mid in registered:
+            m["asset_id"] = mid
+            m["status"] = "ingested"
+            m["reason"] = ""
+        else:
+            m["status"] = "failed"
+            m["reason"] = "ingest_failed (preview render or caption failed — see the log above)"
         _write(batch, m)
     return metas
 
@@ -238,7 +260,13 @@ def run(query, batch, source="sketchfab", count=10, mode="auto", category=None,
     metas = _normalize_and_verify(batch, metas, res=res)
     if dry_run:
         # Everything up to and including the verified .glb, but nothing written to the library.
-        # Use it to look at what a query WOULD bring in before it is in there for good.
+        # Use it to look at what a query WOULD bring in before it is in there for good. The flag
+        # is PERSISTED, not just honoured here: `apply` re-reads the whole batch off disk, and
+        # without a mark on each asset it would cheerfully ingest the entire dry run the first
+        # time you came back to settle one question.
+        for m in metas:
+            m["dry_run"] = True
+            _write(batch, m)
         print("[shop] dry run — normalized but NOT ingested")
     else:
         metas = _ingest(batch, metas, category=category)
@@ -251,8 +279,34 @@ def run(query, batch, source="sketchfab", count=10, mode="auto", category=None,
     return metas
 
 
+def _batch_query(batch: Path):
+    f = batch / "batch.json"
+    return json.loads(f.read_text()).get("query", "") if f.exists() else ""
+
+
+def _resume(batch, metas, res=420):
+    """Carry any half-finished asset the rest of the way.
+
+    `fetched` / `previewed` / `go` are MID-STAGE states: an asset only sits in one because the run
+    died there (Ctrl-C, OOM, a VLM call that raised). They are invisible to the board and to the
+    answers loop, so without this they would sit on disk forever — downloaded, paid for, and
+    never ingested — and the only recovery would be re-running the whole batch from scratch.
+    `apply` is where a batch gets picked back up, so it resumes them first."""
+    q = _batch_query(Path(batch))
+    stages = [("fetched", lambda ms: _preview(batch, ms, res=res)),
+              ("previewed", lambda ms: _triage(batch, ms, q)),
+              ("go", lambda ms: _normalize_and_verify(batch, ms, res=res))]
+    for status, run_stage in stages:
+        stranded = [m for m in metas if m["status"] == status]
+        if stranded:
+            print(f"[shop] resuming {len(stranded)} asset(s) stranded at '{status}'")
+            run_stage(stranded)
+    return metas
+
+
 def apply(batch, category=None, res=420):
-    """Act on the user's answers in HELP.md, and pick up anything they hand-downloaded.
+    """Act on the user's answers in HELP.md, pick up anything they hand-downloaded, and resume
+    anything a previous run left half-finished.
 
     Files dropped in `<batch>/inbox/` are ingested too. Name one after an asset's key (the
     board says so) and it inherits that candidate's licence and attribution; otherwise it comes
@@ -280,9 +334,11 @@ def apply(batch, category=None, res=420):
         if fresh:
             print(f"[shop] inbox: {len(fresh)} hand-downloaded file(s)")
             _preview(str(batch), fresh, res=res)
-            _triage(str(batch), fresh, (json.loads((batch / "batch.json").read_text())
-                                        .get("query", "") if (batch / "batch.json").exists() else ""))
+            _triage(str(batch), fresh, _batch_query(batch))
             _normalize_and_verify(str(batch), fresh, res=res)
+
+    _resume(str(batch), [m for m in metas if m["status"] in ("fetched", "previewed", "go")],
+            res=res)
 
     answers = board.read_answers(batch)
     accepted = []
@@ -302,7 +358,9 @@ def apply(batch, category=None, res=420):
         elif not m.get("src"):
             print(f"  ! {key}: accepted but no file yet — download it into {inbox}/")
         else:
-            m.update(status="go", plan=plan, reason="user answered")
+            # Answering an asset is an explicit "yes, this one" — it lifts the dry-run hold on
+            # that asset and no others.
+            m.update(status="go", plan=plan, reason="user answered", dry_run=False)
             accepted.append(_write(str(batch), m))
 
     if accepted:
@@ -376,6 +434,17 @@ def _report(metas, batch, mode):
                 obj = (m.get("judgment") or {}).get("object", "")
                 print(f"      {m['key'][:34]:34s} {obj[:26]:26s} {extra}")
 
+    # Attribution FIRST — it must print on every path that ingested something. (It used to sit
+    # at the bottom, under three early returns, where it never printed at all.) Several Sketchfab
+    # licences require credit; an asset we ingest without naming its author is one we cannot ship.
+    lic = [m for m in by["ingested"] if (m.get("provenance") or {}).get("license")]
+    if lic:
+        print("\n  attribution (ingested):")
+        for m in lic:
+            p = m["provenance"]
+            print(f"      {p.get('name', '?')} — {p.get('license')} — {p.get('author', '?')} — "
+                  f"{p.get('url', '')}")
+
     # The two modes really do end differently, and this is where. AUTO promises not to bother
     # anyone: the hard ones are left un-ingested (recoverable — they are all still on the board)
     # and the run is a success. MANUAL promises to ask: it ends by naming what it needs and
@@ -393,13 +462,6 @@ def _report(metas, batch, mode):
     print(f"\n  skipped {len(need)} asset(s) the pipeline would not guess at — nothing is lost, "
           f"they are on {batch}/HELP.md\n  (settle them any time: python -m IDSDL.shop apply {batch})")
     return 0
-    lic = [m for m in by["ingested"] if (m.get("provenance") or {}).get("license")]
-    if lic:
-        print("\n  attribution (ingested):")
-        for m in lic:
-            p = m["provenance"]
-            print(f"      {p.get('name', '?')} — {p.get('license')} — {p.get('author', '?')} — "
-                  f"{p.get('url', '')}")
 
 
 def main(argv=None):

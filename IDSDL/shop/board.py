@@ -155,8 +155,15 @@ def generate(batch: Path):
             d = m["dims"]
             lines.append(f"- **Raw import dims (unscaled):** {d['w_x']} x {d['d_y']} x {d['h_z']}")
         if m.get("needs_download"):
-            lines.append("- **Needs manual download:** open the link, download the glTF/GLB, and "
-                         f"drop the file into `{batch}/inbox/`")
+            # Only offer the download route when there is actually a page to send them to: a
+            # Meshy candidate that failed on a missing key has no URL, and "open the link" would
+            # be pointing at nothing.
+            lines.append(f"- **Needs manual download:** open the link above, take the glTF/GLB, "
+                         f"and drop it into `{batch}/inbox/` — name it `{m['key']}.glb` to keep "
+                         f"its licence and attribution attached."
+                         if m["candidate"].get("url") else
+                         "- **Needs a key:** this source could not be reached — set its API key in "
+                         "`.env` (see skills/acquire-assets/SKILL.md) and re-run.")
         lines += [""]
         if (batch / m["key"] / "strip.png").exists():
             lines += [f"![strip]({m['key']}/strip.png)", ""]
