@@ -171,7 +171,19 @@ def _process_one(glb, fname, sha, vlm, encoder, manifest):
         "scale": float(cap.get("scale") or 1.0),   # VLM-given width (m); asset supplied correctly scaled
     }
     entry.update(manifest.get(fname, {}))   # manifest overrides win
-    vec = np.array(encoder.embed_query(entry["description"]), dtype=np.float64)
+
+    # An asset is only ever as findable as the words it is indexed under, and the caption VLM
+    # names what it SEES, which is not always what the thing IS. A perfect Gothic confessional
+    # booth came back captioned without the word "confessional" anywhere in it — so it embedded at
+    # 0.41 against "a church confessional booth" and was, correctly by the numbers and absurdly in
+    # fact, judged not to be one. `aliases` carries the words we already knew and were discarding:
+    # what the triage VLM called it, and the query that went looking for it. They are indexed, not
+    # displayed, so the description stays clean.
+    text = entry["description"]
+    aliases = [a for a in (entry.get("aliases") or []) if a]
+    if aliases:
+        text = f"{text} (also: {'; '.join(aliases)})"
+    vec = np.array(encoder.embed_query(text), dtype=np.float64)
     return ("ok", mid, fname, entry, vec)
 
 

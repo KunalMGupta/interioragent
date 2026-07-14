@@ -12,6 +12,77 @@ description: >
 
 # Skill: acquire assets the library doesn't have
 
+## The dial: `acquire="low" | "mid" | "high"`
+
+The shop above is the side door — you have to already KNOW an asset is missing. The dial is the
+front door: the retriever itself escalates when the dataset cannot serve a query.
+
+```python
+scene = SceneProgRoom("Chapel", seed=3, acquire="mid")     # or IDSDL_ACQUIRE=mid
+```
+
+| level | what it may do | when |
+|---|---|---|
+| `low` (default) | nothing — take the dataset's best hit, however wrong | always the right default |
+| `mid` | SEARCH Sketchfab to fill a measured gap | free, slow (minutes per gap) |
+| `high` | ...and GENERATE with Meshy if the web has nothing | spends credits |
+
+**The dataset always gets first refusal**, at every level. The dial only ever engages on a
+*measured* gap — top-1 similarity below `0.55` — and that number is not a guess. Measured on the
+real index:
+
+```
+0.81  "a modern grey three seat sofa"  -> a modern grey three-seat sofa   SERVED
+0.64  "a pinball machine"              -> a pinball machine               SERVED
+0.50  "a vintage red gas pump"         -> a beige pedal car               GAP
+0.46  "a wooden church lectern"        -> a wooden weaving loom           GAP
+0.45  "a chemistry fume hood"          -> a kitchen chimney hood          GAP
+0.43  "a hospital defibrillator"       -> a wheelchair                    GAP
+```
+
+Below ~0.55 the top hit stops being the thing you asked for and starts being something that merely
+embeds near it — and **nothing downstream ever says so**. The scene just quietly contains a
+wheelchair. That silence is the whole reason the dial exists.
+
+Acquisition is a fallback, never a strategy: an asset already in the library is faster, free,
+reproducible and known-good. Guards, all of them load-bearing:
+
+- **An acquisition must CLOSE THE GAP IT WAS MADE FOR, or it is rolled back.** Getting *an* asset
+  is not getting the RIGHT one. Asked to generate a fume hood, Meshy returned a white box the
+  captioner filed as a *"recessed fireplace insert"* — left alone, the scene silently gets a
+  fireplace AND the library permanently gains an asset indexed under the wrong words. So we
+  re-measure the same gap afterwards; if it is still open, the asset comes back out
+  (`IDSDL.shop remove`) and we fall back to the dataset. The .glb stays in the batch dir with its
+  HELP.md entry, so a human can still rescue it.
+- **Budget** (`IDSDL_ACQUIRE_BUDGET`, default 6 per process) — a runaway loop here costs real
+  money and hours of Blender.
+- **One attempt per query.** A gap that could not be filled is not re-attempted.
+- **Never fatal.** A failed acquisition falls through to the dataset's best hit — i.e. exactly the
+  old behaviour. The scene still builds.
+
+Three things had to be fixed before any of this worked, and they are all worth knowing:
+
+1. **Scene-speak is not search-speak.** Our queries are written for an embedding index and read
+   like prose; Sketchfab's search is literal keywords. `"a chemistry fume hood"` returns **0**
+   hits; `"fume hood"` returns 3. So the acquirer rewrites the query into 3 search terms,
+   narrow→broad, and tries each. (Meshy gets the ORIGINAL prose — generation wants description,
+   search wants keywords. Easy to get backwards.)
+2. **The size prior was circular.** It prices an asset against its nearest library neighbours —
+   but an asset worth acquiring is *by definition* one the library has no neighbours for. It
+   blocked precisely the acquisitions that mattered. Relaxed for gap-fills, and only for size: a
+   wrong size is visible in the render and any program can override it (`width=`); a wrong front
+   is silent. Both front judges stay strict.
+3. **An asset is only as findable as the words it is indexed under.** A perfect Gothic
+   confessional booth came back captioned without the word "confessional" anywhere in it — so it
+   embedded at 0.41 against "a church confessional booth" and was, correctly by the numbers and
+   absurdly in fact, judged not to be one. Ingest now also indexes `aliases`: what the triage VLM
+   called the object, and the query that went looking for it. Both were known and being thrown
+   away.
+
+`acquire.report()` lists what a build acquired. Silence there means the dataset carried the whole
+scene, which is the outcome we actually want.
+
+
 The library used to be a closed set: 29k dataset assets, plus whatever `.glb`s a human had
 already downloaded, hand-oriented and hand-scaled. `IDSDL/shop` makes it open — a query goes in,
 a normalized, verified, retrievable asset comes out — and the human is only consulted about the

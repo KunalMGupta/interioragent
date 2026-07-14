@@ -66,7 +66,8 @@ A few external pieces are required:
   export OPENAI_API_KEY="sk-..."
   ```
 - **Optional — asset shop keys.** Only needed to bring in assets the library does not have
-  (`python -m IDSDL.shop`, see [skills/acquire-assets](skills/acquire-assets/SKILL.md)). Put them
+  (`python -m IDSDL.shop`, or `SceneProgRoom(..., acquire="mid"|"high")` to let the retriever fill
+  a measured gap itself — see [skills/acquire-assets](skills/acquire-assets/SKILL.md)). Put them
   in `<repo>/.env` (git-ignored) or the environment. Sketchfab *search* needs no key; only
   downloading does.
   ```bash

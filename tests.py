@@ -1630,6 +1630,67 @@ def test_55():
         assert set(got) == {"answered"}, got
 
 
+def test_56():
+    """Acquisition dial (Kunal 2026-07-14): the DATASET gets first refusal, always.
+
+    `low` (default) never acquires. `mid`/`high` acquire ONLY on a measured gap. This test pins
+    the gate itself, because everything expensive and irreversible sits behind it: if it ever
+    fires on a query the dataset can already serve, every build starts silently spending money and
+    minutes on assets we already own. No network, no VLM, no Blender."""
+    header(56, "acquisition dial: only ever spend on a measured gap")
+    from IDSDL.shop import acquire as A
+
+    # (a) the dial parses, and anything unrecognised means DO NOTHING
+    assert A.level(None) == "low" and A.level("mid") == "mid" and A.level("high") == "high"
+    assert A.level("banana") == "low", "an unknown level must fail SAFE (never acquire)"
+    assert not A.enabled("low") and A.enabled("mid") and A.enabled("high")
+
+    calls = []
+
+    class FakeRetriever:
+        """Answers every query at `sim`, and records any acquisition attempt."""
+        def __init__(self, sim):
+            self.sim = sim
+            self.metadata = {"m0": {"description": "whatever"}}
+
+        def _sim(self, _q):
+            return self.sim
+
+    orig_best, orig_acq = A._best_sim, A._acquire
+    A._best_sim = lambda r, q: (r._sim(q), "m0")
+    A._acquire = lambda r, q, mode: calls.append((q, mode)) or "custom/fake"
+    try:
+        # (b) a query the dataset SERVES must never acquire — not even at "high". This is the
+        #     line between "a fallback" and "a spending habit".
+        A._state["tried"].clear(); A._state["spent"] = 0
+        got = A.maybe_acquire(FakeRetriever(0.81), "a grey sofa", mode="high")
+        print(f"  served (0.81) at high -> {got}, attempts={len(calls)}")
+        assert got is None and not calls
+
+        # (c) low must never acquire, even on a hopeless gap
+        got = A.maybe_acquire(FakeRetriever(0.20), "a fume hood", mode="low")
+        assert got is None and not calls, "low must NEVER acquire"
+
+        # (d) a real gap at mid DOES acquire
+        got = A.maybe_acquire(FakeRetriever(0.20), "a fume hood", mode="mid")
+        print(f"  gap (0.20) at mid -> {got}, attempts={len(calls)}")
+        assert got == "custom/fake" and calls == [("a fume hood", "mid")]
+
+        # (e) the same gap is not paid for twice
+        got = A.maybe_acquire(FakeRetriever(0.20), "a fume hood", mode="mid")
+        assert got == "custom/fake" and len(calls) == 1, "a query must be attempted only once"
+
+        # (f) the budget is a hard stop — a runaway loop here costs real money and hours
+        A._state["tried"].clear()
+        A._state["spent"] = A.BUDGET
+        got = A.maybe_acquire(FakeRetriever(0.20), "another gap", mode="high")
+        print(f"  gap at high with budget spent -> {got} (must be None)")
+        assert got is None and len(calls) == 1
+    finally:
+        A._best_sim, A._acquire = orig_best, orig_acq
+        A._state["tried"].clear(); A._state["spent"] = 0; A._state["log"].clear()
+
+
 # ---------------------------------------------------------------------------
 # Registry + runner
 # ---------------------------------------------------------------------------
@@ -1695,6 +1756,7 @@ TESTS = {
     53: test_53,   # KitchenIslandGroup pocket mode (L set concave-middle island)
     54: test_54,   # RoomGroup auto ceiling (never below the tallest asset)
     55: test_55,   # asset-shop triage gates (panel->rotation, skip vs ask, size prior)
+    56: test_56,   # acquisition dial (low/mid/high; only ever spend on a measured gap)
 }
 
 

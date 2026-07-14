@@ -172,6 +172,22 @@ Respond with the chosen number and a brief reason.
         self.last_sheet = None
         self.last_reasoning = None
 
+    def reload_library(self):
+        """Re-read the index so assets ingested DURING this process become retrievable.
+
+        The embeddings and metadata are loaded once at construction and memoised in module-level
+        caches, so a freshly ingested asset is invisible to a long-lived retriever — which is
+        exactly the situation the acquisition ladder creates (IDSDL/shop/acquire.py): it fills a
+        gap mid-scene and then needs to hand the new asset back to the very query that triggered
+        it."""
+        _NPZ_CACHE.clear()
+        _JSON_CACHE.clear()
+        self.all_embeddings, self.all_models = _load_embeddings(
+            os.path.join(os.path.dirname(__file__), "assets/futurehssd.npz"))
+        self.metadata = _load_json_cached(
+            os.path.join(os.path.dirname(__file__), "assets/futurehssd.json"))
+        return len(self.all_models)
+
     def remove_bad_assets(self, top_models, top_similarities):
         # Filter out bad assets
         filtered_models = []
@@ -1445,8 +1461,13 @@ FUTURE_HSSD_ASSET_RETRIEVERS = [
 ]
 
 class SceneProgAssetRetriever:
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, acquire=None):
         self.seed = seed
+        # How hard to try when the DATASET cannot serve a query: low (default — make do with what
+        # we have) / mid (search Sketchfab) / high (search, then generate with Meshy). See
+        # IDSDL/shop/acquire.py. Falls back to the IDSDL_ACQUIRE env var when not passed.
+        from IDSDL.shop.acquire import level
+        self.acquire = level(acquire)
 
         self.retrievers = {}
         for retriever in FUTURE_HSSD_ASSET_RETRIEVERS:
@@ -1521,6 +1542,24 @@ reasoning: ...
         family); for the few special retrievers without it, falls back to a direct call and
         best-effort candidate capture (these are rare and not used concurrently in scenes).
         """
+        # THE DATASET GETS FIRST REFUSAL. Only if it demonstrably cannot serve this query — a
+        # measured similarity gap, not a hunch — and only if the caller raised the acquisition
+        # dial above "low", do we go out and fetch or generate the thing. maybe_acquire returns an
+        # id to PIN, because we acquired that asset for THIS query and some retrievers are pool-
+        # restricted and would never see it otherwise. It never raises: a failed acquisition just
+        # falls through to the dataset's best hit, i.e. the old behaviour.
+        if pin is None and self.acquire != "low":
+            from IDSDL.shop import acquire as A
+            base = self.retrievers["FutureHSSDAssetRetriever"]
+            got = A.maybe_acquire(base, query, self.acquire)
+            if got:
+                # Resolve an acquired asset through the BASE retriever, not the router: the router
+                # might send, say, a wall-mounted asset to a pool-restricted retriever whose pool
+                # this brand-new id is not in, and the pin would be silently dropped.
+                d = base.resolve(query, got)
+                d["retriever"] = "FutureHSSDAssetRetriever (acquired)"
+                return d
+
         name, retriever = self._route(query)
         if hasattr(retriever, "resolve"):
             d = retriever.resolve(query, pin)

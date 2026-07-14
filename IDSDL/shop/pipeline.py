@@ -102,7 +102,7 @@ def _preview(batch, metas, res=420):
     return metas
 
 
-def _triage(batch, metas, query, workers=4):
+def _triage(batch, metas, query, workers=4, relax_size=False):
     todo = [m for m in metas if m["status"] == "previewed"]
     if not todo:
         return metas
@@ -122,7 +122,7 @@ def _triage(batch, metas, query, workers=4):
                 s = triage.second(v2, strip, hero)          # actually a candidate
             except Exception:                               # noqa: BLE001
                 s = {}
-        return m, j, s, triage.decide(j, m.get("dims"), second_op=s)
+        return m, j, s, triage.decide(j, m.get("dims"), second_op=s, relax_size=relax_size)
 
     with ThreadPoolExecutor(max_workers=workers) as ex:
         for m, j, s, (verdict, reason, plan) in ex.map(one, todo):
@@ -206,12 +206,14 @@ def _normalize_and_verify(batch, metas, res=420):
     return metas
 
 
-def _ingest(batch, metas, category=None, workers=3):
+def _ingest(batch, metas, category=None, workers=3, query=""):
     """Hand the normalized files to the existing ingest path, pinning what we know exactly.
 
     We measured the object's real width in Blender, so we override the caption VLM's `scale`
     guess with it — the only number in the library that is a measurement rather than an opinion.
-    Provenance rides along so a licence can be traced back from any scene."""
+    Provenance rides along so a licence can be traced back from any scene. And `aliases` carries
+    the two names we already know and would otherwise throw away — what the triage VLM called the
+    object, and the query we went looking for it with — so the asset is findable by them later."""
     from IDSDL import ingest as I
 
     # A dry run stops here on purpose. Without this guard, a later `apply` (to settle one asset
@@ -224,9 +226,12 @@ def _ingest(batch, metas, category=None, workers=3):
     for m in todo:
         p = m["final"]["glb"]
         paths.append(p)
+        obj = (m.get("judgment") or {}).get("object", "")
+        aliases = [a for a in dict.fromkeys([obj, query]) if a]
         manifest[os.path.basename(p)] = {
             "scale": float(m["final"]["dims"]["w_x"]),
             "provenance": m["provenance"],
+            "aliases": aliases,
         }
     I.ingest_paths(paths, category=category, manifest=manifest, workers=workers)
 
@@ -253,7 +258,8 @@ def _ingest(batch, metas, category=None, workers=3):
 # entry points
 # --------------------------------------------------------------------------------------------
 def run(query, batch, source="sketchfab", count=10, mode="auto", category=None,
-        license="permissive", res=420, workers=3, from_dir=None, dry_run=False, refine=True):
+        license="permissive", res=420, workers=3, from_dir=None, dry_run=False, refine=True,
+        relax_size=False):
     t0 = time.time()
     batch = str(batch)
     os.makedirs(batch, exist_ok=True)
@@ -265,7 +271,7 @@ def run(query, batch, source="sketchfab", count=10, mode="auto", category=None,
 
     metas = _fetch_all(batch, src, cands)
     metas = _preview(batch, metas, res=res)
-    metas = _triage(batch, metas, query)
+    metas = _triage(batch, metas, query, relax_size=relax_size)
     metas = _normalize_and_verify(batch, metas, res=res)
     if dry_run:
         # Everything up to and including the verified .glb, but nothing written to the library.
@@ -278,7 +284,7 @@ def run(query, batch, source="sketchfab", count=10, mode="auto", category=None,
             _write(batch, m)
         print("[shop] dry run — normalized but NOT ingested")
     else:
-        metas = _ingest(batch, metas, category=category)
+        metas = _ingest(batch, metas, category=category, query=query)
 
     (Path(batch) / "batch.json").write_text(json.dumps(
         {"query": query, "source": src.name, "mode": mode, "category": category,
@@ -382,7 +388,7 @@ def apply(batch, category=None, res=420):
                 _write(str(batch), m)
 
     all_metas = [board.load(d) for d in board.asset_dirs(batch)]
-    _ingest(str(batch), all_metas, category=category)
+    _ingest(str(batch), all_metas, category=category, query=_batch_query(batch))
     board.generate(batch)
     _report([board.load(d) for d in board.asset_dirs(batch)], str(batch), "apply")
 

@@ -1550,5 +1550,24 @@
    "source": "meshy",
    "name": "a cork pinboard in a wooden frame with paper notes pinned to it (meshy #1)"
   }
+ },
+ "custom/62d6d409ed05914327ce628b6c758b0e06fa73fe": {
+  "description": "Tall brown wooden pedestal with an eagle finial and burgundy velvet banners.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.0114,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "57027b38666e48098d3c1169ec4fdf21",
+   "url": "https://sketchfab.com/3d-models/57027b38666e48098d3c1169ec4fdf21",
+   "license": "CC Attribution",
+   "author": "iedu360.eu",
+   "name": "Orthodox Eagle Lectern \u2013 Patras"
+  },
+  "aliases": [
+   "Orthodox eagle lectern",
+   "church lectern"
+  ]
  }
 }

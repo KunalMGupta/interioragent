@@ -233,7 +233,7 @@ def predicted_width(plan, dims):
     return float(plan["scale_size"]) * width_axis / h
 
 
-def decide(j, dims=None, second_op=None, use_prior=True):
+def decide(j, dims=None, second_op=None, use_prior=True, relax_size=False):
     """Turn the judgments into a decision. Returns (verdict, reason, plan).
 
     verdict is one of: "go" (normalize it), "skip" (mechanically unusable — never worth a
@@ -310,7 +310,18 @@ def decide(j, dims=None, second_op=None, use_prior=True):
         plan["scale_size"] = round(prior, 3)     # ...at what the library says this thing measures
         plan["size_source"] = "library_prior"
         return "go", "", plan
-    if float(j.get("size_confidence") or 0) < CONF:
-        return "ask", "size_uncertain", plan     # no usable prior AND vision is unsure
-    plan["size_source"] = "vlm"
+    # No usable prior. Normally we ask — but `relax_size` says this asset is being fetched to fill
+    # a MEASURED GAP in the library, and there is a circularity to face: the prior comes from the
+    # library's nearest neighbours, so an asset worth acquiring is by definition one the library
+    # has no neighbours for. Demanding a prior there is demanding the impossible, and it would
+    # block precisely the acquisitions that matter most.
+    #
+    # We relax the SIZE gate and not the FRONT gate, because their failures cost different things:
+    # a wrong size is visible in the render and any program can override it (`width=`,
+    # `modulate_scale=`); a wrong front is silent, and the placement code will turn the asset's
+    # back to the room and report no error. So we take vision's size (bounded to the sane band
+    # above) and keep both front judges strict.
+    if float(j.get("size_confidence") or 0) < CONF and not relax_size:
+        return "ask", "size_uncertain", plan
+    plan["size_source"] = "vlm" + ("(no prior, gap-fill)" if relax_size else "")
     return "go", "", plan

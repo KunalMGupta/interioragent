@@ -25,6 +25,22 @@ scene.export("out.blend")                       # runs Blender; writes the .blen
 Per run, the scene owns a unique scratchpad `scene.run_dir = tmp/<timestamp>_<pid>_<rand>/`.
 All renders/intermediate meshes go there. `scene.vlm_feedback` accumulates VLM text.
 
+**`acquire=` — what to do when the DATASET cannot serve an asset query.** Default `"low"`: take
+the dataset's best hit, however wrong. That is usually right, and it is always reproducible — but
+below a top-1 similarity of ~0.55 the "best hit" stops being the thing you asked for and nothing
+downstream ever says so ("a chemistry fume hood" resolves to a kitchen chimney hood; "a hospital
+defibrillator" to a wheelchair). Raise the dial and the retriever fills a MEASURED gap itself:
+
+```python
+scene = SceneProgRoom("Chapel", seed=3, acquire="mid")   # search Sketchfab for real gaps
+scene = SceneProgRoom("Lab",    seed=3, acquire="high")  # ...and GENERATE (Meshy) if the web has none
+```
+
+`mid` is free but slow (minutes per gap); `high` spends Meshy credits. Both try the dataset first
+and only engage on a measured gap, an acquisition that fails to close its gap is rolled back out
+of the library, and a failure always falls back to the old behaviour — the scene still builds.
+Full rules: [acquire-assets/SKILL.md](acquire-assets/SKILL.md).
+
 ## Assets
 
 ```python
