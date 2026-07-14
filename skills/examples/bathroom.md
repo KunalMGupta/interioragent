@@ -57,9 +57,16 @@ floor, exactly the salon's blush-walls trick. Pull `modulate_scale` down so the 
 empty box.
 
 ## Status / open
-Working scene `scenes/work/bath_spa.py` (seed=21). Open cosmetics: back-wall window renders black in
-room_views (sun faces away — side wall lights fine); room reads a touch tight. Not yet promoted to
-`scenes/bathroom.py`.
+Working scene `scenes/work/bath_spa.py` (seed=21). Full rebuild 2026-07-13 closed the two old
+open items:
+- **The back-wall window now renders as a bright curtained pane** — the black-void limitation
+  was fixed in the renderer (greenhouse, 2026-07-12); the workaround note is retired.
+- **"Reads a touch tight" is the DESIGN, and the build agrees it's at the edge:** the rebuild
+  voted `rescale 1.1` and warned two floor overlaps — but both are the corner palm/towel
+  ladder standing 0.14 m onto the edge of the tub group's FLAT BATH MAT (the benign flat-rug
+  AABB class; nothing interpenetrates in the render). `modulate_scale=0.72` stays: a spa bath
+  must feel enclosed. Read past exactly these two warnings; if the room is ever re-iterated,
+  1.1 is the first knob.
 
 ## Program
 

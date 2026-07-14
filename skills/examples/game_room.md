@@ -1,6 +1,20 @@
 # Worked example: a game room / rec lounge (`scenes/work/game_room.py`)
 
-Status: built as `scenes/work/game_room.py`. [`game_room_v1.py`](game_room_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record) — rotation-clean WITH the back-bar cabinet present (evidence against the camera-blind hypothesis).
+Status: built as `scenes/work/game_room.py`. [`game_room_v1.py`](game_room_v1.py) is that program
+**phase-gated and verified 2026-07-13**: phase-1 pass, and a FULL rebuild the same day came back
+**fully clean** (`no rescale / no rotation / no wall overlap`). Three findings from that rebuild
+(this example's "no VLM history" hole is now closed):
+- **The floor-to-ceiling window renders as bright glazing post-void-fix** (greenhouse fixed the
+  renderer 2026-07-12) — the old black-void caveat for this scene is retired.
+- **The historic rotation-storm mystery has a root cause: the FRONT camera is blinded by the
+  entry door.** The design centres the door on the front wall ("walk in at the hero"), and the
+  interior camera at that wall's centre sits inside the door mesh — its whole view renders as
+  dark wood planks, and a garbage view corrupts every constraint judged from it
+  (laundry_room's law). This rebuild stayed clean anyway; if a vote storm ever recurs here,
+  move the door off-centre (lobby's fix for its TV) before touching any furniture.
+- **The dartboard cabinet warns as 0.44 m-deep wall furniture** (its doors stand open — the
+  museum mask class) but renders correctly on the wall. Shipped as a judgment call: it is the
+  category's identity piece; the warning is understood, not ignored.
 
 A moody home game room built entirely by **composition** — no new DSL, no asset ingestion. The
 `GameEquipmentRetriever` pool is deep enough to cover every game piece off the shelf.

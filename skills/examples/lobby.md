@@ -98,9 +98,11 @@ left unfilled** (no per-wall texture exists) — the "focal wall" is a large col
   **and drop density** (`0.03`) → a clean ~9-fixture grid. Energy is a fixed 500 W split across N, so
   fewer fixtures ≠ dimmer. Steer the *mesh* by wording: `"square LED panel"` → a spotlight-on-arm;
   `"flat round LED flush mount"` → the clean disc. [[lighting-footprint]]
-- **Floor-to-ceiling window: `curtain=None`.** No exterior environment → the pane is a black night
-  void, and every curtain/blind query rendered as **billowing ghost drapes**. Bare glazing reads as a
-  clean glass curtain wall (mullions + dark glass). (Prefer `place_window_standard` if you must hide the void.)
+- **Floor-to-ceiling window: `curtain=None`.** HALF-RETIRED (2026-07-13): the black-void half of
+  this rationale is gone — the renderer fix (greenhouse, 2026-07-12) makes the glazing render as
+  bright panes, confirmed in this scene's full rebuild. The other half stands: every curtain/blind
+  query still rendered as **billowing ghost drapes**, and bare glazing reads as a clean glass
+  curtain wall — so `curtain=None` remains the right call here.
 - **Pin the sofa to dodge sectionals** (`"a straight modern beige three-seat sofa"` + the 0.82 id), and
   pin a **flat** rug (avoids the upright-slab `place_rug` warning).
 - **`AroundGroup.place_rectilinear` is the waiting cluster** — 2 sofas + 2 armchairs auto-faced inward

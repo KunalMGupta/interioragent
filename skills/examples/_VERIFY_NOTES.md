@@ -59,8 +59,14 @@ surfaces and walls, never floor mass.
 - **Lesson/program contradictions** (computer_room's phantom 1.1, retail_store's stale
   0.9/0.08 + the reversed POS-rotate): both lessons corrected — the program is the record.
 
-## Still open (not blocking)
-- game_room: one full build to confirm the window renders post-void-fix.
-- Possibly-stale post-renderer-fix workarounds (greenhouse fixed the window void 2026-07-12):
-  bathroom's black back-wall window note; lobby's `curtain=None` rationale; game_room's
-  floor-to-ceiling window. Revisit opportunistically with full builds.
+## Still open
+Nothing. The tail was drained the same day with full builds:
+- game_room FULL: fully clean; the floor-to-ceiling window renders bright post-void-fix, the
+  historic rotation-storm traced to the front camera sitting inside the CENTRED entry door,
+  and the 0.44 m dartboard warning is a documented judgment call (all in game_room.md).
+- bathroom FULL: window renders as a bright curtained pane (workaround retired); the two
+  overlap warnings are the corner palm/ladder on the flat bath mat's AABB edge — benign,
+  documented in bathroom.md with the deliberate 0.72 tightness.
+- lobby's `curtain=None` rationale half-retired (void fixed; ghost-drapes half stands).
+- resto_kitchen: authored, converged and promoted the same day — the LAST dataset category
+  is covered (see resto_kitchen.md).
