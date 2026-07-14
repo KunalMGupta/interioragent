@@ -304,3 +304,9 @@ Two mechanisms make "verify early, cheap" mechanical rather than aspirational:
 InteriorAgent-IDSDL is part of the Ph.D. research of **Kunal Gupta** (CSE, UC San Diego) on
 codifying design expertise into computational form so generative AI systems can perform better
 on creative tasks.
+
+## License
+
+Code and documentation are released under [CC BY-NC 4.0](LICENSE) (Attribution-NonCommercial).
+Commercial use requires separate permission. The 3D asset datasets (3D-FUTURE, HSSD, custom
+ingests) are downloaded separately and remain governed by their own licenses.
