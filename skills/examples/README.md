@@ -1,9 +1,13 @@
 # Examples catalogue — pick by the *pattern*, not the name
 
-Each file is a worked recipe: the finished skeleton for one scene type plus what we changed and
-why (especially how we acted on VLM feedback). For a new prompt, find the row whose **layout
-pattern** matches — copy that skeleton, don't start from scratch. Most rooms are a variant of a
-pattern we've already solved.
+Each entry is a **pair** — `<name>.md` (the lessons: the pattern, the traps, the VLM votes we
+declined) and `<name>_v1.py` (the program: phase-gated, lints, runs). For a new prompt, find the
+row whose **layout pattern** matches, then copy its `.py` — don't start from scratch. Most rooms
+are a variant of a pattern we've already solved.
+
+The `.py` is the thing you copy; the `.md` tells you what will bite you. See
+[`_TEMPLATE.md`](_TEMPLATE.md) before adding one — an example without a runnable program is not
+a worked example.
 
 ## Worked examples (VLM-iterated, backed by a memory scene-status)
 
