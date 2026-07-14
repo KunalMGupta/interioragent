@@ -1547,6 +1547,89 @@ def test_54():
     scene_b.export("results/test54_tall_ceiling.blend")
 
 
+def test_55():
+    """Asset shop triage (Kunal 2026-07-14): the gates that decide what gets ingested.
+
+    Pure logic — no network, no VLM, no Blender — so it runs anywhere and pins the two rules the
+    whole pipeline rests on: the panel->rotation table (a sign error here silently ingests every
+    asset back-to-front) and skip-vs-ask (misfiling an UNCERTAIN asset as a SKIP throws a good
+    model away without telling anyone)."""
+    header(55, "shop triage: panel->rotation, skip vs ask, size prior")
+    from IDSDL.shop import board, triage
+
+    # (a) the rotation table: bring each side round to -Y (the library's front)
+    assert triage.PANELS[2][1] == 0.0, "panel 2 IS the front — no rotation"
+    assert triage.PANELS[1][1] == 180.0
+    assert triage.PANELS[3][1] == -90.0
+    assert triage.PANELS[4][1] == 90.0
+
+    good = {"object": "lounge chair", "n_units": 1, "single_unit": True, "interior_object": True,
+            "front_panel": 3, "front_confidence": 0.9, "size_anchor": "height", "size_m": 0.9,
+            "size_confidence": 0.9}
+    dims = {"w_x": 0.62, "d_y": 0.7, "h_z": 0.9}
+    second_ok = {"front_panel": 3, "confidence": 0.9}
+
+    # (b) a clean, agreed candidate goes — with the -90 that panel 3 implies
+    v, why, plan = triage.decide(good, dims, second_op=second_ok, use_prior=False)
+    print(f"  clean candidate -> {v} rot={plan['rot_deg'][2]}")
+    assert v == "go" and plan["rot_deg"][2] == -90.0, (v, why, plan)
+
+    # (c) SKIP: several objects in one file. This is the one the boolean waved through until we
+    #     made the VLM COUNT (a 3-table 'surgical instrument table collection').
+    v, why, _ = triage.decide({**good, "n_units": 3}, dims, second_op=second_ok)
+    print(f"  3 objects in one file -> {v} ({why})")
+    assert v == "skip" and "multi_unit" in why, (v, why)
+    v, why, _ = triage.decide({**good, "interior_object": False}, dims, second_op=second_ok)
+    assert v == "skip", (v, why)
+
+    # (d) ASK, never skip: the two front judges disagree -> a human settles it. If this ever
+    #     returns "skip", good assets start vanishing silently.
+    v, why, _ = triage.decide(good, dims, second_op={"front_panel": 1, "confidence": 0.9})
+    print(f"  judges disagree (3 vs 1) -> {v} ({why})")
+    assert v == "ask" and "front_disagreement" in why, (v, why)
+
+    # (e) ASK: neither judge is confident
+    v, why, _ = triage.decide({**good, "front_confidence": 0.4}, dims,
+                              second_op={"front_panel": 3, "confidence": 0.4})
+    assert v == "ask" and why == "front_uncertain", (v, why)
+
+    # (f) the width the plan implies — a +-90 rotation SWAPS width and depth, and getting that
+    #     backwards is how a chair ends up sideways in the library
+    w = triage.predicted_width({"rot_deg": [0, 0, -90.0], "scale_axis": "z", "scale_size": 0.9},
+                               dims)
+    assert abs(w - 0.9 * dims["d_y"] / dims["h_z"]) < 1e-6, w      # rotated: width comes from d_y
+    w0 = triage.predicted_width({"rot_deg": [0, 0, 180.0], "scale_axis": "z", "scale_size": 0.9},
+                                dims)
+    assert abs(w0 - 0.9 * dims["w_x"] / dims["h_z"]) < 1e-6, w0    # unrotated: width is w_x
+    print(f"  predicted width: rotated {w:.3f} m, unrotated {w0:.3f} m")
+
+    # (g) the board round-trip: what the user types must survive back into a plan
+    meta = {"plan": {"rot_deg": [0, 0, 0.0], "scale_axis": "z", "scale_size": 1.0,
+                     "front_panel": 2}}
+    action, plan = board.parse_answer(
+        {"action": "accept", "front": "4", "size": "2.5 m", "anchor": "width"}, meta)
+    print(f"  user answer -> {action} rot={plan['rot_deg'][2]} {plan['scale_axis']}={plan['scale_size']}")
+    assert action == "accept" and plan["rot_deg"][2] == 90.0
+    assert plan["scale_axis"] == "x" and abs(plan["scale_size"] - 2.5) < 1e-9
+    assert board.parse_answer({"action": "drop"}, meta)[0] == "drop"
+
+    # (h) an UNTOUCHED block is not an answer. The template line reads `action: accept | drop` —
+    #     the menu, not a choice — and parsing it as a choice made `apply` "act on" every asset
+    #     the user had not looked at yet.
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as td:
+        b = Path(td)
+        (b / "HELP.md").write_text(
+            "## 1. untouched  <!-- asset:untouched -->\n\n```\naction: accept | drop\nfront:  3\n"
+            "size:   2.0\nanchor: height\n```\n\n"
+            "## 2. answered  <!-- asset:answered -->\n\n```\naction: accept\nfront:  4\n"
+            "size:   2.5\nanchor: width\n```\n")
+        got = board.read_answers(b)
+        print(f"  answered blocks seen: {sorted(got)}")
+        assert set(got) == {"answered"}, got
+
+
 # ---------------------------------------------------------------------------
 # Registry + runner
 # ---------------------------------------------------------------------------
@@ -1611,6 +1694,7 @@ TESTS = {
     52: test_52,   # KitchenIslandGroup tip mode (U set peninsula + entry gap + stools)
     53: test_53,   # KitchenIslandGroup pocket mode (L set concave-middle island)
     54: test_54,   # RoomGroup auto ceiling (never below the tallest asset)
+    55: test_55,   # asset-shop triage gates (panel->rotation, skip vs ask, size prior)
 }
 
 

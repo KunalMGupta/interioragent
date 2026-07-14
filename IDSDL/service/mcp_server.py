@@ -249,6 +249,64 @@ def ingest_glbs(zip_path: str, category: str | None = None, manifest_path: str |
     return "\n".join(lines)
 
 
+@mcp.tool()
+def shop_search(query: str, count: int = 12, license: str = "permissive") -> str:
+    """Search Sketchfab for free downloadable assets WITHOUT ingesting anything. Use this when
+    retrieve() has nothing good and you want to know whether the internet does. license:
+    permissive (cc0+by, default) | commercial-ok | any."""
+    with _quiet():
+        d = core.shop_search(query, count=count, license=license)
+    if not d["hits"]:
+        return f"no downloadable hits for {query!r}. Try a broader query or license='any'."
+    lines = [f"{d['n']} hit(s) for {query!r}:"]
+    for h in d["hits"]:
+        lines.append(f"  {h['name'][:44]:44s} {h['license'] or '?':22s} {h['faces'] or 0:>8,}f  {h['url']}")
+    lines.append("ingest them with shop_run(query). "
+                 + ("" if d["has_token"] else "NOTE: no SKETCHFAB_API_TOKEN — downloads will be "
+                    "handed to the user as manual links."))
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def shop_run(query: str, count: int = 6, source: str = "sketchfab", category: str | None = None,
+             manual: bool = False, dry_run: bool = False) -> str:
+    """Search the web for an asset the library lacks, normalize it (single mesh, real metres,
+    front=+Z, verified on a re-render) and ingest it — then re-warm so retrieve() can find it
+    immediately. VERY SLOW (download + several Blender passes + VLM per candidate).
+
+    Anything the pipeline cannot judge confidently is NOT guessed: it lands on <batch>/HELP.md
+    for the user (`manual=True` is the same run, framed as a question). source='meshy' GENERATES
+    the asset instead of searching — that spends the user's Meshy credits, so only use it when
+    they have asked for it. dry_run=True normalizes but writes nothing to the library."""
+    with _quiet():
+        d = core.shop_run(query, count=count, source=source, category=category,
+                          manual=manual, dry_run=dry_run)
+    lines = [f"shop[{query!r}] {d['counts']}"]
+    for a in d["ingested"]:
+        lines.append(f"  + {a['asset_id']}  {a['object']}  ({a['width_m']} m wide)  [{a['license']}]")
+    for a in d["needs_you"]:
+        lines.append(f"  ? {a['key']}  {a['object']}  — {a['why']}")
+    for a in d["skipped"]:
+        lines.append(f"  - {a['key']} skipped: {a['why']}")
+    if d["needs_you"]:
+        lines.append(f"user must settle these in {d['help_md']}, then shop_apply(batch).")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def shop_apply(batch: str, category: str | None = None) -> str:
+    """Act on the answers the user wrote into <batch>/HELP.md (and any file they hand-downloaded
+    into <batch>/inbox/), ingest what they accepted, and re-warm."""
+    with _quiet():
+        d = core.shop_apply(batch, category=category)
+    lines = [f"shop apply[{batch}] {d['counts']}"]
+    for a in d["ingested"]:
+        lines.append(f"  + {a['asset_id']}  {a['object']}  ({a['width_m']} m wide)")
+    for a in d["needs_you"]:
+        lines.append(f"  ? still open: {a['key']} — {a['why']}")
+    return "\n".join(lines)
+
+
 # ---- Tier C: long isolated jobs -----------------------------------------------
 @mcp.tool()
 def plan(prompt: str, top_k: int = 3) -> list:

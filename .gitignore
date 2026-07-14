@@ -78,3 +78,6 @@ tools/lamp_ontop_test.py
 
 # secrets (reload_credentials reads this at runtime; never commit)
 .env
+
+# asset-shop batches (downloads, previews, per-asset working dirs)
+shops/

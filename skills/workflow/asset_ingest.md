@@ -1,5 +1,13 @@
 # Ingesting custom GLB assets — the single-mesh invariant (and how ingest breaks it)
 
+> **Getting the `.glb`s in the first place?** `python -m IDSDL.ingest` is the *low* level: it
+> assumes — and never checks — that you hand it files already single-mesh, real-metre, front=+Z.
+> To go from a text query to an asset that satisfies all of that automatically (search Sketchfab
+> or generate with Meshy → normalize in Blender → VLM triage → verify → ingest), use the asset
+> shop: **[../acquire-assets/SKILL.md](../acquire-assets/SKILL.md)**, `python -m IDSDL.shop run
+> "<query>"`. This page is what the shop is protecting you from — read it when something you
+> ingested renders white, disassembled, or at the wrong size.
+
 When you add your own `.glb`s to the library (`python -m IDSDL.ingest <zip>`), the stored mesh
 must stay a **single glTF mesh**. Multiple *primitives* and *materials* inside that one mesh are
 fine — that's how a textured asset with many parts is represented (Blender imports it as **one

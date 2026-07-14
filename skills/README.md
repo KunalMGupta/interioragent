@@ -31,6 +31,7 @@ folder with a `SKILL.md` (name + description front matter, then instructions).
 |---|---|
 | [generate-scene](generate-scene/SKILL.md) | Generate a complete 3D scene from a text prompt, end to end — the plan → retrieve-traces → asset-audit → author → build → critique → judge → write-back playbook (agent-as-author), plus the one-command `main.py` / MCP-job automatic mode. |
 | [add-placement-group](add-placement-group/SKILL.md) | Add a new placement group / arrangement motif to `IDSDL/groups_extra.py` — hand-written motifs or integrations of external 3D scene-generation repos (SceneMotifCoder, diffusion/transformer/CNN/LLM models). Validates numerically + via renders. |
+| [acquire-assets](acquire-assets/SKILL.md) | Get an asset the library does NOT have: the automatic search-and-ingest pipeline (`IDSDL/shop`) — Sketchfab search → download → Blender normalize → VLM triage → self-verify → ingest, skipping what it can't judge and asking you about the rest (`HELP.md`). Also covers generating assets with Meshy, and the six load-bearing Blender fixes. |
 | _add-constraint_ | _(planned)_ Add a new optimization constraint without touching core. |
 
 ## Using a skill

@@ -175,14 +175,21 @@ def _process_one(glb, fname, sha, vlm, encoder, manifest):
     return ("ok", mid, fname, entry, vec)
 
 
-def ingest_zip(zip_path, category=None, manifest_path=None, workers=4):
+def ingest_paths(glbs, category=None, manifest=None, manifest_path=None, workers=4):
+    """Ingest an explicit list of .glb paths. The zip entry point is a thin wrapper over this, and
+    IDSDL.shop calls it directly with the files it just normalized — a zip in between would only
+    be a temp file neither side wants.
+
+    `manifest` (a dict keyed by glb BASENAME) overrides any metadata field per file and wins over
+    the VLM caption, which is how the shop pins the `scale` it measured in Blender rather than
+    letting the captioner re-guess a width it already knows exactly."""
     from sceneprogllm import LLM
 
     _ensure_dirs()
-    manifest = {}
+    manifest = dict(manifest or {})
     if manifest_path and os.path.exists(manifest_path):
         with open(manifest_path) as f:
-            manifest = json.load(f)
+            manifest.update(json.load(f))
 
     vlm = LLM(system_desc=_CAPTION_SYS, response_format="json",
               response_params={"description": "str", "placement": "str",
@@ -196,6 +203,46 @@ def ingest_zip(zip_path, category=None, manifest_path=None, workers=4):
     lock = threading.Lock()
     added = []
 
+    todo = []
+    for glb in glbs:
+        fname, sha = os.path.basename(glb), _sha1(glb)
+        if f"custom/{sha}" in have:
+            print(f"  · {fname}: already ingested, skipping")
+        else:
+            todo.append((glb, fname, sha))
+    print(f"[ingest] {len(glbs)} glb(s); processing {len(todo)} new with {workers} workers")
+
+    def _register(mid, fname, entry, vec):
+        # single-threaded section: append + SAVE INCREMENTALLY so a crash/kill keeps
+        # everything done so far (idempotent re-runs then skip them).
+        with lock:
+            meta[mid] = entry
+            models.append(mid)
+            embs.append(vec)
+            _save(meta, models, embs)
+            added.append((mid, entry))
+            print(f"  + {fname} -> {mid}\n      {entry['description'][:70]}\n"
+                  f"      placement={entry['placement']} freetop={entry['freetop']} "
+                  f"scale={entry['scale']:.2f}m")
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = [ex.submit(_process_one, glb, fname, sha, vlm, encoder, manifest)
+                for glb, fname, sha in todo]
+        for fut in as_completed(futs):
+            res = fut.result()
+            if res[0] == "ok":
+                _register(res[1], res[2], res[3], res[4])
+            else:
+                print(f"  ! {res[1]}: {res[2]}")
+
+    if added and category:
+        _add_to_category(category, [mid for mid, _ in added])
+    R._NPZ_CACHE.clear(); R._JSON_CACHE.clear()   # so a same-process reload sees new assets
+    print(f"[ingest] added {len(added)} asset(s); library now has {len(models)} custom asset(s).")
+    return added
+
+
+def ingest_zip(zip_path, category=None, manifest_path=None, workers=4):
     with tempfile.TemporaryDirectory() as tmp:
         with zipfile.ZipFile(zip_path) as z:
             z.extractall(tmp)
@@ -203,44 +250,7 @@ def ingest_zip(zip_path, category=None, manifest_path=None, workers=4):
                       if p.lower().endswith(".glb")
                       and "__MACOSX" not in p
                       and not os.path.basename(p).startswith("._"))   # skip macOS junk
-
-        todo = []
-        for glb in glbs:
-            fname, sha = os.path.basename(glb), _sha1(glb)
-            if f"custom/{sha}" in have:
-                print(f"  · {fname}: already ingested, skipping")
-            else:
-                todo.append((glb, fname, sha))
-        print(f"[ingest] {len(glbs)} glb(s); processing {len(todo)} new with {workers} workers")
-
-        def _register(mid, fname, entry, vec):
-            # single-threaded section: append + SAVE INCREMENTALLY so a crash/kill keeps
-            # everything done so far (idempotent re-runs then skip them).
-            with lock:
-                meta[mid] = entry
-                models.append(mid)
-                embs.append(vec)
-                _save(meta, models, embs)
-                added.append((mid, entry))
-                print(f"  + {fname} -> {mid}\n      {entry['description'][:70]}\n"
-                      f"      placement={entry['placement']} freetop={entry['freetop']} "
-                      f"scale={entry['scale']:.2f}m")
-
-        with ThreadPoolExecutor(max_workers=workers) as ex:
-            futs = [ex.submit(_process_one, glb, fname, sha, vlm, encoder, manifest)
-                    for glb, fname, sha in todo]
-            for fut in as_completed(futs):
-                res = fut.result()
-                if res[0] == "ok":
-                    _register(res[1], res[2], res[3], res[4])
-                else:
-                    print(f"  ! {res[1]}: {res[2]}")
-
-    if added and category:
-        _add_to_category(category, [mid for mid, _ in added])
-    R._NPZ_CACHE.clear(); R._JSON_CACHE.clear()   # so a same-process reload sees new assets
-    print(f"[ingest] added {len(added)} asset(s); library now has {len(models)} custom asset(s).")
-    return added
+        return ingest_paths(glbs, category=category, manifest_path=manifest_path, workers=workers)
 
 
 def _add_to_category(category, ids):

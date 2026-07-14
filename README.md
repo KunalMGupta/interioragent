@@ -65,6 +65,16 @@ A few external pieces are required:
   ```bash
   export OPENAI_API_KEY="sk-..."
   ```
+- **Optional — asset shop keys.** Only needed to bring in assets the library does not have
+  (`python -m IDSDL.shop`, see [skills/acquire-assets](skills/acquire-assets/SKILL.md)). Put them
+  in `<repo>/.env` (git-ignored) or the environment. Sketchfab *search* needs no key; only
+  downloading does.
+  ```bash
+  SKETCHFAB_API_TOKEN=...   # free: sketchfab.com -> Settings -> Password & API
+  MESHY_API_KEY=...         # only for --source meshy (text-to-3D generation; spends credits)
+  ```
+  Without a Sketchfab token the pipeline still runs — it hands you the download links and picks
+  the files up from `<batch>/inbox/`.
 
 ## Quick start
 
@@ -266,7 +276,10 @@ than dumping a 401 traceback.
 Tools (`mcp__idsdl__*`): **retrieve / inspect** (route+resolve a query → candidate contact sheet
 inline), **browse** (montage of dataset matches), **reselect / show / pin** (session-memory picks
 — instant, no re-retrieval; `pin` → the `AddAsset(asset_id=…)` snippet), **candidates / gallery /
-pool_add** (pool curation), **ingest_glbs** (custom-asset ingestion + auto re-warm), **plan**
+pool_add** (pool curation), **ingest_glbs** (custom-asset ingestion + auto re-warm), **shop_search
+/ shop_run / shop_apply** (find an asset the library does NOT have on Sketchfab — or generate one
+with Meshy — normalize, verify and ingest it, re-warmed so it is retrievable in the same session;
+anything the pipeline will not judge alone lands on a `HELP.md` for you), **plan**
 (design brief + collage) and **run_scene** (build+render a DSL program → VLM feedback + room views).
 
 Knowledge + generation tools: **catalog** (the tacit-knowledge index, offline),

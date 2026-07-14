@@ -491,3 +491,66 @@ def generate_result(job_id):
             "plan_png": os.path.join(out_dir, "plan.png"),
             "final_strip": os.path.join(out_dir, "final_strip.png"),
             "score": trace.get("final", {}).get("score")}
+
+
+# ---- Tier B: the asset shop (search the web -> normalize -> ingest) ---------
+# The library is no longer a closed set: when a scene needs a thing that does not exist in it,
+# these fetch one and make it a first-class asset. Everything runs through IDSDL.shop, so the
+# same triage/verify guarantees apply here as on the command line.
+
+def shop_search(query, count=15, license="permissive"):
+    """Look, don't touch: what a query WOULD bring in from Sketchfab."""
+    from IDSDL.shop.sources import SketchfabSource
+    s = SketchfabSource()
+    hits = s.search(query, count=count, license=license)
+    return {"query": query, "n": len(hits), "has_token": bool(s.token),
+            "hits": [{"name": c.name, "license": c.license, "author": c.author,
+                      "faces": c.faces, "url": c.url} for c in hits]}
+
+
+def shop_run(query, batch=None, count=6, source="sketchfab", category=None, manual=False,
+             dry_run=False, from_dir=None, license="permissive"):
+    """Full pipeline. Re-warms the retrievers so anything ingested is retrievable IMMEDIATELY —
+    the point being that a scene program can ask for an asset the library did not have a minute
+    ago."""
+    import time as _t
+
+    from IDSDL.shop.pipeline import run as _run
+    from IDSDL.shop.sources import slugify
+    batch = batch or os.path.join(REPO_ROOT, "shops",
+                                  f"{_t.strftime('%Y-%m-%d')}-{slugify(query or 'local')}")
+    metas = _run(query, batch, source=source, count=count,
+                 mode="manual" if manual else "auto", category=category,
+                 license=license, from_dir=from_dir, dry_run=dry_run)
+    if not dry_run:
+        refresh_retrievers()
+    return _shop_summary(metas, batch)
+
+
+def shop_apply(batch, category=None):
+    """Act on the answers written into <batch>/HELP.md, then re-warm."""
+    from IDSDL.shop import board as _board
+    from IDSDL.shop.pipeline import apply as _apply
+    from pathlib import Path as _P
+    _apply(batch, category=category)
+    refresh_retrievers()
+    metas = [_board.load(d) for d in _board.asset_dirs(_P(batch))]
+    return _shop_summary(metas, batch)
+
+
+def _shop_summary(metas, batch):
+    by = {}
+    for m in metas or []:
+        by.setdefault(m["status"], []).append(m)
+    return {"batch": str(batch),
+            "counts": {k: len(v) for k, v in by.items()},
+            "ingested": [{"asset_id": m.get("asset_id"),
+                          "object": (m.get("judgment") or {}).get("object"),
+                          "width_m": (m.get("final") or {}).get("dims", {}).get("w_x"),
+                          "license": (m.get("provenance") or {}).get("license")}
+                         for m in by.get("ingested", [])],
+            "needs_you": [{"key": m["key"], "why": m.get("reason"),
+                           "object": (m.get("judgment") or {}).get("object")}
+                          for m in by.get("ask", []) + by.get("failed", [])],
+            "skipped": [{"key": m["key"], "why": m.get("reason")} for m in by.get("skip", [])],
+            "help_md": os.path.join(str(batch), "HELP.md")}
