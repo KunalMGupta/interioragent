@@ -1551,3 +1551,14 @@ rotation issue you can *see*; the VLM rotation text is just a hint.
   when the loop is clean and the room still doesn't convince, stop iterating on placement — the
   workaround pile IS the signal that the asset is wrong.** Corollary: the workarounds are worth
   writing down anyway, because they are what you do while the ingest does not exist.
+- **[bedroom v1 (phase-gating retrofit), A ROOM-SIZE VOTE ON A PARTIAL BUILD IS VOTING ON A ROOM
+  THAT DOES NOT EXIST YET]** The same program, same seed: **full build → VLM-clean at
+  `modulate_scale=0.8`**; rebuilt at **phase 1 → `rescale room by 1.4`**. Opposite verdicts on an
+  identical floor plan — the only difference is that the rug, lamps, plant and art have not been
+  placed yet. Act on the phase-1 vote and you inflate the shell 40%, then phases 2–3 fill it and you
+  have built exactly the cavernous room the `0.8` existed to prevent. **Rule: room-size votes are
+  only meaningful on a FULL build.** On phase 1/2, read the layout signals (`no rotation`, `no wall
+  overlap`, per-object `no rescale`) and ignore the shell verdict entirely. This is the phase-aware
+  sharpening of kitchen's rule — *the occupancy vote tells you THAT the room is wrong, never WHICH
+  slot did it* — and it is why laundromat's genuinely sparse room could legitimately shrink below
+  1.0 while a half-dressed bedroom appears to want to grow.
