@@ -3,7 +3,9 @@
 Status: **built & essentially VLM-clean** ("Moody Luxe Bar & Lounge", `scenes/work/bar_lounge.py`,
 seed=26). Final compile: objects `no rescale`, stools `no rotation`, `no wall overlap`,
 RoomProportions converged 0.8→0.95 after the final-phase shrink. Built coarse-to-fine through the
-workbench (3 render passes).
+workbench (3 render passes). Built as `scenes/work/bar_lounge.py`; `bar_v1.py` is that program
+phase-gated (2026-07-13), `lint_program`-clean, and **NOT re-rendered since the retrofit**, so the
+phase splits are unverified.
 
 ## Prompt this covers
 - "a stylish, moody cocktail bar / lounge: a long bar counter with a row of stools, a mirrored
@@ -25,45 +27,13 @@ it) occupies the whole long BACK wall; the **short walls stay light** (a mirror 
 on the other); the **front half is the lounge** (two velvet nooks facing back toward the bar), with the
 door on the front wall between them.
 
-## Working skeleton (coarse-to-fine)
+## Program
 
-```python
-scene = SceneProgRoom("BarLounge", seed=26)
-scene.prefetch_assets([ ...all descriptions... ])   # warm the cache for the cold build
+[`bar_v1.py`](bar_v1.py) — phase 1 builds the floor anchors (the rigid bar station: back-bar + baked
+aisle + counter + stool row, the two lounge nooks, the door), phase 2 the floor dressing (nook rugs,
+corner palm), phase 3 the short-wall decor (mirror, print) and the pendant lighting.
 
-# Phase 1 — the bar line (hero anchor = counter; stool ROW on its front/customer side)
-counter = scene.AddAsset("a long vintage solid wood bar counter with a paneled front",
-                         asset_id="future/dd75f4ed-...", width=3.6)   # width= lengthens it into a long bar
-with scene.AroundGroup(sparsity=0.15, jitter=0.25) as bar_group:
-    bar_group.set_anchor(counter)
-    stools = 5 * scene.AddAsset("a tall tufted leather bar stool with a backrest", asset_id="future/84e8c226-...")
-    bar_group.place_rectilinear(longer_side1=stools)      # ONE row along one long side
-    for s in stools: bar_group.face(s, toward=counter)    # turn each stool in to face the bar
-    bar_group.add_lighting("a warm brass globe pendant light", density=0.2)   # SINGULAR query; see lighting note
-backbar = scene.AddAsset("a tall wooden back-bar cabinet with glass doors displaying liquor bottles",
-                         asset_id="future/f92b65d2-...", width=2.6)
-
-# Phase 2 — an intimate lounge nook, built ONCE then duplicated (design_principles: N*unit)
-with scene.AroundGroup(sparsity=0.3, jitter=0.4) as nook:
-    nook.set_anchor(scene.AddAsset("a small round marble cocktail table with a brass pedestal base"))
-    nook.place_circle(2 * scene.AddAsset("a dark green velvet tub lounge chair"))   # a 2-top facing across
-    nook.place_rug("a dark patterned wool area rug", size=1.0)
-    nook.add_lighting("a small brass pendant light", density=0)      # one pendant over the 2-top
-nook_l, nook_r = 2 * nook
-
-# Phase 3 — shell + short-wall decor + greenery + door
-with scene.RoomGroup(modulate_scale=0.85, randomness=0.15) as room:  # 0.85 = final-phase shrink
-    room.place_walls(floor_texture="dark walnut herringbone wood",
-                     ceiling_texture="charcoal", wall_texture="deep charcoal")
-    room.place_on_back_wall_center(backbar)              # focal wall
-    room.place_on_back(bar_group, facing="front")        # counter+stools in front of the back-bar
-    room.place_on_front_left(nook_l, facing="back")      # nooks face back toward the bar
-    room.place_on_front_right(nook_r, facing="back")
-    room.place_on_wall_left_center(scene.AddAsset("a large gold-framed vintage mirror"))
-    room.place_on_wall_right_center(scene.AddAsset("a framed vintage cocktail print in a brass frame"))
-    room.place_on_back_left_corner(scene.AddAsset("a large potted areca palm in a brass planter"))
-    room.place_door("front_wall", position="center")
-```
+`workbench run skills/examples/bar_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## What worked / gotchas
 - **Pin the hero fixtures.** Bar counter, stools and back-bar are the whole scene — browse + pin them

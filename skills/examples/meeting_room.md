@@ -4,6 +4,9 @@ Status: **built & essentially VLM-clean** (`scenes/work/meeting_room.py`, seed=1
 Final compile: `no rescale`, `no room-rescale`, `no wall overlap`, no overlap warning; only the noisy
 `RotationConstraint` on two tiny on-top props remained (declined). Built asset-first (retrieval stress
 test) then coarse-to-fine.
+Built as `scenes/work/meeting_room.py`; [`meeting_room_v1.py`](meeting_room_v1.py) is that program
+**phase-gated** (2026-07-13) — same layout, same pinned ids, same seed. It is **`lint_program`-clean**
+and has **NOT been re-rendered since the retrofit**, so *the phase splits are unverified*.
 
 ## Prompt this covers
 - "a professional corporate meeting / conference / board room: a long central table ringed with office
@@ -37,51 +40,15 @@ the station from the coffee machine on a sideboard. Then **measure the heroes** 
 + `get_whd()`, no network): table 2.0×0.87 → stretch to `width=3.2`; chair 0.6 wide; wall TV only
 1.2 m → `modulate_scale=1.6` for a ~1.9 m display; whiteboard 1.8 m.
 
-## Working skeleton (coarse-to-fine)
-```python
-scene = SceneProgRoom("MeetingRoom", seed=17)
-TABLE="hssd/aee7c3b…"; CHAIR="hssd/430315716…"; WALL_TV="hssd/576f0a57…"; WHITEBOARD="hssd/1b37271d…"
-SIDEBOARD="hssd/70d4947…"; COFFEE="hssd/85ba1568…"; WATER="hssd/b77968f3…"; TALL_PLANT="future/feeb8797…"
-scene.prefetch_assets([ ...all descriptions... ])
+## Program
 
-# CENTER: table + a rectilinear ring of chairs (4 per long side, 1 each end) + styling + ONE pendant + rug
-with scene.AroundGroup(sparsity=0.15, jitter=0.35) as boardroom:
-    boardroom.set_anchor(scene.AddAsset("a long rectangular boardroom conference table", asset_id=TABLE, width=3.2))
-    long1 = 4 * scene.AddAsset("a white leather conference chair with armrests", asset_id=CHAIR)
-    long2 = 4 * scene.AddAsset("a white leather conference chair with armrests", asset_id=CHAIR)
-    ends  = 2 * scene.AddAsset("a white leather conference chair with armrests", asset_id=CHAIR)
-    boardroom.place_rectilinear(longer_side1=long1, longer_side2=long2, shorter_side1=[ends[0]], shorter_side2=[ends[1]])
-    boardroom.place_on_top([scene.AddAsset("a low floral centerpiece in a vase"),
-                            scene.AddAsset("a black conference desk phone", asset_id=PHONE),
-                            scene.AddAsset("an open silver laptop computer", asset_id=LAPTOP),
-                            scene.AddAsset("a stack of notepads with pens")])
-    boardroom.add_lighting("a long linear LED ceiling pendant light", density=0)   # ONE — density>0 STARFIELDS the wiry mesh
-    boardroom.place_rug("a large grey commercial area rug", size=0.9)
+[`meeting_room_v1.py`](meeting_room_v1.py) — phase 1 the floor anchors (the table hub with its
+rectilinear chair ring, the AV credenza, the coffee station, the water cooler, the walls and the
+door), phase 2 the surface dressing (the tabletop styling, the coffee machine + carafe, the rug, the
+corner plant), phase 3 the wall decor (display, whiteboard, framed print), the floor-to-ceiling glass
+and the table's linear pendant.
 
-# BACK service station: sideboard + coffee machine + carafe on top (scale the props down)
-with scene.RelativeGroup() as coffee_station:
-    coffee_station.set_anchor(scene.AddAsset("a low dark wood office sideboard credenza", asset_id=SIDEBOARD, width=1.6))
-    coffee_station.place_on_top([scene.AddAsset("a stainless steel office coffee machine", asset_id=COFFEE, modulate_scale=0.5),
-                                 scene.AddAsset("a glass water carafe with drinking glasses", modulate_scale=0.5)])
-
-tv = scene.AddAsset("a large wall-mounted flat screen display", asset_id=WALL_TV, modulate_scale=1.6)   # pre-scale BEFORE wall
-av_credenza = scene.AddAsset("a low dark wood office AV credenza cabinet", asset_id=SIDEBOARD, width=1.8)
-
-with scene.RoomGroup(modulate_scale=1.05, randomness=0.2, max_height=3.2) as room:
-    room.place_walls(floor_texture="grey commercial carpet tile", ceiling_texture="white acoustic panel ceiling",
-                     wall_texture="soft warm grey with one charcoal accent wall")
-    room.place_on_center(boardroom, facing="front")
-    room.place_on_front_wall_center(av_credenza, facing="front")   # reversed-front sideboard -> flip (see gotcha)
-    room.place_on_wall_front_center(tv)
-    room.place_on_wall_front_right(scene.AddAsset("a white dry-erase whiteboard", asset_id=WHITEBOARD))
-    room.place_on_back_wall_center(coffee_station, facing="back")   # reversed-front sideboard -> flip
-    room.place_on_back_left_corner(scene.AddAsset("a white office water cooler dispenser", asset_id=WATER), facing="front")
-    room.place_on_back_right_corner(scene.AddAsset("a tall potted indoor office plant", asset_id=TALL_PLANT, width=0.8), facing="front")
-    room.place_window_floor_to_ceiling("left_wall", curtain="light grey roller blinds")
-    room.place_on_wall_right_center(scene.AddAsset("a large framed abstract print", asset_id=ABSTRACT))
-    room.place_door("right_wall", position="right")
-    # no room-wide ceiling fixtures: the table's pendant + the glass daylight are enough (panels starfielded + blew out)
-```
+`workbench run skills/examples/meeting_room_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## What worked / gotchas
 - **Stretch the table into a boardroom table with `width=`** (not uniform scale): the meeting-table mesh

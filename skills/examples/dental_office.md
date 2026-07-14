@@ -5,6 +5,12 @@ hero**: a complete dental UNIT mesh (chair + overhead light + delivery + monitor
 carried the scene, so the rest was ordinary dataset retrieval + placement. Read alongside
 `../workflow/asset_selection.md` (kickoff) and `../workflow/coarse_to_fine.md`.
 
+## Status
+
+Status: **built** as `scenes/dental_office.py` (seed=35). [`dental_office_v1.py`](dental_office_v1.py)
+is that same program, phase-gated (2026-07-13) — lint-clean, but **NOT re-rendered since the
+retrofit**; the phase splits are unverified.
+
 ## Prompt(s) this covers
 - "a dental office" / "a dentist exam room / operatory" (pediatric or adult).
 
@@ -47,31 +53,13 @@ botanical + kids prints.
 A single operatory is **compact/near-square** — unlike the salon, you do NOT load long walls to
 stretch the room; balance the four walls and let `modulate_scale` set the final size.
 
-```python
-DENTAL_UNIT = "custom/64a7f627dc9e7a246ebfef4bc10fb15c27be636f"   # complete unit, pinned
-scene = SceneProgRoom("DentalOffice", seed=35)
+## Program
 
-# Phase 1 — floor anchors: the unit + dentist stool as the central operatory group
-with scene.RelativeGroup() as operatory:
-    unit = scene.AddAsset("a pediatric dental treatment chair unit", asset_id=DENTAL_UNIT)
-    operatory.set_anchor(unit)
-    operatory.place_on_back_left(scene.AddAsset("a dentist saddle stool on casters"))
-    operatory.place_on_front_right(scene.AddAsset("a white mobile medical instrument cart on casters"))  # Ph2
-
-with scene.RoomGroup(modulate_scale=0.85, randomness=0.12) as room:   # 0.85 = acting on room-rescale feedback
-    room.place_walls(floor_texture="light grey vinyl flooring", ceiling_texture="white", wall_texture="soft white")
-    room.place_on_center(operatory, facing="front")
-    room.place_on_right_wall_center(scene.AddAsset("a wood bathroom vanity with a sink and countertop"))
-    room.place_on_left_wall_center(scene.AddAsset("a tall white medical supply cabinet"))
-    room.place_on_back_right_corner(scene.AddAsset("a tall potted plant in a modern planter"))   # Ph2
-    # Phase 3 — decor + openings
-    room.add_lighting("a flat rectangular LED ceiling panel light", density=0.3)
-    room.place_on_wall_back_center(scene.AddAsset("a large framed botanical green leaf print"))   # green accent
-    room.place_on_wall_left_left(scene.AddAsset("a colorful framed cartoon tooth brushing poster for kids"))
-    room.place_door("front_wall", position="right")
-    room.place_window_standard("front_wall", position="left", curtain="white blinds")
-scene.export("dental_office.blend")
-```
+[`dental_office_v1.py`](dental_office_v1.py) — phase 1 the floor anchors (the central operatory
+group, the perimeter cabinetry, the corner workstation and the door), phase 2 the surface dressing
+(the desktop layer + the corner plant), phase 3 the wall decor, the glass front wall and the ceiling
+light. `workbench run skills/examples/dental_office_v1.py --phase 1` builds the layout alone in
+~1–2 min.
 
 ## What worked / gotchas
 - **A single "unit" mesh beats assembling parts.** The whole operatory came from one ingested

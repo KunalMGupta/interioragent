@@ -1,5 +1,10 @@
 # Toy shop — worked example
 
+Status: **built as `scenes/toy_shop.py`** (seed=42). [`toy_shop_v1.py`](toy_shop_v1.py) is that
+program **phase-gated** (2026-07-13): same layout, same pinned ids, same seed. It is
+**`lint_program`-clean**, and it has **NOT been re-rendered since the retrofit**, so *the phase
+splits are unverified*.
+
 A bright children's **toy / comic / book shop**, from the planner target "Bright Primary-Play Toy
 Store". The reference for **building a shop's identity out of PRE-STOCKED shop fixtures** (the new
 `ShopFixtureRetriever`) instead of crowning generic shelves, and for two DSL lessons the build forced
@@ -46,34 +51,14 @@ prefer inherently-stocked fixtures over compose-your-own.
 **AVOID:** `custom/91fa23e0…` — captioned "comic-book display cabinet" but its **mesh is a clothing
 rack**. `custom/1313330a…` comic wall is **D=1.9 m** (multi-part spread mesh) — juts into the room.
 
-## Skeleton program (final)
-```python
-scene = SceneProgRoom("ToyShop", seed=42)
+## Program
+[`toy_shop_v1.py`](toy_shop_v1.py) — phase 1 the floor anchors (the perimeter merch ring, the play
+island and its flanking heroes, the display tables, the teepee/book-display reading corner, the
+bean-bag seating cluster, the checkout, the walls and the door), phase 2 the surface dressing (the
+shelf crowns, the island's train + blocks, the display-table props, the POS, the rugs), phase 3 the
+neon wall sign, the storefront window and the flush-mount lighting.
 
-def sized(q, aid, w):     o = scene.AddAsset(q, asset_id=aid); o.scale(w);  return o          # target WIDTH
-def sized_h(q, aid, h):   o = scene.AddAsset(q, asset_id=aid); o.scale(o.get_width()*h/o.get_height()); return o  # target HEIGHT
-
-# perimeter unit: a PRE-STOCKED shelf, optionally crowned; RelativeGroup so one wall call seats both
-def shelf_unit(kind, crown=None):
-    sid, sq, sh = SHELVES[kind]                    # (id, query, STAND HEIGHT in m) — scale by height
-    with scene.RelativeGroup() as s:
-        s.set_anchor(sized_h(sq, sid, sh))
-        if crown: s.place_on_top([crown])
-    return s
-
-# little seating nook — a FLOOR cluster (NOT place_on_top on a rug; that tiles a flat surface to nothing)
-with scene.RelativeGroup() as seating:
-    seating.set_anchor(sized("a large kids' floor cushion", FLOORCUSH, 1.1))
-    seating.place_on_left(sized("a pink bean-bag chair", BEANBAG_P, 0.9))
-    seating.place_on_right(sized("a blue bean-bag chair", BEANBAG_B, 0.8))
-    seating.place_rug("a colourful kids' rug", size=1.0, asset_id=RUG)
-
-with scene.RoomGroup(modulate_scale=0.98) as room:
-    room.place_on_back_wall_left(shelf_unit("toy", crown=dollhouse)); room.place_on_back_wall_center(shelf_unit("comic"))
-    ...                                            # side walls: toy/comic/book/figs; play island at centre
-    room.place_on_center(island); room.place_on_front(seating)
-    room.add_lighting("a flat round LED flush mount ceiling light", density=0.05)
-```
+`workbench run skills/examples/toy_shop_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## DSL lessons this build forced out (durable, beyond this scene)
 - **`object.scale(target_width)` was wrong for pre-normalised assets.** It set `target/current_width`

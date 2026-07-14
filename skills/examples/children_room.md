@@ -2,7 +2,9 @@
 
 Status: **built & VLM-clean** (`scenes/work/children_room.py`, seed=7). Final compile returns
 `no rescale` / `no rotation` / `no wall overlap`; RoomProportions converged to ~0.9. Planner-driven,
-built coarse-to-fine through the workbench.
+built coarse-to-fine through the workbench. Built as `scenes/work/children_room.py`;
+[`children_room_v1.py`](children_room_v1.py) is that program phase-gated (2026-07-13),
+`lint_program`-clean, and **NOT re-rendered since the retrofit**, so the phase splits are unverified.
 
 ## Prompt / plan
 "A bright, playful children's bedroom for a young kid: single bed with colorful bedding, a soft play
@@ -25,49 +27,12 @@ rooms well.
 
 Each functional cluster is its own `RelativeGroup`, placed as a unit so it travels/rotates together.
 
-## Skeleton (the working structure)
-```python
-scene = SceneProgRoom("ChildrenRoom", seed=7)
-scene.prefetch_assets([...all queries...])          # warm the retrieval cache (5x faster cold build)
-
-# Phase 1 majors — PIN a clean SINGLE bed (the shortlist is full of BUNK beds) + a kids desk
-bed  = scene.AddAsset("a kids single bed with colorful bedding", asset_id="future/f65434b4-…")
-desk = scene.AddAsset("a kids wooden study desk with drawers",  asset_id="hssd/49fcf2005b…")
-# nightstand, chair, cubby, bookshelf via plain AddAsset
-
-# Phase 2 details — pin small lamps (generic "desk lamp" came back an OVERSIZED designer lamp)
-mushroom_lamp = AddAsset("a mushroom shaped table lamp", asset_id="hssd/fd1e99da…")
-desk_lamp     = AddAsset("a small childrens desk lamp",  asset_id="hssd/5d1cede6…")
-baskets       = 3 * AddAsset("a woven seagrass storage basket")   # ONE unit, duplicated
-beanbag       = AddAsset("a large yellow kids bean bag chair", asset_id="hssd/0d129d28…",
-                         modulate_scale=5.0)          # its scale metadata loads it ~6x too small
-
-# Phase 3 art — FLAT kid canvases, pre-scaled small (place_on_wall_* mounts by art height)
-ocean_art, blossom_art = AddAsset(…8e37f5ae…), AddAsset(…5ece73ce…)
-for a in (ocean_art, blossom_art): a.scale_only_width(0.5); a.scale_only_height(0.5); a.scale_only_depth(0.03)
-
-with scene.RelativeGroup() as desk_group:
-    desk_group.place_desk_chair(desk, chair); desk_group.place_on_top([desk_lamp, pencils])
-with scene.RelativeGroup() as ns_group:
-    ns_group.set_anchor(nightstand); ns_group.place_on_top(mushroom_lamp)
-with scene.RelativeGroup() as cubby_group:
-    cubby_group.set_anchor(cubby); cubby_group.place_inside(baskets)
-    cubby_group.place_on_top([teddy, bunny, shelf_plant])
-with scene.RelativeGroup() as bed_group:
-    bed_group.set_anchor(bed); bed_group.place_on_back_right(ns_group)
-    bed_group.place_rug("a soft scalloped cream kids play rug with pastel dots", size=0.9)
-    bed_group.add_lighting("a warm flush kids ceiling light", density=0)
-
-with scene.RoomGroup(modulate_scale=0.80, randomness=0.15) as room:
-    room.place_walls(floor_texture="light maple wood planks", ceiling_texture="soft white",
-                     wall_texture="pale sky blue")
-    room.place_on_back_wall_center(bed_group)
-    room.place_on_right_wall_left(cubby_group); room.place_on_right_wall_right(bookshelf)
-    room.place_on_left_wall_center(desk_group);  room.place_on_right(beanbag)
-    room.place_on_wall_left_center(ocean_art);   room.place_on_wall_right_center(blossom_art)
-    room.place_window_standard("front_wall", position="center", curtain="bright cheerful patterned curtains")
-    room.place_door("front_wall", position="right")
-```
+## Program
+[`children_room_v1.py`](children_room_v1.py) — phase 1 the floor anchors (bed hero + bedside unit,
+the cubby/bookshelf run, the desk+chair study nook, the walls and the door); phase 2 the surface and
+floor dressing (baskets inside the cubbies, toys and lamps on top, the play rug, the bean bag);
+phase 3 the kid-height wall art, the curtained window and the lighting.
+`workbench run skills/examples/children_room_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## What worked / gotchas (kids-room specific)
 - **Beds are "set assets" AND the shortlist skews to BUNK beds.** For a *single*-bed brief, pin a

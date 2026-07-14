@@ -1,5 +1,10 @@
 # Library — worked example ("Grand Public Library Reading Room")
 
+Status: **built as `scenes/work/library.py`** (seed=36). [`library_v1.py`](library_v1.py) is that
+program **phase-gated** (2026-07-13): same layout, same pinned ids, same seed. It is
+**`lint_program`-clean**, and it has **NOT been re-rendered since the retrofit**, so *the phase
+splits are unverified*.
+
 Built end-to-end coarse-to-fine from the planner target (`tmp/library/plan/plan.png`). The working
 program is `scenes/work/library.py` (seed=36). Read alongside `../workflow/coarse_to_fine.md`. This
 is the reference for a **symmetric-corridor reading hall**: twin bookcase runs on the long walls +
@@ -54,66 +59,14 @@ Same family as warehouse/locker_room long-rows, but *symmetric*:
 - **Short walls stay light**: reference desk + card catalog + door on the FRONT wall; the arched
   window + the armchair nook + a plant on the BACK wall.
 
-## Working skeleton (final)
-```python
-scene = SceneProgRoom("Library", seed=36)
-_SHELF, _TABLE, _CHAIR = "hssd/b356640d…", "hssd/e5c0975d…", "hssd/b98286cc…"
-_LAMP, _REFDESK, _ARMCHR = "hssd/721b75b4…", "hssd/7379d888…", "hssd/613ba909…"
+## Program
+[`library_v1.py`](library_v1.py) — phase 1 the floor anchors (the twin bookcase runs, the centre
+reading-table column with its chairs, the armchair nook, the inverted reference station, the card
+catalog, the book cart, the walls and the door), phase 2 the surface and floor dressing (the
+banker's lamps on the tables, the desk accessories, the nook's book stack, the rugs, the plant),
+phase 3 the arched window and curtains, the drum pendants, and the wall art.
 
-def reading_unit():
-    with scene.AroundGroup(sparsity=0.28, jitter=0.35) as u:
-        u.set_anchor(scene.AddAsset("a long walnut rectangular reading table", asset_id=_TABLE))
-        u.place_rectilinear(longer_side1=3 * scene.AddAsset("a wooden library chair with a cushioned seat", asset_id=_CHAIR),
-                            longer_side2=3 * scene.AddAsset("a wooden library chair with a cushioned seat", asset_id=_CHAIR))
-        u.place_on_top(2 * scene.AddAsset("a green glass bankers desk lamp", asset_id=_LAMP, modulate_scale=0.3))  # SMALL (0.3)
-        u.place_rug("a traditional patterned green and cream wool rug", size=0.9)
-    return u
-with scene.GridGroup(sparsity=0.4, randomness=0.1) as reading_hall:
-    reading_hall.place_grid(2 * reading_unit(), cols=1)                       # two tables, centre column
-
-with scene.GridGroup(sparsity=0.04) as shelves_left:  shelves_left.place_row(4 * scene.AddAsset("a tall wooden bookshelf full of books", asset_id=_SHELF))
-with scene.GridGroup(sparsity=0.04) as shelves_right: shelves_right.place_row(4 * scene.AddAsset("a tall wooden bookshelf full of books", asset_id=_SHELF))
-
-with scene.RelativeGroup() as nook:                                          # seat gets a table + its own light (design_principles)
-    nook.set_anchor(scene.AddAsset("a cozy brown leather reading armchair", asset_id=_ARMCHR))
-    nook.place_on_right(side_tbl)              # round side table + a small book stack (modulate_scale=0.6)
-    nook.place_on_back_left(scene.AddAsset("a slender brass floor reading lamp", asset_id=_FLOOR))
-    nook.place_rug("a small patterned wool rug", size=0.7)
-
-with scene.RoomGroup(modulate_scale=0.9, randomness=0.12) as room:           # 0.9 after the 1.25<->0.8 oscillation
-    room.place_walls(floor_texture="warm herringbone parquet oak wood flooring",
-                     ceiling_texture="soft cream plaster ceiling", wall_texture="warm ivory plaster wall")
-    room.place_on_center(reading_hall)
-    room.place_on_left_wall_center(shelves_left)     # omit facing -> shelves face into the room
-    room.place_on_right_wall_center(shelves_right)
-    room.place_on_back_left_corner(nook, facing="front")   # nook faces the ROOM, not its side table
-    room.place_on_back_right_corner(scene.AddAsset("a tall potted plant with lush green leaves"))
-    room.place_on_front_left(reference, facing="front")    # reference desk+chair OFF the wall, front-left (see below)
-    room.place_on_front_wall_left(scene.AddAsset("a dark wooden card catalog cabinet with many small drawers", asset_id=_CATALOG))
-    room.place_on_right(book_cart)                          # fill the browsing aisle
-    room.place_door("front_wall", position="right")
-    room.place_window_standard("back_wall", position="center", curtain="floor-length cream linen curtains")
-    room.add_lighting("a warm fabric drum pendant ceiling light", density=0.025, modulate_scale=0.4)  # see coupling note
-    room.place_on_wall_front_center(scene.AddAsset("a framed classical oil painting portrait in a gold frame"))
-    room.place_on_wall_front_left(scene.AddAsset("a large round wall clock with roman numerals"))
-    # a few library-themed artworks on the back wall (pre-scale via width= so the mount clears the ceiling)
-    room.place_on_wall_back_left(scene.AddAsset("a framed vintage botanical illustration print in a gold frame", width=0.7))
-    room.place_on_wall_back_right(scene.AddAsset("a framed antique world map in a wooden frame", width=0.8))
-scene.export("library.blend")
-```
-
-where the off-wall reference station is an **inverted `WorkstationGroup`** (the reception pattern from
-`lobby.md` — NOT `place_desk_chair`, see the feedback note):
-```python
-_ref_desk = scene.AddAsset("a curved wooden reception front desk", asset_id=_REFDESK, modulate_scale=1.2)
-_ref_desk.set_rotation(180)                                  # invert: counter -> patrons, staff side -> operator +Z
-with scene.WorkstationGroup() as reference:
-    reference.set_anchor(_ref_desk)
-    reference.place_chair(scene.AddAsset("a brown leather office task chair on casters"), gap=True)
-    reference.place_accessories([scene.AddAsset("a green glass bankers desk lamp", asset_id=_LAMP, modulate_scale=0.3),
-                                 scene.AddAsset("a stack of hardcover books", modulate_scale=0.45)])
-# ... room.place_on_front_left(reference, facing="front")   # operator +Z -> front wall => librarian faces the room
-```
+`workbench run skills/examples/library_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## VLM / layout feedback we hit and how we resolved it
 - **Banker's lamps came out chair-sized.** `place_on_top` sized the green lamp to ~0.6 m domes that

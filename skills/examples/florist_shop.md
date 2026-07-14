@@ -5,6 +5,11 @@ The reference for a **retail room whose identity comes from MASSING one abundant
 across repeated display surfaces — and for **opening a scene with a retrieval stress test** to decide
 what the dataset can and can't give you. Read alongside `../workflow/asset_selection.md`.
 
+## Status
+Built as `scenes/florist_shop.py` (seed=48). `florist_shop_v1.py` is that same program, phase-gated
+(2026-07-13) and lint-clean, but **NOT re-rendered since the retrofit** — the phase splits are
+unverified.
+
 ## Prompt(s) this covers
 - "a flower shop" / florist / flower market / bloom boutique.
 
@@ -53,50 +58,11 @@ few more tables and flowers," and going 4→6 tables / ~16→~25 bouquets is wha
 with some flowers" to "flower shop." When the dataset is thin on the literal hero (buckets) but thick
 on a related prop (bouquets), lean all the way into the prop.
 
-## Skeleton program (final)
-```python
-scene = SceneProgRoom("FlowerShop", seed=48)
-
-_bloom_i = [0]
-def bouquet():                          # rotate the 6 pinned blooms so each cluster is mixed
-    aid = _BLOOMS[_bloom_i[0] % len(_BLOOMS)]; _bloom_i[0] += 1
-    return scene.AddAsset("a vase of fresh cut flowers", asset_id=aid)
-
-def bloom_table(n=3):                    # a display table brimming with bouquets — the reused unit
-    with scene.RelativeGroup() as t:
-        t.set_anchor(scene.AddAsset("a rustic wooden display table", asset_id=_TABLE))
-        t.place_on_top([bouquet() for _ in range(n)])
-    return t
-center, left, right = bloom_table(5), bloom_table(4), bloom_table(4)
-window, bay, side   = bloom_table(4), bloom_table(4), bloom_table(4)
-
-with scene.RelativeGroup() as cabinet:   # fill the glass cabinet or it reads bare
-    cabinet.set_anchor(scene.AddAsset("a glass display cabinet", asset_id=_CABINET))
-    cabinet.place_inside([bouquet(), bouquet(), bouquet()])
-with scene.RelativeGroup() as counter:   # checkout hub: POS + a wrapped bundle on top
-    counter.set_anchor(scene.AddAsset("a wooden shop checkout counter", asset_id=_COUNTER))
-    counter.place_on_top([scene.AddAsset("a point of sale terminal", asset_id=_POS),
-                          scene.AddAsset("a bundle of wrapped cut roses", asset_id=_BUNDLE)])
-
-with scene.RoomGroup(modulate_scale=1.0, randomness=0.1) as room:
-    room.place_walls(floor_texture="warm honey oak wood plank flooring",
-                     ceiling_texture="warm white", wall_texture="soft cream plaster")
-    room.place_on_back_wall_center(counter)                                   # service hub
-    room.place_on_back_left_corner(scene.AddAsset("a potted olive tree", asset_id=_OLIVE))
-    room.place_on_back_right_corner(scene.AddAsset("a tall potted fern", asset_id=_FERN))
-    room.place_on_left_wall_center(cabinet)
-    room.place_on_left_wall_left(left)
-    room.place_on_left_wall_right(scene.AddAsset("a tall leafy potted plant", asset_id=_TREE))
-    room.place_on_right_wall_center(right)
-    room.place_on_right_wall_right(side)
-    room.place_door("right_wall", position="left")                            # door on a SIDE wall
-    room.place_on_center(center)
-    room.place_window_floor_to_ceiling("front_wall")                          # storefront glass
-    room.place_on_front_left(window); room.place_on_front(bay)                # display bay
-    room.place_on_wall_back_center(scene.AddAsset("a decorative sunburst wall art", asset_id=_SUN))
-    room.place_on_wall_right_center(scene.AddAsset("a round decorative wall mirror", asset_id=_MIRROR))
-    room.add_lighting("a recessed ceiling downlight", density=0.12)
-```
+## Program
+[`florist_shop_v1.py`](florist_shop_v1.py) — phase 1 the floor anchors (the six bare bloom tables, the
+counter, the cabinet, the door), phase 2 the identity layer (the bouquets massed via `place_on_top` /
+`place_inside`, plus the potted greenery), phase 3 the storefront window, wall decor and lighting.
+`workbench run skills/examples/florist_shop_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## Asset traps that wrecked v1 (all in retrieval, not layout)
 - **The black-wire "tiered plant stand" (`9ae7a2c2…`) is a trap.** It renders as a GIANT glossy-black

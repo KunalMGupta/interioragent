@@ -1,5 +1,11 @@
 # Executive office — worked example (single room, "storage-backbone + work/lounge zones")
 
+Status: **built as `scenes/executive_office.py`** (seed=42), planner-driven, iterated on VLM
+feedback. [`executive_office_v1.py`](executive_office_v1.py) is that program **phase-gated**
+(2026-07-13): a retrofit only — same layout, same pinned ids, same seed. It is **lint-clean**, but
+it has **NOT been re-rendered since the retrofit**, so the *phase splits are unverified*; treat the
+phase boundaries as a proposal that still needs one `--phase 1` build to confirm.
+
 A single private/executive office. Its defining moves: a **wide bookcase as the storage
 backbone** on the back wall (the visual anchor), a **warm-wood desk WorkstationGroup** in
 front of it with the executive facing the room, and a small **lounge nook** (2-seat sofa +
@@ -33,37 +39,13 @@ All rank-1..3 good; pinned for durability:
   `hssd/d4bff7307857a9634e9785ce7febc342217cce7c` (round mid-century wood), **orange accent chair**
   `hssd/91999bead15b71802e7a306d174b69a924619756` (winged).
 
-## Skeleton program
-```python
-DESK = "hssd/6804953904df94d4abdb0776ad6d55c2a5b8aeaa"
-BOOKCASE = "future/f1f6fd18-6494-40d5-9fba-988c0734aaf3"
-scene = SceneProgRoom("ExecutiveOffice", seed=42)
+## Program
+[`executive_office_v1.py`](executive_office_v1.py) — phase 1 the floor anchors (the backbone
+bookcase, the desk workstation with its executive chair, the lounge nook, the orange accent chair,
+the walls and the door), phase 2 the surface dressing (the laptop, task lamp and succulent on the
+desktop, plus the corner plant), phase 3 the wall art, the window and the ceiling lighting.
 
-# desk workstation: warm-wood desk + leather exec chair + laptop + task lamp + succulent (<=3 on-top)
-with scene.WorkstationGroup() as station:
-    station.set_anchor(scene.AddAsset("a modern warm wood writing desk with slim metal legs", asset_id=DESK))
-    station.place_chair(scene.AddAsset("a brown leather executive office chair"))
-    station.place_computer(scene.AddAsset("an open laptop computer"))
-    station.place_accessories([scene.AddAsset("an articulated black desk task lamp"),
-                               scene.AddAsset("a small potted succulent for a desk")])
-
-with scene.RelativeGroup() as lounge:            # seating always gets a table (design_principles)
-    lounge.set_anchor(scene.AddAsset("a modern grey two-seat sofa", asset_id=SOFA))
-    lounge.place_on_front_right(scene.AddAsset("a small round wooden side table", asset_id=SIDE_TABLE))
-
-with scene.RoomGroup(modulate_scale=0.85, randomness=0.1) as room:   # 0.85 = acted-on rescale feedback
-    room.place_walls(floor_texture="warm oak wood flooring", ceiling_texture="white", wall_texture="soft warm white")
-    room.place_on_back_wall_center(scene.AddAsset("a wide modern wood open bookcase with a lower cabinet", asset_id=BOOKCASE))
-    room.place_on_center(station, facing="back")            # facing="back" -> executive faces the ROOM/window
-    room.place_on_left_wall_center(lounge, facing="right")
-    room.place_on_front_left(scene.AddAsset("a sculptural orange winged accent lounge chair", asset_id=ACCENT_CHAIR), facing="back")
-    room.place_on_back_right_corner(scene.AddAsset("a tall potted plant in a modern planter"))
-    room.add_lighting("a flat round LED flush mount ceiling light", density=0.2)   # FLUSH fixture, NOT a chandelier
-    room.place_on_wall_right_center(scene.AddAsset("a large framed abstract wall art print in warm tones"))
-    room.place_window_standard("front_wall", position="center", curtain="sheer white curtains")
-    room.place_door("right_wall", position="right")
-scene.export("executive_office.blend")
-```
+`workbench run skills/examples/executive_office_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## What worked / gotchas
 - **The bookcase backbone is the anchor + the proportion-setter.** Place the long storage unit on

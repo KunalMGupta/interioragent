@@ -16,6 +16,14 @@
 > a newly-added retriever class until a server restart, but `run_scene`/`workbench.py` can). The rest of
 > this file (the improvised-prop version) stays as the fallback recipe + the reasoning that led here.
 
+## Status
+
+Status: **built & iterated as `scenes/jewelry_shop.py` (seed=42)** — the v3 rebuild on the real
+`ShopFixtureRetriever` fixtures. [`jewelry_shop_v1.py`](jewelry_shop_v1.py) is that program
+**phase-gated** (2026-07-13): `lint_program`-clean, with the layout / pinned ids / seed / comments
+preserved. **It has NOT been re-run or re-rendered since the retrofit, so the phase splits are
+UNVERIFIED.**
+
 ## (earlier) fine-jewelry boutique, "visible-jewelry display tables + calm vitrine backdrop"
 
 A luxury jewelry boutique. **The hard-won lesson (v2): a shop is read by its PRODUCT, not its
@@ -93,55 +101,15 @@ vitrines. Same reword-to-the-retriever's-class trick as the restaurant back-bar 
 - **Emerald armchair** `hssd/1672e0bc1abcdde2fd45c13b85d7bcf74f2f8236` — tufted velvet (**pinned to lock the jewel-tone palette**, see gotcha).
 - Unpinned but high-recall: ornate gold mirror (0.86), floor mirror, marble pedestal, POS terminal, plant, neon sign.
 
-## Skeleton program (v2 — visible jewelry + de-congested)
-```python
-scene = SceneProgRoom("JewelryShop", seed=42)
+## Program
 
-def vitrine():   # backdrop only — 4 total (thinned from 6)
-    return scene.AddAsset("a dark wood and glass display showcase cabinet with glass shelves", asset_id=VITRINE)
+[`jewelry_shop_v1.py`](jewelry_shop_v1.py) — the v3 program (real fixtures), phase-gated: phase 1 the
+floor anchors (cash-wrap, the six low jewelry counters around the perimeter, stools, the featured
+table, the lounge, the floor mirror, the pedestals, the walls and the door), phase 2 the surface
+dressing that IS the identity (the busts / ring cubes / cushions massed at viewing height, the rug,
+the plant), phase 3 the wall decor (focal mirror, neon sign), the storefront window and the lighting.
 
-with scene.RelativeGroup() as checkout:                       # cash-wrap: POS + a spread of jewelry props
-    checkout.set_anchor(scene.AddAsset("a curved reception service counter desk", asset_id=COUNTER))
-    checkout.place_on_top([scene.AddAsset("a point of sale touchscreen terminal"),
-                           scene.AddAsset("a gold hand-shaped jewelry display stand", asset_id=HAND_STAND),
-                           jbox(), scene.AddAsset("a glass display cloche", asset_id=CLOCHE)])
-
-with scene.GridGroup(sparsity=0.4) as stools:                 # customer seating at the counter
-    stools.place_row([scene.AddAsset("a barstool", asset_id=STOOL), scene.AddAsset("a barstool", asset_id=STOOL)])
-
-with scene.RelativeGroup() as island:                         # HERO: a low table MASSED with visible jewelry
-    island.set_anchor(scene.AddAsset("a low display table with a black metal frame", asset_id=DISPLAY_TABLE))
-    island.place_on_top([scene.AddAsset("a gold hand-shaped jewelry display stand", asset_id=HAND_STAND),
-                         scene.AddAsset("a white display bust on a stand", asset_id=BUST),
-                         scene.AddAsset("a smoky agate on a gold stand", asset_id=AGATE),
-                         scene.AddAsset("a white geode gem specimen", asset_id=GEODE), jbox()])
-    island.place_rug("a large flat luxury cream area rug", size=0.9)
-
-with scene.GridGroup(sparsity=0.5) as lounge:                 # seating + its side table (design principle)
-    lounge.place_row([scene.AddAsset("an emerald velvet accent armchair", asset_id=ARMCHAIR),
-                      scene.AddAsset("a small round wooden side table")])
-
-with scene.RoomGroup(modulate_scale=0.9, randomness=0.1) as room:   # 0.8→0.9 to de-congest
-    room.place_walls(floor_texture="polished stone floor", ceiling_texture="white", wall_texture="warm light greige")
-    # CLEAN brand wall: just the cash-wrap under the ornate focal mirror (no flank cabinets — v2 de-congest)
-    room.place_on_back_wall_center(checkout, facing="front")
-    room.place_on_wall_back_center(scene.AddAsset("an ornate gold-framed wall mirror"))
-    # thinned vitrine backdrop: 2 per side wall, facing inward
-    room.place_on_left_wall_left(vitrine(), facing="right");  room.place_on_left_wall_center(vitrine(), facing="right")
-    room.place_on_left_wall_right(scene.AddAsset("a full-length freestanding floor mirror"), facing="right")
-    room.place_on_right_wall_left(vitrine(), facing="left");  room.place_on_right_wall_center(vitrine(), facing="left")
-    # interior: stools at counter, jewelry island centre, lounge + plant in back corners
-    room.place_on_back(stools, facing="back"); room.place_on_center(island)
-    room.place_on_back_left(lounge, facing="front"); room.place_on_back_right(scene.AddAsset("a large potted indoor plant"))
-    # window display: pedestals carry VISIBLE jewelry, not vases
-    room.place_on_front_left(pedestal_display(scene.AddAsset("a gold hand-shaped jewelry display stand", asset_id=HAND_STAND)), facing="front")
-    room.place_on_front_right(pedestal_display(scene.AddAsset("a white geode gem specimen", asset_id=GEODE)), facing="front")
-    room.place_on_wall_left_center(scene.AddAsset("a neon store brand sign with glowing tube lettering"))
-    room.add_lighting("a flat round LED flush mount ceiling light", density=0.06)   # medium room — 0.1 over-tiled
-    room.place_window_standard("front_wall", position="center")
-    room.place_door("right_wall", position="right")
-scene.export("jewelry_shop.blend")
-```
+`workbench run skills/examples/jewelry_shop_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## What worked / gotchas
 - **Show the PRODUCT at viewing height, not the fixture** (the v2 rescue). Massed jewelry props on

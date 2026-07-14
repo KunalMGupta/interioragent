@@ -9,6 +9,11 @@ mid-height rails, low table) build depth. Reach for this for "a store / shop / b
 retail / showroom". Read alongside `../workflow/asset_selection.md` (this scene began with a
 retrieval **stress test**) and `../workflow/vlm_feedback.md`.
 
+## Status
+Built as `scenes/retail_store.py`. [`retail_store_v1.py`](retail_store_v1.py) is that same program
+phase-gated (2026-07-13) and is lint-clean, but it has **NOT been re-rendered since the retrofit**
+— the phase 1/2/3 splits are unverified.
+
 ## Prompt(s) this covers
 - "a retail store", "a clothing / apparel store", "a boutique", "a shop", "a showroom".
 
@@ -51,45 +56,11 @@ availability only; embedding recall ≠ a good mesh).
 - **Folded sweaters** `future/c17aa2e4-30f4-482a-badc-1c04309e487b` (on-top prop).
 - **Glass showcase** `hssd/be0ea104f86eedb2424627de3e52a32af8d19c02` (oak/glass accessory cabinet).
 
-## Skeleton program
-```python
-scene = SceneProgRoom("RetailStore", seed=42)
-
-with scene.RelativeGroup() as checkout:                       # cash-wrap + POS + bags on top
-    checkout.set_anchor(scene.AddAsset("a retail checkout counter service desk", asset_id=COUNTER))
-    checkout.place_on_top([scene.AddAsset("a point of sale touchscreen terminal"),
-                           scene.AddAsset("a paper retail shopping bag")])
-
-with scene.RelativeGroup() as table:                          # spine centrepiece + rug
-    table.set_anchor(scene.AddAsset("a low wooden display table with a black metal frame", asset_id=DISPLAY_TABLE))
-    table.place_on_top([scene.AddAsset("a stack of folded sweaters", asset_id=FOLDED),
-                        scene.AddAsset("a stack of folded shirts in muted colours")])
-    table.place_rug("a large flat neutral wool area rug", size=0.9)
-
-with scene.RoomGroup(modulate_scale=0.9, randomness=0.1) as room:   # 0.9 acts on 'rescale 0.9' + tightens empty floor
-    room.place_walls(floor_texture="polished concrete floor", ceiling_texture="white", wall_texture="warm light greige")
-    # service wall
-    room.place_on_back_wall_center(checkout, facing="front")
-    room.place_on_back_wall_left(scene.AddAsset("an oak and glass display showcase cabinet", asset_id=SHOWCASE), facing="front")
-    # central spine: two double-sided rails (facing="left" runs them front-back) framing the table
-    room.place_on_left(scene.AddAsset("a double-sided clothing rail", asset_id=SPINE_RAIL), facing="left")
-    room.place_on_center(table)
-    room.place_on_right(scene.AddAsset("a double-sided clothing rail", asset_id=SPINE_RAIL), facing="left")
-    # front-window display: three mannequins
-    for slot in (room.place_on_front_left, room.place_on_front, room.place_on_front_right):
-        slot(scene.AddAsset("a full-body standing clothing mannequin", asset_id=MANNEQUIN), facing="front")
-    room.place_on_back_right_corner(scene.AddAsset("a large potted indoor plant"))
-    # perimeter merch (wall-hung shelves: bottom= sets mount height)
-    room.place_on_left_wall_center(scene.AddAsset("a wall retail shelf with folded clothes and a hanging rod", asset_id=WALL_MERCH), facing="right", bottom=0.4)
-    room.place_on_left_wall_left(scene.AddAsset("a wall shoe display shelf", asset_id=SHOE_SHELF), facing="right", bottom=0.4)
-    room.place_on_right_wall_center(scene.AddAsset("a black-framed boutique clothing rack", asset_id=FRAMED_RACK), facing="left")
-    room.place_on_right_wall_right(scene.AddAsset("a full-length freestanding floor mirror"), facing="left")
-    room.place_on_wall_back_center(scene.AddAsset("a neon store brand sign with glowing tube lettering"))
-    room.add_lighting("a flat round LED flush mount ceiling light", density=0.08)   # LOW — a big floor tiles many
-    room.place_window_standard("front_wall", position="center")   # NOT floor-to-ceiling (wall-sized void)
-    room.place_door("right_wall", position="right")
-scene.export("retail_store.blend")
-```
+## Program
+[`retail_store_v1.py`](retail_store_v1.py) — phase 1 the floor anchors (service wall, rack rows,
+display tables, mannequins, perimeter merch, door), phase 2 the surface dressing (folded stacks,
+rug, plant, the POS rotate), phase 3 the brand sign, the storefront pane and the lighting.
+`workbench run skills/examples/retail_store_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## What worked / gotchas
 - **Central-spine layout on the RoomGroup 5×5 grid.** Two double-sided rails at `place_on_left`

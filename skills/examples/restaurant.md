@@ -3,6 +3,8 @@
 Status: **built & essentially VLM-clean** (`scenes/work/restaurant.py`, seed=37). Final compile:
 `no rescale`, `no room-rescale`, `no wall overlap`; only the noisy `RotationConstraint` remained
 (declined). Built asset-first (a retrieval STRESS TEST before any placement) then coarse-to-fine.
+Built as `scenes/work/restaurant.py`; `restaurant_v1.py` is that program phase-gated (2026-07-13),
+lint-clean, and **NOT re-rendered since the retrofit**, so the phase splits are unverified.
 
 ## Prompt this covers
 - "an upscale but warm sit-down restaurant / bistro: several dining tables with chairs, booth/
@@ -43,62 +45,14 @@ Two things the stress test surfaced, both fixed WITHOUT ingest:
 - Entrance = a host-stand podium by the door; service = a sideboard (POS + plates on top). Brick
   fireplace anchors the right wall (warm focal), greenery in the corners, chandelier over center.
 
-## Working skeleton (coarse-to-fine)
-```python
-scene = SceneProgRoom("Restaurant", seed=37)
-BAR_COUNTER="hssd/b1c9d732…"; BACKBAR="hssd/d13be689…"; BARSTOOL="hssd/d10ff3f7…"
-BOOTH="future/56f963cd…"; TUBCHAIR="future/2548400f…"          # cognac leather tub chair
-ROUND_TABLE="future/aaea6776…"; HOST_STAND="hssd/2fa15bc3…"    # BARE pedestal table; podium
-scene.prefetch_assets([ ...all descriptions... ])
+## Program
 
-# BAR: counter + customer-side stool row + back-bar hutch behind = one rigid station (geometric aisle)
-counter = scene.AddAsset("a long wooden restaurant bar counter with a paneled front", asset_id=BAR_COUNTER, width=3.2)
-with scene.AroundGroup(sparsity=0.15, jitter=0.2) as bar_group:
-    bar_group.set_anchor(counter)
-    bar_group.place_rectilinear(longer_side1=4*scene.AddAsset("a wooden bar stool with a backrest", asset_id=BARSTOOL))
-    bar_group.add_lighting("a warm amber glass globe pendant light", density=0.2)   # SINGULAR query
-backbar = scene.AddAsset("a tall dark wood back bar cabinet with shelves of liquor bottles", asset_id=BACKBAR, width=2.6)
-with scene.RelativeGroup() as bar_station:
-    bar_station.set_anchor(bar_group); bar_station.place_on_back(backbar)
+[`restaurant_v1.py`](restaurant_v1.py) — phase 1 builds the floor anchors (the rigid bar station, the
+banquette run, the 2-top cluster field, the host stand, the fireplace, the door), phase 2 the surface
+dressing (place settings + candles on each 2-top, the POS + plates on the service sideboard, the corner
+olive tree), phase 3 the wall decor (fireplace poster, landscape), the window and all the lighting.
 
-def two_top(lit=False):                                   # intimate 2-top dining cluster
-    with scene.AroundGroup(sparsity=0.2, jitter=0.4) as g:
-        t = scene.AddAsset("a small round wooden bistro dining table", asset_id=ROUND_TABLE, width=0.8)  # BARE
-        g.set_anchor(t)
-        chairs = 2 * scene.AddAsset("a modern leather tub dining armchair", asset_id=TUBCHAIR, modulate_scale=0.82)
-        g.place_circle(chairs)
-        for c in chairs: g.face(c, toward=t)              # settle the facing (still noisy; render is arbiter)
-        g.place_on_top([scene.AddAsset("an elegant table place setting with a plate, wine glass and cutlery"),
-                        scene.AddAsset("a lit candle in a small glass votive holder")])
-        if lit: g.add_lighting("a warm amber glass globe pendant light", density=0)
-    return g
-
-def banquette():                                          # high-back booth + table + facing chair
-    with scene.RelativeGroup() as g:
-        booth = scene.AddAsset("a high-back upholstered restaurant booth bench", asset_id=BOOTH, width=1.4)
-        g.set_anchor(booth); g.place_on_front(scene.AddAsset("a small square bistro dining table", width=0.7))
-        chair = scene.AddAsset("a modern leather tub dining armchair", asset_id=TUBCHAIR, modulate_scale=0.82)
-        g.place_on_front_further(chair); g.face(chair, toward=booth)
-    return g
-
-with scene.RoomGroup(modulate_scale=0.8, randomness=0.2, max_height=3.4) as room:
-    room.place_walls(floor_texture="warm walnut herringbone wood floor",
-                     ceiling_texture="warm off-white plaster",
-                     wall_texture="warm taupe plaster with a rustic exposed brick accent")
-    room.place_on_back(bar_station, facing="front")
-    room.place_on_back_left_corner(scene.AddAsset("a tall potted indoor olive tree", width=0.9), facing="front")
-    room.place_on_back_right_corner(service, facing="front")             # sideboard w/ POS + plates
-    room.place_on_left(banq_1, facing="right"); room.place_on_front_left(banq_2, facing="right")
-    room.place_on_center(table_c, facing="front"); room.place_on_right(table_r, facing="front")
-    room.place_on_front_right(table_fr, facing="front")
-    room.place_on_front(scene.AddAsset("a wooden host stand podium", asset_id=HOST_STAND), facing="back")
-    room.place_on_right_wall_center(scene.AddAsset("a classic brick fireplace", width=1.6))
-    room.place_on_wall_right_center(scene.AddAsset("a large framed vintage Casablanca movie poster"))  # above the fireplace
-    room.place_on_wall_front_center(scene.AddAsset("a framed landscape painting"))
-    room.place_window_standard("left_wall", position="center", curtain="olive green drapes")
-    room.place_door("front_wall", position="right")
-    room.add_lighting("an elegant warm dining chandelier", density=0)    # key central fixture
-```
+`workbench run skills/examples/restaurant_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## What worked / gotchas
 - **Retrieval SET trap (the big one).** A generic "a small round dining table" (or "…bistro table")

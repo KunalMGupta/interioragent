@@ -1,7 +1,10 @@
 # Warehouse / industrial storage — worked example
 
 Status: **built & VLM-clean** (`scenes/work/warehouse.py`, seed=31). Final compile: `no rescale`,
-`no rotation`, `no wall overlap`. Built coarse-to-fine through the workbench.
+`no rotation`, `no wall overlap`. Built coarse-to-fine through the workbench. Built as
+`scenes/work/warehouse.py`; [`warehouse_v1.py`](warehouse_v1.py) is that program phase-gated
+(2026-07-13), `lint_program`-clean, and **NOT re-rendered since the retrofit**, so the phase splits
+are unverified.
 
 > **v2 (2026-07-06):** rebuilt around Kunal's **ingested custom warehouse gear** — a real forklift,
 > pallet jack, traffic cones, roller-shutter dock door, exit sign, gas cylinder, wooden crates, and a
@@ -31,46 +34,15 @@ the recipe:
   → both loaded faces point INTO the same aisle (the collage's money shot). Leave the FRONT third open
   as a loading/staging DOCK + the entrance.
 
-## Working skeleton (coarse-to-fine)
+## Program
 
-```python
-scene = SceneProgRoom("Warehouse", seed=31)
-RACK = "hssd/44935cd7942c9a256e13286fd3c07e148fb3e5aa"   # loaded industrial rack: dark frame, plank decking
-PALLET, BOXES_CARD = "hssd/a5d4b9f0…", "hssd/71e625e1…"
-WORKBENCH = "hssd/81ad56ba…"
+[`warehouse_v1.py`](warehouse_v1.py) — **phase 1** the floor anchors (the two butted rack walls in
+the back and center thirds, the forklift + cones group, the staged dock row, the packing bench + gas
+cylinder, the factory-tank backdrop, the walls and the personnel door); **phase 2** the surface
+dressing (the box stack on the packing bench — the only `place_on_top` in the scene); **phase 3** the
+wall gear and the mood (the roller-shutter dock door, the exit sign, the linear high-bays).
 
-def rack_wall(n):                                  # a butted horizontal row of loaded racks
-    racks = n * scene.AddAsset("a heavy-duty industrial warehouse pallet racking bay loaded with boxes", asset_id=RACK)
-    with scene.GridGroup(sparsity=0.05, randomness=0.0) as w:
-        w.place_row(racks)
-    return w
-wall_back, wall_mid = rack_wall(5), rack_wall(5)
-
-# FRONT dock: a wide row of brown cardboard box-stacks, sized UP to palletized-load scale (~1.2 m).
-# (See "place_on_top" note — do NOT put boxes on a flat pallet.)
-dock_items = [_fit_w(scene.AddAsset("a stack of brown cardboard shipping boxes", asset_id=BOXES_CARD), 1.2) for _ in range(5)]
-with scene.GridGroup(sparsity=0.5, randomness=0.15) as dock:
-    dock.place_row(dock_items)
-# a corner staging pile + a packing station (workbench + box on top — bench has real height so on_top is fine)
-staging_l = staging_cluster()
-with scene.RelativeGroup() as packing:
-    packing.set_anchor(scene.AddAsset("a heavy-duty industrial steel workbench", asset_id=WORKBENCH))
-    packing.place_on_top(scene.AddAsset("a stack of brown cardboard shipping boxes", asset_id=BOXES_CARD))
-
-with scene.RoomGroup(modulate_scale=0.85, randomness=0.05, max_height=5.0) as room:
-    room.place_walls(floor_texture="polished grey concrete warehouse floor with painted safety lines",
-                     ceiling_texture="light grey exposed industrial ceiling with steel beams",
-                     wall_texture="light grey industrial corrugated metal wall")
-    room.place_on_back(wall_back, facing="front")     # loaded face -> aisle
-    room.place_on_center(wall_mid, facing="back")     # loaded face -> SAME aisle = double-loaded
-    room.place_on_front(dock, facing="back")          # front third = busy dock
-    room.place_on_front_left_corner(staging_l, facing="back")
-    room.place_on_front_right(packing, facing="back")
-    room.place_door("right_wall", position="center")  # NB: position is a wall label (left/center/right), NOT "front"
-    room.place_on_back_wall_center(scene.AddAsset("a large plain black round wall clock"))
-    room.add_lighting("a row of bright industrial linear ceiling lights", density=0.02, modulate_scale=2.4)
-scene.export("warehouse.blend")
-```
+`workbench run skills/examples/warehouse_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## What worked / gotchas
 - **`place_grid` won't give forklift aisles** (gap capped at `sparsity·depth`); use `place_row` lines in

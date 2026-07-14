@@ -4,6 +4,11 @@ A premium fitness/team **locker room**, built from the planner target "Pro Locke
 Flow". The reference for a **wide corridor room whose long rows go flush-on-wall or down-the-centre**
 (the layout trap that wrecks these rooms). Read alongside `../workflow/coarse_to_fine.md`.
 
+## Status
+Built as `scenes/locker_room.py`. `locker_room_v1.py` is that same program, phase-gated
+(2026-07-13) and lint-clean — but it has **NOT been re-rendered since the retrofit**, so the
+phase 1/2/3 splits are unverified.
+
 ## Prompt(s) this covers
 - "a team sports locker room" / gym changing rooms / spa locker rooms.
 
@@ -41,43 +46,12 @@ line floating across the open floor** and **balloons the auto-sized room** (14×
 back/front (lockers on back, cubbies+door on front) and run the benches down the centre — where
 `place_row`'s natural axis is already right, so no `face()` fiddling.
 
-## Skeleton program (phase by phase)
-```python
-scene = SceneProgRoom("LockerRoom", seed=15)
-
-# Ph1 — floor anchors
-lockers = 6 * scene.AddAsset("a bank of tall metal lockers", asset_id=_LOCKERS)
-with scene.GridGroup(sparsity=0.02) as locker_spine: locker_spine.place_row(lockers)
-benches = 4 * scene.AddAsset("a wooden slat locker room bench", asset_id=_BENCH)
-with scene.GridGroup(sparsity=0.5) as bench_row: bench_row.place_row(benches)
-
-# Ph2 — cubby-with-towels unit built ONCE then duplicated (place_on_top survives the row+flush)
-with scene.RelativeGroup() as cubby_unit:
-    cubby_unit.set_anchor(scene.AddAsset("an open wooden cubby storage unit", asset_id=_CUBBY))
-    cubby_unit.place_on_top(scene.AddAsset("a stack of rolled white towels", asset_id=_TOWELS, modulate_scale=0.7))
-cubbies = 3 * cubby_unit
-with scene.GridGroup(sparsity=0.15) as cubby_row: cubby_row.place_row(cubbies)
-with scene.RelativeGroup() as grooming:                      # 2 sinks + towels, as ONE unit
-    grooming.set_anchor(scene.AddAsset("a bathroom vanity with a sink", asset_id=_VANITY))
-    grooming.place_on_right(scene.AddAsset("a bathroom vanity with a sink", asset_id=_VANITY))
-    grooming.place_on_top(scene.AddAsset("a stack of rolled white towels", asset_id=_TOWELS, modulate_scale=0.7))
-
-with scene.RoomGroup(modulate_scale=0.9, randomness=0.1) as room:
-    room.place_walls(floor_texture="large format grey porcelain floor tiles",
-                     ceiling_texture="white", wall_texture="white ceramic wall tiles")
-    room.place_on_back_wall_center(locker_spine, facing="back")   # hero spine, one long wall
-    room.place_on_center(bench_row)                               # benches down the centre
-    room.place_on_front_wall_center(cubby_row, facing="front")    # dressing wall
-    room.place_door("front_wall", position="right")
-    room.place_on_left_wall_center(grooming, facing="left")       # grooming short wall
-    room.place_on_wall_left_center(scene.AddAsset("a large rectangular wall mirror", asset_id=_MIRROR))
-    room.place_on_right_wall_left(scene.AddAsset("a glass walk-in shower stall", asset_id=_SHOWER))
-    room.place_on_right_wall_right(scene.AddAsset("a glass walk-in shower stall", asset_id=_SHOWER))
-    room.place_on_front_wall_left(scene.AddAsset("a freestanding water cooler dispenser", asset_id=_COOLER))
-    room.place_on_back_right_corner(scene.AddAsset("a tall wicker laundry hamper basket"))
-    room.place_on_wall_back_center(scene.AddAsset("a large round wall clock"))
-    room.add_lighting("a recessed ceiling downlight", density=0.06)
-```
+## Program
+[`locker_room_v1.py`](locker_room_v1.py) — phase 1 the floor anchors (locker spine, centre bench
+row, cubby row, grooming stations, walls + door), phase 2 the surface dressing (rolled towels on the
+cubbies, water cooler, laundry hamper), phase 3 the walls & mood (shower stalls, wall clock,
+downlights). `workbench run skills/examples/locker_room_v1.py --phase 1` builds the layout alone in
+~1–2 min.
 
 ## Overlaps & over-height: keep modulate_scale=1.0, don't fight the auto-sizer
 Three failures all traced to the SAME misuse — treating the VLM's occupancy-driven "rescale room by

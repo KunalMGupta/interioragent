@@ -6,6 +6,12 @@ Status: **built & VLM-clean** (`scenes/work/garage_workshop.py`, seed=9). Final 
 it as one unit, the way `living_room`/`classroom` do. Do NOT scatter bench/chest/stool across three
 separate wall slots** (the first pass did that and read as sparse, disconnected props).
 
+Status (2026-07-13, phase-gating retrofit): the scene was built and iterated as
+`scenes/work/garage_workshop.py`. [`garage_v1.py`](garage_v1.py) is that same program, phase-gated:
+`lint_program`-clean, layout / pinned ids / seed / comments preserved. It has **NOT been re-rendered
+since the retrofit**, so the phase-1 / phase-2 / phase-3 splits are UNVERIFIED — treat the phase
+boundaries as a proposal until someone runs `--phase 1`.
+
 ## Prompt(s) this covers
 - "a home workshop garage with a car, a workbench, tool storage, shelving, and pegboards"
 
@@ -16,45 +22,14 @@ pegboard tool **spine**, tall white vertical storage, a side window for daylight
 and a car in the central bay. The library covers garages well — three Garage reference skills at
 0.71–0.75.
 
-## Skeleton program (compose clusters, then place them)
-```python
-scene = SceneProgRoom("GarageWorkshop", seed=9)
+## Program
 
-# hero: pin a REAL car width so an uncurated "car" query isn't scaled like a toy
-car = scene.AddAsset("a modern silver SUV car", asset_id=_CAR, width=1.85)
+[`garage_v1.py`](garage_v1.py) — phase 1 the floor anchors (the car hero, the work-zone cluster, the
+storage run, the shell, the shutter and the man-door), phase 2 the cluster detail (the rubber work
+mat, the corner tyre stack and the box pile), phase 3 the pegboard spine, the window, the clock and
+the LED shop lighting.
 
-# WORK-ZONE cluster — bench (anchor) + chest beside it + stool in front, on a rubber mat.
-# Same idiom as the living-room U-cluster: build relative to the anchor, place as ONE unit.
-with scene.RelativeGroup() as work_zone:
-    work_zone.set_anchor(scene.AddAsset(..., asset_id=_WORKBENCH, modulate_scale=0.8))
-    work_zone.place_on_right(scene.AddAsset(..., asset_id=_TOOLCHEST))   # chest alongside the bench
-    work_zone.place_on_front_further(scene.AddAsset("a round metal shop stool"))  # sit-at-bench
-    work_zone.place_rug("a black rubber garage floor work mat", size=0.7)
-
-# STORAGE run + corner clusters (StackGroup tyres, PileGroup boxes-on-a-pallet)
-cabinets = 2 * scene.AddAsset("a tall white metal storage cabinet", asset_id=_CABINET)
-shelving = scene.AddAsset("a heavy-duty open steel garage shelving unit", asset_id=_SHELVING)
-with scene.StackGroup() as tyre_stack:
-    tyre_stack.place_stack(3 * scene.AddAsset("a black rubber car tyre"))
-with scene.PileGroup() as box_pile:
-    box_pile.set_anchor(scene.AddAsset("a wooden shipping pallet"))
-    box_pile.place_pile(4 * scene.AddAsset("a cardboard storage box"), spread=0.6)
-
-with scene.RoomGroup(modulate_scale=0.85, randomness=0.15) as room:      # 0.85 = final-phase shrink
-    room.place_walls(floor_texture="polished light grey epoxy concrete",
-                     ceiling_texture="white drywall", wall_texture="white painted drywall")
-    room.place_on_center(car, facing="front")                            # car down the long axis
-    room.place_on_right_wall_center(work_zone)                           # WHOLE cluster, flush to wall
-    room.place_on_left_wall_left(cabinets[0]); room.place_on_left_wall_center(cabinets[1])
-    room.place_on_left_wall_right(shelving)                              # the storage run fills one wall
-    room.place_on_front_right_corner(tyre_stack)                        # corner clusters, not floor clutter
-    room.place_on_back_left_corner(box_pile)
-    room.place_on_wall_right_center(scene.AddAsset(..., asset_id=_PEGBOARD))  # spine ABOVE the bench
-    room.place_window_standard("back_wall", position="center", curtain=None)
-    room.place_on_wall_back_right(scene.AddAsset("a round industrial wall clock"))
-    room.place_door("front_wall", position="right")
-    room.add_lighting("a row of bright LED linear ceiling shop lights", density=0.03)
-```
+`workbench run skills/examples/garage_v1.py --phase 1` builds the layout alone in ~1–2 min.
 
 ## What worked / gotchas
 - **Compose zones as clusters — this is the whole lesson.** v1 placed the bench on `right_wall_center`,
