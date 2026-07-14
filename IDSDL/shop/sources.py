@@ -263,5 +263,5 @@ def get_source(name, **kw):
         return LocalSource(kw["directory"])
     if name == "meshy":
         from IDSDL.shop.meshy import MeshySource
-        return MeshySource(api_key=kw.get("token"))
+        return MeshySource(api_key=kw.get("token"), refine=kw.get("refine", True))
     raise ValueError(f"unknown source {name!r}")

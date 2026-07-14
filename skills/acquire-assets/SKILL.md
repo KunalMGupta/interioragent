@@ -124,12 +124,11 @@ anchor: width
 user-set front overrules the verifier — you looked at the render, it only guessed), ingests, and
 regenerates the board.
 
-**No Sketchfab token is the normal state, not an error.** Search is public; downloading needs a
-free token (`SKETCHFAB_API_TOKEN` in `.env`). Without one, every candidate becomes a
-`needs_download` entry on the board with its link, and anything the user drops into
-`<batch>/inbox/` is picked up by `apply` — name the file `<key>.glb` and it inherits that
-candidate's licence and attribution. The token is the only thing between the manual flow and the
-automatic one.
+**A missing Sketchfab token is a supported state, not an error.** Search is public; downloading
+needs a free token (`SKETCHFAB_API_TOKEN` in `.env` — Kunal's is set). Without one, every
+candidate becomes a `needs_download` entry on the board with its link, and anything the user drops
+into `<batch>/inbox/` is picked up by `apply` — name the file `<key>.glb` and it inherits that
+candidate's licence and attribution.
 
 ## Licences are not optional
 
@@ -168,10 +167,33 @@ any of them. Five came from the hand-rolled normalizer that preceded this
 
 `IDSDL/shop/meshy.py` is the same pipeline with the search step replaced by a generator — a
 generated model arrives just as un-normalized as a download (no canonical front, no real scale),
-so it needs exactly the same triage and gets it for free. Needs `MESHY_API_KEY`; every generation
-spends the user's credits, so `count` is never inferred and `--refine` (higher cost) is opt-in.
-**Untested against a live key** — treat the first real run as a shakedown and check the endpoint
-constants against Meshy's current docs.
+so it needs exactly the same triage and gets it for free. Needs `MESHY_API_KEY` in `.env`. Every
+generation spends credits (~5 preview, ~10 refine), so `count` is never inferred; check the
+balance first with `MeshySource().balance()`.
+
+```bash
+python -m IDSDL.shop run "a cork pinboard in a wooden frame with notes pinned to it" \
+    --source meshy --count 1
+```
+
+**A texture is not a finishing touch — it is what makes the asset legible.** Meshy's `preview`
+mode returns geometry with NO texture: a uniform grey blob. It is not a cheaper version of the
+asset, it is half of one, and ingested as-is it poisons the library twice:
+
+| | preview (untextured) | refine (textured) |
+|---|---|---|
+| what the caption VLM indexed it as | *"Large gray metal wall panel"* | *"Square orange felt bulletin board with a natural wood frame and assorted pinned notes"* |
+| front call | **wrong** (picked the blank back) | correct (panel 2, the notes side) |
+| needed a human | yes | no — clean auto-ingest |
+
+Both failures have the same cause: the features that mark a front — pinned notes, labels, screens,
+branding — are TEXTURE, not geometry. Strip the texture and the front judgment has nothing to see,
+and the captioner indexes the silhouette. So **refine is the default** and `--no-refine` is the
+opt-out for when you only want to look at a shape.
+
+Belt and braces: any asset that normalizes to **zero textures** is never ingested silently — it
+goes to the board as `untextured`, whatever the source. It renders as a flat grey solid, and that
+is a failure that hides itself.
 
 ## How we know it works
 
@@ -194,6 +216,23 @@ gate correctly **skipped** a file containing three separate draped instrument ta
 the rest went to the board — the library has no size prior for a slit lamp and the VLM knows it is
 guessing. **Expect a high auto-yield on ordinary furniture and a low one on exotic equipment.**
 That is the pipeline being honest, not broken.
+
+### Live, against both real APIs (2026-07-14)
+
+Both legs were then run for real, aimed at two gaps this codebase had already *documented* as
+unfillable — `examples/`'s writer's-studio notes record that the dataset has **no typewriter**
+(best retrieval 0.52, all rotary phones) and **no cork pinboard** (0.47, all classroom
+whiteboards). Both now exist:
+
+- `run "vintage typewriter" --count 5` (Sketchfab): 5 downloaded, 1 auto-ingested — a textured
+  Royal typewriter, 0.45 m, `placement=NA` (correctly a tabletop object), front on panel 2, CC-BY
+  attribution printed. The other 4 went to the board, one of them because it was not a typewriter
+  at all but a *fragment* of one ("metal piece of a typewriter").
+- `run "a cork pinboard ..." --source meshy --count 1`: generated, refined, normalized, verified
+  and auto-ingested with no human in the loop.
+
+The pipeline holds up on live input. Its judgment is only as good as what the render shows it —
+which is the whole reason the lighting fix and the refine default exist.
 
 ## Checklist for a batch
 

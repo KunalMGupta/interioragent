@@ -11,15 +11,19 @@ exactly the same triage, normalization and verification, and it gets them for fr
 (and the money) happens: POST a task, poll it to SUCCEEDED, download the .glb. A generation takes
 minutes, so fetch is slow by nature and the pipeline treats it like a big download.
 
+**REFINE IS NOT OPTIONAL, and that was the surprise of the first live run.** Meshy's `preview`
+mode returns geometry with NO TEXTURE — a uniform grey blob. It is not a cheaper version of the
+asset; it is half of one. Ingested as-is it poisons the library twice over: the caption VLM sees
+the real render and files a generated cork pinboard as "large gray metal wall panel" (that string
+is what retrieval then indexes), and the front judgment collapses because the features that say
+which side is the front — the pinned notes, the labels, the screen — are texture, not geometry.
+So `refine` (the texturing pass) is the DEFAULT here, and `--no-refine` is the opt-out for when
+you only want to look at a shape. It costs roughly double. A grey blob costs the whole library.
+
 Cost and consent, deliberately:
   * Nothing generates without MESHY_API_KEY (in the environment or <repo>/.env).
   * Every generation spends credits, so `count` is never inferred — you type it.
-  * `--refine` doubles the cost for a textured, higher-poly result; preview-only is the default.
-
-STATUS: written against Meshy's documented OpenAPI v2 text-to-3d flow, but NOT yet run against a
-live key (we do not have one). The shape is right and the polling is defensive, but treat the
-first real run as a shakedown, and check `API`/`MODEL` below against the current docs — Meshy has
-rev'd its endpoints before.
+  * Check the balance before a big batch: `MeshySource().balance()`.
 """
 import json
 import os
@@ -73,7 +77,7 @@ def _req(url, key, method="GET", body=None):
 class MeshySource:
     name = "meshy"
 
-    def __init__(self, api_key=None, art_style="realistic", refine=False,
+    def __init__(self, api_key=None, art_style="realistic", refine=True,
                  target_polycount=30000):
         self.key = _key(api_key)
         self.art_style = art_style

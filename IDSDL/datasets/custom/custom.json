@@ -1524,5 +1524,31 @@
   "freetop": false,
   "on_top_or_inside": false,
   "scale": 0.61
+ },
+ "custom/c56e29ccc74da4c747b3714ecd21f5bc7fd778fe": {
+  "description": "Vintage Royal manual typewriter with a dark blue textured metal body and ivory keys.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.4533,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "0b6766c2df0e4901b8c387283d544027",
+   "url": "https://sketchfab.com/3d-models/0b6766c2df0e4901b8c387283d544027",
+   "license": "CC Attribution",
+   "author": "freddy1231",
+   "name": "Typewriter"
+  }
+ },
+ "custom/48fb69bac1f5a8f3d8fad5483d4f3dc1d966ee0f": {
+  "description": "Square orange felt bulletin board with a natural wood frame and assorted pinned notes.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.9,
+  "provenance": {
+   "source": "meshy",
+   "name": "a cork pinboard in a wooden frame with paper notes pinned to it (meshy #1)"
+  }
  }
 }

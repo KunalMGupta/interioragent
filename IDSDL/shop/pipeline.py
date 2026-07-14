@@ -175,7 +175,16 @@ def _normalize_and_verify(batch, metas, res=420):
                 v = {"ok": False, "note": f"verify_error: {e}", "front_panel": 0}
             m["verify"] = v
 
-            if v.get("ok"):
+            if not m["final"]["n_images"]:
+                # An asset with ZERO textures is not library-grade, and it fails in a way that
+                # hides itself: it renders as a uniform grey solid, so the caption VLM indexes it
+                # by its silhouette ("large gray metal wall panel" — that was a generated cork
+                # pinboard), and the front call collapses because the features that mark a front
+                # (notes, labels, screens, branding) are texture, not geometry. Never ingested
+                # silently; a human can still wave it through from the board.
+                m.update(status="ask",
+                         reason="untextured (0 textures — renders as a flat grey solid)")
+            elif v.get("ok"):
                 m["status"] = "normalized"
             elif attempt == 1 and int(v.get("front_panel") or 0) in triage.PANELS:
                 # The render disagrees with the triage call. Believe the render: rotate by the
@@ -244,11 +253,11 @@ def _ingest(batch, metas, category=None, workers=3):
 # entry points
 # --------------------------------------------------------------------------------------------
 def run(query, batch, source="sketchfab", count=10, mode="auto", category=None,
-        license="permissive", res=420, workers=3, from_dir=None, dry_run=False):
+        license="permissive", res=420, workers=3, from_dir=None, dry_run=False, refine=True):
     t0 = time.time()
     batch = str(batch)
     os.makedirs(batch, exist_ok=True)
-    src = LocalSource(from_dir) if from_dir else get_source(source)
+    src = LocalSource(from_dir) if from_dir else get_source(source, refine=refine)
     cands = src.search(query, count=count, license=license) if not from_dir else src.search(query)
     print(f"[shop] {len(cands)} candidate(s) from {src.name}")
     if not cands:
@@ -487,6 +496,9 @@ def main(argv=None):
     r.add_argument("--res", type=int, default=420)
     r.add_argument("--dry-run", action="store_true",
                    help="normalize + verify but do NOT write to the library")
+    r.add_argument("--no-refine", action="store_true",
+                   help="meshy only: skip the texturing pass (CHEAPER, but the result is an "
+                        "untextured grey blob — not library-grade; see IDSDL/shop/meshy.py)")
 
     rm = sub.add_parser("remove", help="un-ingest asset ids from the library")
     rm.add_argument("asset_ids", nargs="+")
@@ -532,7 +544,7 @@ def main(argv=None):
     mode = "manual" if args.manual else "auto"
     metas = run(args.query, batch, source=args.source, count=args.count,
                 mode=mode, category=args.category, license=args.license, res=args.res,
-                from_dir=args.from_dir, dry_run=args.dry_run)
+                from_dir=args.from_dir, dry_run=args.dry_run, refine=not args.no_refine)
     # manual mode exits 2 while a human still owes us an answer, so a caller can tell "finished"
     # from "waiting on you" without reading the prose.
     pending = [m for m in metas if m["status"] in ("ask", "failed")]
