@@ -1,5 +1,6 @@
 """
 Restaurant kitchen (commercial back-of-house) — "The Stainless Line".
+Worked example: see resto_kitchen.md beside this file.
 
 The last uncovered dataset category (Restaurant-Kitchen). A commercial kitchen is the
 LICENSED recipe-B kitchen: there is no fitted "set" asset for a resto line, so the room is
@@ -157,4 +158,4 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.08) as room:
         # FLAT flush fixture only (kitchen.md); medium room -> moderate density
         room.add_lighting("a flat round LED flush mount ceiling light", density=0.06)
 
-scene.export("resto_kitchen.blend")
+scene.export("resto_kitchen_v1.blend")
