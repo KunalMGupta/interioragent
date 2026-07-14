@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "idsdl": {
+      "command": "./tools/idsdl_mcp.sh",
+      "env": {
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}

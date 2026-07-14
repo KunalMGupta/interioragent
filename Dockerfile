@@ -9,7 +9,7 @@ RUN mkdir -p /work && \
     rm /tmp/blender.tar.xz
 
 RUN conda create -n interioragent python=3.12 -y
-RUN /opt/conda/envs/interioragent/bin/pip install numpy matplotlib trimesh scipy tqdm sceneprogllm sceneprogexec
+RUN /opt/conda/envs/interioragent/bin/pip install numpy matplotlib trimesh scipy tqdm sceneprogllm sceneprogexec mcp==1.28.1 pillow
 RUN /opt/conda/envs/interioragent/bin/sceneprogexec install sceneprogllm
 
 RUN apt-get update && apt-get install -y \

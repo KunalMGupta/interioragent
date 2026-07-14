@@ -11,9 +11,22 @@ __pycache__/
 # Claude Code / local agent state
 .claude/
 
-# Large 3D asset datasets — fetched/installed separately, not version-controlled
-IDSDL/datasets/assets/
+# Large 3D asset datasets — fetched/installed separately, not version-controlled.
+# DO track the small hand-curated pool id-lists under assets/ (essential to retrieval);
+# ignore only the heavy install-time blobs (embeddings, full metadata, mesh binaries).
+IDSDL/datasets/assets/*.npz
+IDSDL/datasets/assets/futurehssd.json
+IDSDL/datasets/assets/*.glb
+IDSDL/datasets/assets/*.obj
 IDSDL/datasets/futurehssd/
+# Custom-ingested assets: track metadata + preview PNGs, but NOT the heavy .glb meshes
+# (large, fetched out-of-band like the main dataset; see scenes/work/*_attributions.md)
+IDSDL/datasets/custom/models/*.glb
+
+# Supplied glb upload bundles + raw gallery selections (scratch; the ingested assets +
+# curated pool jsons are the durable artifacts)
+/*.zip
+/selection.json
 
 # Generated scene outputs and renders
 results/
@@ -21,6 +34,18 @@ tmp/
 frames/
 *.blend
 *.blend1
+
+# Smart-placement / annotator scratch:
+#  - tools/out/        : VLM placement-tournament renders (.blend/.glb/.png, multi-GB)
+#  - annotator.html    : self-contained zone annotator, regenerable via tools/build_annotator_html.py
+#  - placement_zones.json: local zone store, auto-created by IDSDL.placement_zones on first write
+tools/out/
+/annotator.html
+IDSDL/datasets/placement_zones.json
+
+# Generated batch-review pages (regenerable via batchgen.py --collect; can be huge)
+batch_review*.html
+combined_review.html
 
 # Transient scripts emitted by sceneprogexec (random-digit-named, plus *_exec.py)
 /[0-9]*.py
@@ -38,3 +63,18 @@ blender-*/
 
 # Linux: compiled ELF binary (not source-controlled)
 code
+
+# Manual smoke-test harness for vlm_placement (writes to the ignored tools/out scratch)
+tools/dsl_place_test.py
+
+# Generated kitchen component tagger (regenerable via tools/build_kitchen_tagger.py)
+/kitchen_tagger.html
+
+# Generated scene-collection collage (regenerable via RoomGroup.render_collection)
+/kitchen_collection.png
+
+# Manual isolated repro for place_on_top surface/sizing (scratch, like dsl_place_test.py)
+tools/lamp_ontop_test.py
+
+# secrets (reload_credentials reads this at runtime; never commit)
+.env

@@ -1,11 +1,35 @@
 # IDSDL skills
 
-Reusable, agent-runnable playbooks for extending IDSDL **without changing core logic**. Each skill
-is a folder with a `SKILL.md` (name + description front matter, then instructions), following the
-Claude Code skill format.
+This folder holds two distinct, complementary kinds of knowledge. Don't confuse them.
+
+### A. Scene-generation knowledge base — **start at [SKILLS.md](SKILLS.md)**
+
+How to *use* the DSL to build and iteratively optimize a scene from a prompt
+(coarse-to-fine workflow, constraint model, VLM-feedback playbook, per-scene
+examples). This is the everyday loop for producing rooms. Layout:
+
+| Path | Purpose |
+|---|---|
+| [SKILLS.md](SKILLS.md) | entry point — workflow + index (read first) |
+| [dsl_reference.md](dsl_reference.md) | the DSL API cheat sheet |
+| [workflow/](workflow/) | coarse_to_fine · constraints · vlm_feedback · rendering |
+| [examples/](examples/) | per-scene-type recipes (living_room, classroom, kitchen, …) |
+
+This knowledge base is also machine-retrievable: `retriever_core/` parses these files
+into a card catalog (recipes indexed by layout pattern, workflow guides, atomic
+lessons) and an LLM reasons over the whole catalog to select what's procedurally
+relevant for a new prompt — used by `main.py` and the MCP `retrieve_context` tool.
+Keep the markdown structures (README tables, decision-log bullets, `##` sections)
+intact when writing back so new lessons stay retrievable.
+
+### B. Codebase-extension playbooks (Claude Code SKILL.md format)
+
+Reusable, agent-runnable playbooks for extending IDSDL **without changing core logic**. Each is a
+folder with a `SKILL.md` (name + description front matter, then instructions).
 
 | Skill | Purpose |
 |---|---|
+| [generate-scene](generate-scene/SKILL.md) | Generate a complete 3D scene from a text prompt, end to end — the plan → retrieve-traces → asset-audit → author → build → critique → judge → write-back playbook (agent-as-author), plus the one-command `main.py` / MCP-job automatic mode. |
 | [add-placement-group](add-placement-group/SKILL.md) | Add a new placement group / arrangement motif to `IDSDL/groups_extra.py` — hand-written motifs or integrations of external 3D scene-generation repos (SceneMotifCoder, diffusion/transformer/CNN/LLM models). Validates numerically + via renders. |
 | _add-constraint_ | _(planned)_ Add a new optimization constraint without touching core. |
 

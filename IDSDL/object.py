@@ -10,6 +10,7 @@ from functools import wraps
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from IDSDL.constraints import CONSTRAINTS, GradSolver, VLMSolver
+from IDSDL import front_cache
 
 
 class Transform:
@@ -232,8 +233,28 @@ class SceneProgObject:
         self.mesh_path = None
         self.description = None
         self.ignore_overlap = False
+        # Retrieval provenance (set by Scene.AddAsset): the query, the candidates the
+        # visual picker considered, and the chosen model id — for inspection / override.
+        self.retrieval_query = None
+        self.retrieval_candidates = []
+        self.retrieval_model = None
+        # Per-asset front-orientation correction (degrees), applied at serialization
+        # only. Set from the front-correction cache when a mesh is loaded; see
+        # IDSDL/front_cache.py and get_state_info().
+        self.front_offset = 0.0
 
         self.operations = []
+
+        # Deferred manual-constraint registrations (Clearance/Access/Visibility).
+        # compile() clears the per-compile constraint lists, so manual gradient
+        # constraints can't be registered once and persist — they're re-run from
+        # here on every compile, after the auto constraints and before grad solve.
+        self.constraint_hooks = []
+
+        # Opt-in post-placement orientation overrides, applied AFTER layout settles
+        # so face_towards sees final positions. List of ("face", obj, target|None)
+        # or ("rotate", obj, degrees). Available on every group (anchor and room).
+        self._orient_requests = []
 
         self.is_compiled = False
         self.compile_log = []
@@ -277,8 +298,44 @@ class SceneProgObject:
             f"constraints={len(self.constraints)}",
             f"grad_constraints={len(self.grad_constraints)}",
             f"vlm_constraints={len(self.vlm_constraints)}",
+            f"constraint_hooks={len(self.constraint_hooks)}",
         ]
         return "\n".join(lines)
+
+    # ----------------------------
+    # manual constraint hooks
+    # ----------------------------
+    # Clearance/Access/Visibility take arguments, so they can't be auto-added.
+    # Register them here; each compile re-runs the hooks after the auto
+    # constraints and before the gradient solve, so they're enforced too.
+    def add_constraint_hook(self, hook):
+        """Register a callable hook(group) that adds manual constraint(s) at compile."""
+        self.constraint_hooks.append(hook)
+        return self
+
+    def _run_constraint_hooks(self):
+        for hook in self.constraint_hooks:
+            hook(self)
+
+    def add_clearance(self, obj, distance=0.5, dir="front", omit_objs=None):
+        """Keep `distance` m clear around `obj`. dir: front (facing dir), sides (the two
+        perpendicular sides), all (front+back+sides), front_back (front+back only, e.g. an
+        equipment row's aisles), front_sides (front+left+right, e.g. a machine or a desk)."""
+        return self.add_constraint_hook(
+            lambda g: g.ClearanceConstraint(obj, distance=distance, dir=dir, omit_objs=omit_objs)
+        )
+
+    def add_access(self, obj, target, min_dist=0.1, max_dist=0.15, dir="front"):
+        """Keep `target` within [min_dist, max_dist] reach of `obj` (dir: front|sides)."""
+        return self.add_constraint_hook(
+            lambda g: g.AccessConstraint(obj, target, min_dist=min_dist, max_dist=max_dist, dir=dir)
+        )
+
+    def add_visibility(self, source, target):
+        """Keep the sightline from `source` to `target` clear of other objects."""
+        return self.add_constraint_hook(
+            lambda g: g.VisibilityConstraint(source, target)
+        )
 
     # ----------------------------
     # copy helpers
@@ -341,6 +398,7 @@ class SceneProgObject:
 
             if self.mesh_path is not None:
                 new_obj.mesh_path = self.mesh_path
+                new_obj.front_offset = self.front_offset
 
             if self.description is not None:
                 new_obj.description = self.description
@@ -472,6 +530,7 @@ class SceneProgObject:
         self.log_phase("prepare_constraints")
         if hasattr(self, "OverlapConstraint"):
             self.OverlapConstraint()
+        self._run_constraint_hooks()
 
     def run_grad_optimization(self):
         self.log_phase("run_grad_optimization")
@@ -522,6 +581,7 @@ class SceneProgObject:
         self.prepare_constraints()
         self.run_grad_optimization()
         self.execute_post_operations()
+        self._apply_orientations()
         self.run_vlm_optimization()
         self.finalize_compile()
 
@@ -621,7 +681,10 @@ class SceneProgObject:
     # state + debugging helpers
     # ----------------------------
     def get_state_info(self):
-        return self.get_world_transform().decompose_matrix()
+        # Fold the per-asset front correction into the serialized rotation only;
+        # the DSL geometry above stays in the canonical (front=+z) frame.
+        translation, rotation, scale = self.get_world_transform().decompose_matrix()
+        return translation, rotation + self.front_offset, scale
 
     def describe_state(self):
         world_loc = self.get_world_location()
@@ -767,13 +830,63 @@ class SceneProgObject:
         rot = np.arctan2(rel[0], rel[1]) * 180.0 / np.pi
         self.set_rotation(rot)
 
+    # ----------------------------
+    # post-placement orientation control (opt-in)
+    # ----------------------------
+    # Placement bakes a fixed rotation into each object, which is often wrong for
+    # orientation-sensitive cases (chairs that should face the conversation
+    # center; a student desk grid that must face the teacher's desk). These let
+    # you override rotation explicitly; the override is applied at the END of
+    # compile, after layout settles, so it reflects final positions. Defaults are
+    # unchanged — objects only reorient when you ask. Works on anchor groups
+    # (default target = the anchor) and on RoomGroup (pass an explicit target).
+    def face(self, obj, toward=None):
+        """Orient `obj` to face `toward`. `toward` may be:
+        - another object → face it exactly (any angle, via face_towards);
+        - a wall name string ("front_wall"/"back_wall"/"left_wall"/"right_wall") →
+          face that wall, snapped to the nearest 90 degrees (RoomGroup only). Use
+          this for functionally-required orientation (e.g. a desk grid facing the
+          teacher's wall) so the result is orthogonal, not an odd angle;
+        - None → this group's anchor (anchor groups).
+        """
+        self._orient_requests.append(("face", obj, toward))
+        return obj
+
+    def rotate(self, obj, degrees):
+        """Set `obj`'s absolute rotation (degrees) after layout — manual override."""
+        self._orient_requests.append(("rotate", obj, degrees))
+        return obj
+
+    def _apply_orientations(self):
+        for kind, obj, arg in self._orient_requests:
+            if kind == "face":
+                if isinstance(arg, str):
+                    self._apply_face_wall(obj, arg)
+                else:
+                    target = arg if arg is not None else getattr(self, "anchor", None)
+                    if target is not None:
+                        obj.face_towards(target)
+            else:
+                obj.set_rotation(arg)
+
+    def _apply_face_wall(self, obj, wall_name):
+        raise NotImplementedError(
+            "face(obj, toward=<wall name>) is only supported inside a RoomGroup; "
+            f"got wall target {wall_name!r} on {type(self).__name__}."
+        )
+
     def scale(self, target_width):
         current_width = self.get_width()
         if current_width == 0:
             raise ValueError(f"Object '{self.name}' has zero width, cannot scale.")
 
-        uniform_scale = target_width / current_width
-        self.transform.set_scale([uniform_scale, uniform_scale, uniform_scale])
+        # Uniform scale so the object's WIDTH becomes target_width. Apply RELATIVE to the
+        # current scale (like scale_only_width/height/depth) — assets that ship pre-normalised
+        # with a non-1.0 transform.scale would otherwise blow up: target/current_width was being
+        # set as the ABSOLUTE scale, i.e. width = raw_width * ratio instead of target_width.
+        factor = target_width / current_width
+        cs = self.transform.scale
+        self.transform.set_scale([cs[0] * factor, cs[1] * factor, cs[2] * factor])
 
     def scale_only_width(self, target_width):
         current_width = self.get_width()
@@ -843,6 +956,7 @@ class SceneProgObject:
     # ----------------------------
     def load(self, mesh_path):
         self.mesh_path = mesh_path
+        self.front_offset = front_cache.front_offset_for(mesh_path)
 
         mesh = trimesh.load(mesh_path, force="mesh", process=False)
         vertices = mesh.vertices.copy()
@@ -923,6 +1037,13 @@ class SceneProgObject:
         locs[:, 0] += x0
         locs[:, 1] += z0
 
+        # Split a fixed illumination budget across the N pendants so adding more lights makes the
+        # room no brighter (just more fixtures), instead of N*500 W blowing the scene out to white.
+        # The budget is a scene-level dial (`scene.light_budget`, default 500 W): `density` sets the
+        # fixture COUNT and cannot change brightness, so a deliberately DIM room (a wine cellar, a
+        # bar, a cinema) had no lever at all and rendered blown out whatever fixture it picked.
+        budget = float(getattr(self.scene, "light_budget", 500.0))
+        per_light_energy = budget / max(1, N)
         for i in range(min(N, len(locs))):
             x = locs[i, 0]
             z = locs[i, 1]
@@ -932,13 +1053,33 @@ class SceneProgObject:
             # the light count and spread, would change the object's reported size).
             new_light.is_light = True
             new_light.ignore_overlap = True
+            new_light.light_energy = per_light_energy
             new_light.set_location(x, y, z)
             self.add_child(new_light)
             if self.scene is not None and hasattr(self.scene, "ceiling_lights"):
                 self.scene.ceiling_lights.append(new_light)
 
 
-    def render(self):
+    def _run_dir(self, sub=""):
+        """
+        Directory for this run's intermediates and renderings, created on demand.
+        Uses the scene's unique per-run scratchpad (tmp/<run id>) when available,
+        else falls back to tmp/. Pass `sub` for a named subdirectory.
+        """
+        scene = getattr(self, "scene", None)
+        if scene is not None and hasattr(scene, "run_subdir"):
+            return scene.run_subdir(sub)
+        path = os.path.join("tmp", sub) if sub else "tmp"
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def _build_blend(self, target=None):
+        """
+        Serialize the current scene state (assets, ceiling lights, walls and
+        wall objects) to a .blend file and return its path. Shared by render()
+        and RoomGroup.render_interior() so both use the exact same export. A
+        unique per-run tmp path is used when target is None.
+        """
         lines = """
 import bpy
 import os
@@ -1023,9 +1164,12 @@ obj.scale = [{scale[0]}, {scale[2]}, {scale[1]}]
             if hasattr(self.scene, "ceiling_lights") and obj in self.scene.ceiling_lights:
                 w, h, d = obj.get_whd()
                 light_y = getattr(self.scene, "HEIGHT", 4.0)
+                # Per-fixture energy: add_lighting splits a fixed budget across N pendants so the
+                # room brightness doesn't scale with the light count (a swarm no longer blows out).
+                energy = float(getattr(obj, "light_energy", 500))
                 lines += f"""
 light_data = bpy.data.lights.new(name='{obj_name}_Light', type='AREA')
-light_data.energy = 500
+light_data.energy = {energy}
 light_data.shape = 'RECTANGLE'
 light_data.size = {w}
 light_data.size_y = {d}
@@ -1035,11 +1179,13 @@ light_object.location = [{translation[0]}, -{translation[2]}, {light_y}]
 bpy.context.collection.objects.link(light_object)
     """
 
+        run_dir = self._run_dir()
+
         if hasattr(self.scene, "walls") and len(self.scene.walls) > 0:
             for wall in self.scene.walls:
                 wall._rebuild()
                 uid = random.randint(0, 1000000)
-                mesh_path = f"tmp/{wall.name}_{uid}.glb"
+                mesh_path = os.path.join(run_dir, f"{wall.name}_{uid}.glb")
                 try:
                     wall.export(mesh_path)
                 except Exception:
@@ -1065,18 +1211,24 @@ assign_generated_texture(
 bpy.ops.import_scene.gltf(filepath=r'{obj.mesh_path}')
     """
 
-        uid = random.randint(0, 1000000)
-        target = f"tmp/group_{uid}.blend"
-        os.makedirs("tmp", exist_ok=True)
+        if target is None:
+            uid = random.randint(0, 1000000)
+            target = os.path.join(run_dir, f"group_{uid}.blend")
 
         exec_runner = SceneProgExec()
         exec_runner(lines, target, verbose=True)
+        return target
+
+    def render(self):
+        target = self._build_blend()
+        run_dir = self._run_dir()
+        uid = random.randint(0, 1000000)
 
         renderer = SceneRenderer(verbose=True)
-        right_path = f"tmp/right_{uid}.png"
-        back_path = f"tmp/back_{uid}.png"
-        left_path = f"tmp/left_{uid}.png"
-        front_path = f"tmp/front_{uid}.png"
+        right_path = os.path.join(run_dir, f"right_{uid}.png")
+        back_path = os.path.join(run_dir, f"back_{uid}.png")
+        left_path = os.path.join(run_dir, f"left_{uid}.png")
+        front_path = os.path.join(run_dir, f"front_{uid}.png")
 
         renderer.render_from_edge_midpoints(
             target,
@@ -1089,7 +1241,7 @@ bpy.ops.import_scene.gltf(filepath=r'{obj.mesh_path}')
         img4 = plt.imread(front_path)
 
         combined_img = np.hstack((img4, img1, img2, img3))
-        combined_path = f"tmp/combined_{uid}.png"
+        combined_path = os.path.join(run_dir, f"combined_{uid}.png")
         plt.imsave(combined_path, combined_img)
         return combined_path
 
@@ -1141,11 +1293,13 @@ bpy.ops.object.delete(use_global=False)
 mesh_lookup = {}
     """
 
+        run_dir = self._run_dir()
+
         wall_obj_ref = self._wall_name_to_wall(wall)
         wall_obj_ref._rebuild()
 
         uid = random.randint(0, 1000000)
-        mesh_path = f"tmp/{wall_obj_ref.name}_{uid}.glb"
+        mesh_path = os.path.join(run_dir, f"{wall_obj_ref.name}_{uid}.glb")
         try:
             wall_obj_ref.export(mesh_path)
         except Exception:
@@ -1199,18 +1353,17 @@ obj.rotation_euler = (0, 0, {rot_rad})
 obj.scale = [{scale[0]}, {scale[2]}, {scale[1]}]
     """
 
-        target = f"tmp/group_{uid}.blend"
-        os.makedirs("tmp", exist_ok=True)
+        target = os.path.join(run_dir, f"group_{uid}.blend")
 
         exec_runner = SceneProgExec()
         exec_runner(lines, target, verbose=True)
 
         renderer = SceneRenderer(verbose=True)
         import json
-        with open("tmp/scene_dims.json", "w") as f:
+        with open(os.path.join(run_dir, "scene_dims.json"), "w") as f:
             json.dump({"W": wall_obj_ref.width, "D": 0.1, "H": wall_obj_ref.height}, f)
 
-        output_path = f"tmp/front_{uid}.png"
+        output_path = os.path.join(run_dir, f"front_{uid}.png")
         renderer.render_from_front(target, output_path=output_path)
         return output_path
 

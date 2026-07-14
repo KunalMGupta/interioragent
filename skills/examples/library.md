@@ -1,0 +1,122 @@
+# Library — worked example ("Grand Public Library Reading Room")
+
+Status: **built as `scenes/work/library.py`** (seed=36). [`library_v1.py`](library_v1.py) is that
+program **phase-gated** (2026-07-13): same layout, same pinned ids, same seed. It is
+**`lint_program`-clean**, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).
+
+Built end-to-end coarse-to-fine from the planner target (`tmp/library/plan/plan.png`). The working
+program is `scenes/work/library.py` (seed=36). Read alongside `../workflow/coarse_to_fine.md`. This
+is the reference for a **symmetric-corridor reading hall**: twin bookcase runs on the long walls +
+a communal reading-table column down the centre. It also carries a **retrieval stress-test** kickoff
+and the **`add_lighting` fixture-size ↔ count coupling** lesson.
+
+## Prompt(s) this covers
+- "a library" / public reading room / academic reading hall / study hall.
+
+## Plan summary
+Planner → **"Grand Public Library Reading Room — Warm Wood, Layered Light, Symmetry."** Twin
+FLOOR-TO-CEILING walnut bookcases line the two long walls to form a legible CORRIDOR; a long
+communal READING TABLE runs down the centre axis, ringed with wooden chairs, each table wearing
+**green banker's lamps** under soft warm pendants; a cosy **leather ARMCHAIR nook** sits by a grand
+arched window (the focal end); a librarian **REFERENCE desk** anchors the entrance. Palette: walnut/
+oak, dark brass, **green** (lamps + upholstery), a patterned wool rug, linen curtains, leather.
+Light is layered: window daylight + pendants + banker's lamps. (This is the executive_office's
+"Library-Backbone" look scaled up to a public hall — retrieval risk is LOW.)
+
+## Kickoff: a RETRIEVAL STRESS TEST before any placement
+The user's ask — "first make sure most assets are available" — is a reusable habit. Before writing
+placements, batch-route ~40 candidate library queries through the **warm visual picker** and audit
+chosen-desc + similarity, so gaps surface up front (see `../workflow/asset_selection.md` → "Batch
+retrieval stress test"). Verdict for a library: **~32/40 on-target**; the dataset covers it well.
+
+Pinned good picks (all eyeballed via preview render):
+- **Bookcase** `hssd/b356640d…` — dark walnut, leather-bound books + lower cabinet (the hero; dupe into a row per long wall).
+- **Reading table** `hssd/e5c0975d…` — long walnut rectangular top (retrieved via "a long rectangular **dark walnut dining table**", 0.71; the literal "library reading table" query was weak at 0.53 with white legs).
+- **Library chair** `hssd/b98286cc…` — black frame + cushioned seat, slat back.
+- **Green banker's lamp** `hssd/721b75b4…` — the signature prop; it **exists** (green dome desk lamp). MUST be shrunk (below).
+- **Leather armchair** `hssd/613ba909…` — brown tufted, the nook hero.
+- **Card catalog** `hssd/14532900…` — dark multi-drawer cabinet (a faithful card-catalog stand-in).
+- **Reference desk** `hssd/7379d888…` — curved wooden reception desk.
+
+Gaps, all worked around (no ingest needed): a **librarian reference/circulation desk** ("reference
+desk"/"checkout counter" route to a *bookcase* or nothing — reword to **"a curved wooden reception
+front desk"**, 0.81); a **rolling library ladder** (none — the bookcase asset already includes a
+ladder motif + a step stool covers it); an **OPAC/computer terminal** and **directory signage**
+(skip — off-theme prop risk, same as warehouse). None block the scene.
+
+## THE layout: symmetric corridor (twin shelf rows) + a centre table column
+Same family as warehouse/locker_room long-rows, but *symmetric*:
+- **Bookcase run = `GridGroup.place_row(4 * shelf)` per LONG wall**, placed `place_on_left_wall_center` /
+  `place_on_right_wall_center` with **`facing` OMITTED** (the heuristic faces the shelves' open side
+  into the room; both walls rendered book-spines-in on the first try). Loading the two long walls is
+  what makes the room read as a deep corridor.
+- **Communal table = a column of table units down the centre.** Build ONE reading unit as an
+  `AroundGroup` (table anchor + `place_rectilinear(3 chairs, 3 chairs)` on the two long sides +
+  banker's lamps `place_on_top` + a `place_rug`), then `2 * unit` into a `GridGroup.place_grid(cols=1)`
+  and `room.place_on_center(...)`. `place_on_top` runs ONCE on the composed unit (design_principles),
+  so both tables get identically-sized lamps for free.
+- **Short walls stay light**: reference desk + card catalog + door on the FRONT wall; the arched
+  window + the armchair nook + a plant on the BACK wall.
+
+## Program
+[`library_v1.py`](library_v1.py) — phase 1 the floor anchors (the twin bookcase runs, the centre
+reading-table column with its chairs, the armchair nook, the inverted reference station, the card
+catalog, the book cart, the walls and the door), phase 2 the surface and floor dressing (the
+banker's lamps on the tables, the desk accessories, the nook's book stack, the rugs, the plant),
+phase 3 the arched window and curtains, the drum pendants, and the wall art.
+
+`workbench run skills/examples/library_v1.py --phase 1` builds the layout alone in ~1–2 min.
+
+## VLM / layout feedback we hit and how we resolved it
+- **Banker's lamps came out chair-sized.** `place_on_top` sized the green lamp to ~0.6 m domes that
+  dominated the tables (small-prop-on-top oversizing). Fix: `modulate_scale=0.4` on the lamp → a
+  believable ~0.4 m banker's lamp. Same fix pattern as any small on-top prop.
+- **RoomProportions oscillated 1.25 → 0.8.** Phase-1 (anchors only) read tight → VLM wanted **1.25**;
+  I grew to 1.1 and added detail → it flipped to **0.8** (now under-filled). Settled **0.9** and let
+  the render arbitrate (occupancy is a call, not the oscillating vote — same as warehouse/bar).
+- **`add_lighting` fixture-size ↔ COUNT coupling (the key new lesson).** The drum pendant renders
+  ~1.5 m at `modulate_scale=1.0` and drops to table height, so I shrank it to 0.35 — which turned
+  **5 pendants into a 35-pendant starfield**. `add_lighting` count ≈ `density · area / footprint`, so
+  shrinking the fixture MULTIPLIES the count. Fix: drop `density` in step (0.12 → 0.025 at scale 0.4)
+  → ~6 tidy pendants. When you change fixture size, re-tune density the opposite way. (Warehouse used
+  the same lever the *other* direction: scale UP + density DOWN for a few big high-bays.)
+- **"rotate armchair to face the side table" / "rotate floor lamp to face the chair"** (repeated) →
+  **declined** as noise: a reading-nook armchair faces the ROOM, and a slim floor lamp is ~symmetric
+  (same call as the executive_office "rotate sofa to face its own end table").
+- **"rescale hardcover books by 0.6"** → applied `modulate_scale=0.6` on the nook's book stack.
+
+### Follow-up feedback round (user notes)
+- **"lamps too big"** → dropped the banker's lamp `modulate_scale` 0.4 → **0.3** (sits right on a table).
+- **"the reference desk is flush to the wall — give it space; add a desk + chair; make it 1.2×."**
+  This is the **reception-desk problem — reach for the inverted `WorkstationGroup`, per `lobby.md`**, not
+  a hand-rolled desk+chair. My first attempt used `RelativeGroup.place_desk_chair(desk, chair)` +
+  `place_on_front(...)`: it **failed two ways** — (a) `place_on_front` dropped the station into the
+  front-third *on top of* the centre reading-table column (jammed the desk into the chairs), and (b) the
+  facing never resolved — the VLM kept voting `rotate reception desk 180 to face the chair` because a
+  reception desk is an *inverted* desk (counter faces patrons, staff behind) and `place_desk_chair`
+  can't express that. **The fix that worked:** a `WorkstationGroup` with `desk.set_rotation(180)` (flips
+  the counter to the patron side, makes the staff side the operator +Z), `place_chair(..., gap=True)` +
+  a couple of `place_accessories`, dropped on a **floor third clear of the tables** —
+  `room.place_on_front_left(reference, facing="front")` (operator +Z → front wall ⇒ librarian faces the
+  room, chair tucked behind, desk off the wall). VLM went fully quiet on the desk/chair. **Lesson: a
+  manned service/reception desk = inverted `WorkstationGroup` on a floor third, never a flush wall
+  placement and never `place_desk_chair` (which puts the *working* front, not the counter, to the room).**
+- **"add a few library-themed paintings"** → hung a **botanical print** + an **antique world map** on the
+  back wall (`place_on_wall_back_left/right`), pre-scaled with `width=` so the mount clears the ceiling
+  ([[wall-art-mount-height]]). The long walls are full-height bookcases with no headroom for art, so
+  wall art lives only on the two short walls (back = botanical/map, front = portrait/clock).
+
+## What worked / gotchas (summary)
+- **Symmetric corridor = twin `place_row` shelf runs on the LONG walls, omit `facing`.** Loading both
+  long walls sets the deep-corridor footprint; the heuristic faces the shelves in on the first try.
+- **Compose the reading table ONCE (`AroundGroup` + rectilinear chairs + on-top lamps + rug), then
+  `N * unit`** into a `GridGroup(cols=1)` centre column — identical tables, one `place_on_top` tourney.
+- **"library reading table" is a weak query** (0.53, white legs); **"long rectangular dark walnut
+  dining table"** (0.71) is the right retrieval for a communal table. Describe the object + material,
+  not the room (same lesson as casino's "don't put 'casino' in the query").
+- **"reference/circulation desk" routes to a bookcase** — use **"a curved wooden reception front
+  desk."** A reception desk is the correct stand-in for a librarian service desk.
+- **A modest `place_window_standard` (not `_picture`)** keeps the focal window from becoming a big
+  black night-void (executive_office lesson); a well-lit room hides the small void.
+- **Green banker's lamps are the signature cue** — a bare reading table reads generic; the green
+  domes + patterned rug make it read "library" instantly. The dataset HAS them; pin + shrink.

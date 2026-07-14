@@ -14,6 +14,52 @@ This skill extends IDSDL with new placement groups **without changing any core l
 placement group is a context-managed object that records `@placemethod` calls and, on
 `compile()`, resolves them into concrete object poses and freezes into a reusable, nestable unit.
 
+## Step 0 — Decide: do you actually need a new group? (think before you build)
+
+Adding a group is the right move only when an arrangement is a **recurring, named relationship
+that no existing group expresses** — not for a one-off layout you can hand-place. Work through:
+
+1. **Name the relationship as a general motif, not a scene prop.** When the salon needed a mirror
+   on the wall + a chair facing it + a counter under it, the insight was *not* "salons need
+   this" — it was "a **wall-mirror-with-a-facing-floor-item** is a relationship the DSL can't
+   express" (wall-mounting was RoomGroup-only; RelativeGroup is floor-only). That generalized
+   immediately to **gym treadmill + mirror**, **vanity + mirror**, **dressing-room stations** →
+   it earned a group: `MirrorStationGroup`.
+2. **Try existing groups first.** Can `RelativeGroup` / `AroundGroup` / `GridGroup` /
+   `place_on_wall_freeform` + creative facing already do it? (e.g. a *row of mirrors alone* needs
+   no new group — `place_on_wall_freeform("back_wall", mirrors)` already spaces+scales N of them.)
+   Only when you've confirmed the relationship is unrepresentable do you build.
+3. **Design for several scenes, not one.** Give it **optional slots** so it covers a family of
+   needs (MirrorStationGroup: required mirror + anchor, optional counter / floating shelf+decor /
+   `place_beside` side-cart). A group that only fits one scene isn't worth the surface area.
+4. **Then test thoroughly** (Step 0 is not done until §3–§4 pass): a numeric `tests.py` case **and**
+   a rendered figure you eyeball, **plus** a second, different scene to prove generality (the
+   salon styling station was re-validated as a bare gym treadmill+mirror station).
+
+If the answer is "no new group," stop here and use an existing one creatively. See the worked
+example in `skills/examples/hair_salon.md`.
+
+> **Second worked precedent — `WorkstationGroup`** (desk + operator chair + monitor/computer +
+> distributed desk accessories). The generalizable motif is **"an anchor with a seat in front and
+> a set of items arranged ON its top surface at exact, semantic positions"** — a
+> desk-with-a-screen-and-clutter that recurs in offices, reception counters, study desks and
+> classroom desks. What it adds over a bare `place_on_top`: a **paired operator seat placed on the
+> floor in front of the desk facing it** (a named desk↔chair relationship), plus the *pairing of a
+> desk anchor with the right retriever pool* — the group is the reusable unit. **Crucial
+> lesson (learned the hard way):** the on-top items MUST be seated with the DSL's own
+> **`place_on_top`**, never a hand-computed `y = desk_height`. Seating at the desk's *aabb top*
+> floats the monitor whenever that isn't the writing surface (a hutch desk, or a bbox inflated by
+> baked-in props) — v1 did exactly this and the monitor/pen-cup/plant floated in mid-air while the
+> lamp (which happened to be a desk prop) sat right. `place_on_top` uses the highest *substantial*
+> surface (VLM tournament, AABB fallback) so items rest on the real desktop. It is reliable with
+> **only a few items**, so the group **caps the desktop at 3** (computer + two accessories) and
+> drops extras with a warning. Slots: `place_chair`, `place_computer` (faced at the operator after
+> seating), `place_accessories([...])`; still warns if the desk is a tall hutch (prefer a flat one).
+> It is paired with a retrieval mechanism, the **`DesktopWorkstationRetriever`** (curated pool
+> `assets/desktop_workstation.json`), which supplies the on-top layer — monitors / all-in-one
+> desktop **sets** (the dataset has no standalone keyboard/mouse; they come bundled in an iMac-style
+> set), desk lamps, pen cups, desk plants, books, frames. Worked in `skills/examples/dental_office.md`.
+
 ## Golden rules (do not break these)
 
 1. **Never edit core files' logic.** `IDSDL/groups.py`, `IDSDL/object.py`, `IDSDL/constraints.py`

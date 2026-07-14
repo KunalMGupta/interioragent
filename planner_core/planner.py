@@ -12,7 +12,9 @@ You are a skill-composition model for interior image generation. You operate in 
 
 **Edit mode** — Given an existing conditioning skill and an edit instruction, refine the skill to incorporate the requested changes while preserving everything that was not explicitly asked to change.
 
-In both modes:
+**Refinement mode** — Given the CURRENT room as actually built (the first reference image is a collage of real 3D renders from several angles), optionally a prior design target image, and the current conditioning skill, critique the gap between intent and what was built, then produce an IMPROVED conditioning skill. Keep what already works; add concrete, image-generation-friendly improvements to layout, circulation, focal composition, material/textile layering, lighting, and surface styling — and address weaknesses visible in the renders (bare or sparse zones, flat lighting, missing decor, awkward spacing). Preserve the room's identity (type, purpose, major furniture anchors, core palette); this is a refinement, not a different room.
+
+In all modes:
 - Output should describe design principles and visual/spatial cues, not a fixed final scene layout.
 - Combine overlapping ideas into broader reusable concepts.
 - Preserve strong recurring visual motifs, furniture relationships, materials, colors, lighting, and spatial patterns.
@@ -50,6 +52,25 @@ Requirements:
 - Translate the conditioning skill into visible design features.
 - Maintain realistic spatial relationships and clear continuity across panels.
 - Photorealistic interior design photography, editorial blog style, natural perspective, realistic lighting and shadows.
+- No people, no captions, no text labels, no diagrams, no impossible architecture.
+"""
+
+
+_IMAGE_REFINE_PROMPT = """
+Create a photorealistic 2x4 editorial interior-design collage showing an IMPROVED version of the SAME room shown in the reference images.
+
+Reference images, in order: the FIRST image is a collage of the CURRENT room as actually built — real 3D renders from several angles (treat it as the ground-truth current state). Any remaining images are PRIOR design targets for the same room.
+
+User prompt: {user_prompt}
+
+Conditioning skill (the improvement direction): {skill}
+
+Requirements:
+- Keep the SAME room identity: same room type and purpose, the same major furniture anchors, and the overall material/color family visible in the current renders. This is a refinement of THIS room, not a different room.
+- Explore concrete IMPROVEMENTS over the current state: better layout and circulation, a stronger focal composition, richer textile/material layering, considered lighting, and decor/styling that fills the gaps visible in the current renders (bare surfaces, sparse zones, flat lighting, empty walls).
+- Show one coherent room across all eight panels; a simple cuboid room (straight walls, ceiling, floor).
+- Each panel focuses on one distinct design element (focal zone, primary anchor, materials/textiles, rug/floor zone, window/natural light, lighting fixture, surface styling, overall composition), at varied camera distances.
+- Photorealistic interior-design photography, editorial blog style, natural perspective, realistic lighting and shadows.
 - No people, no captions, no text labels, no diagrams, no impossible architecture.
 """
 
@@ -96,6 +117,53 @@ class InteriorPlanner:
         )
         self._last_prompt = prompt
         self._state = DesignResult(image=image, skill=composite_skill, retrieved=retrieved)
+        return self._state
+
+    def refine(self, render_paths, prior_paths=None, instruction: str | None = None,
+               prompt: str | None = None) -> DesignResult:
+        """Generate a NEW visual target that IMPROVES the current built scene.
+
+        Feeds the planner three things and explores how to do better next iteration:
+          * `render_paths` — renders of what was actually built (e.g. a collection collage),
+          * `prior_paths` (or the in-memory prior target) — the planner's own prior visual(s),
+          * the retrieved/sythesized skills — the design knowledge.
+        It revises the conditioning skill grounded in the visual gap (the composer SEES the
+        renders), then image-conditions a fresh 2x4 target on the same images. Returns the
+        new DesignResult and updates state so refine() can be chained.
+        """
+        import tempfile
+        prompt = prompt or self._last_prompt or ""
+        render_paths = list(render_paths)
+        prior_paths = list(prior_paths or [])
+
+        # the planner's own prior target: from the CLI, or saved from in-memory state
+        if not prior_paths and self._state is not None:
+            tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+            self._state.image.save(tmp.name)
+            prior_paths = [tmp.name]
+
+        # skills: reuse the prior retrieval if we have one, else RAG the prompt fresh
+        retrieved = self._state.retrieved if self._state else self._rag(prompt, top_k=self._top_k)
+        base_skill = self._state.skill if self._state else "\n".join(r["skills"] for r in retrieved)
+
+        image_paths = render_paths + prior_paths       # current renders FIRST, priors after
+        instruction = instruction or (
+            "explore improvements to layout, circulation, focal composition, material/textile "
+            "layering, lighting, and surface styling; address anything sparse or unfinished in "
+            "the current renders"
+        )
+        revised_skill = self._skill_composer(
+            f"Refinement mode.\nUser prompt: {prompt}\n"
+            f"Current conditioning skill:\n{base_skill}\n\n"
+            f"Improvement focus: {instruction}",
+            image_paths=image_paths,
+        )
+        image = self._dreamer(
+            _IMAGE_REFINE_PROMPT.format(user_prompt=prompt, skill=revised_skill),
+            image_paths=image_paths,
+        )
+        self._last_prompt = prompt
+        self._state = DesignResult(image=image, skill=revised_skill, retrieved=retrieved)
         return self._state
 
     def edit(self, instruction: str) -> DesignResult:

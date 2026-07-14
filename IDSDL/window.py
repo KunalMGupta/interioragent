@@ -105,9 +105,15 @@ class SceneProgObjectWall:
             raise ValueError(f"Unknown wall name: {wall.name}")
 
     def translate(self, mesh, translation):
+        # Center by the BBOX midpoint, not the vertex mean: a mesh with uneven vertex
+        # density (the door glb has ~0.18 m mean-vs-bbox skew from its hinge-side
+        # geometry) would otherwise land offset from the partition center that all the
+        # downstream math (doorway clearance proxies, _enforce_door_clearances,
+        # wall-slot occupancy) computes from — furniture then legally sat "outside the
+        # clearance band" while visibly covering the door leaf.
         translation = np.asarray(translation, dtype=np.float32)
         vertices = mesh.vertices
-        center = np.mean(vertices, axis=0)
+        center = (vertices.min(axis=0) + vertices.max(axis=0)) / 2.0
         vertices -= center
         vertices += translation
         mesh.vertices = vertices
@@ -243,6 +249,10 @@ class Window(SceneProgObjectWall):
         self.mesh = self.translate(self.mesh, pos)
         self.mesh.export(self.mesh_path)
 
+        # A floor-to-ceiling window is bare glass by default — only dress it if a curtain is given.
+        if not curtain_texture:
+            return self, None
+
         mesh = self.add_curtain(curtain_texture)
         mesh = self.scale(mesh, 0.98 * wall_width, 0.98 * wall_height)
         mesh = self.rotate(mesh, wall)
@@ -274,6 +284,10 @@ class Window(SceneProgObjectWall):
 
         self.cut_wall(wall)
 
+        # A picture window is bare by default — only dress it if a curtain texture is given.
+        if not curtain_texture:
+            return self, None
+
         mesh = self.add_curtain(curtain_texture)
         mesh = self.scale(mesh, 0.8 * wall_width + 0.4, 1.1 * window_height)
         mesh = self.rotate(mesh, wall)
@@ -304,6 +318,14 @@ class Window(SceneProgObjectWall):
         self.mesh.export(self.mesh_path)
 
         self.cut_wall(wall)
+
+        # A standard window is bare by default — only dress it if a curtain texture is given
+        # (same contract as add_window_picture above). Without this, `curtain=None` still loaded
+        # the DEFAULT patterned drape mesh, so there was NO way to author an undressed window —
+        # it put floral curtains on a prison cell, and silently on every other scene that omits
+        # the kwarg (retail/jewelry storefronts, a warehouse, a pantry).
+        if not curtain_texture:
+            return self, None
 
         mesh = self.add_curtain(curtain_texture)
         mesh = self.scale(mesh, 1.1 * window_width, 1.1 * window_height)

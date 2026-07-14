@@ -57,6 +57,45 @@ worker.render_from_top("{path}", "{output_path}")
 """
         self.run(script)
 
+    # ---- Interior views for RoomGroup scenes ----
+
+    def render_interior_walls(self, path, output_paths):
+        """Four interior wall-facing views [back, front, left, right]."""
+        script = f"""
+{self.script}
+worker.render_interior_walls("{path}", {output_paths})
+"""
+        self.run(script)
+
+    def render_interior_corners(self, path, output_paths):
+        """Four high 3/4 interior corner views (ceiling removed)."""
+        script = f"""
+{self.script}
+worker.render_interior_corners("{path}", {output_paths})
+"""
+        self.run(script)
+
+    def render_room(self, path, output_dir):
+        """Render a full interior set (4 walls + 4 corners) into output_dir."""
+        script = f"""
+{self.script}
+worker.render_room("{path}", "{output_dir}")
+"""
+        self.run(script)
+
+    def render_views(self, path, specs):
+        """Render arbitrarily-framed views (per-group detail shots for a collection
+        collage). `specs`: list of {{out, cam, target, lens?}} dicts (framing done by
+        the caller). One scene load, N cameras."""
+        import json
+        script = f"""
+{self.script}
+import json
+specs = json.loads(r'''{json.dumps(specs)}''')
+worker.render_views("{path}", specs)
+"""
+        self.run(script)
+
 # renderer = SceneRenderer(resolution_x=512, resolution_y=512, samples=5)
 # renderer.render_from_corners("/Users/kunalgupta/Documents/opttool2.blend", ["/Users/kunalgupta/Documents/packages/sceneprogrenderer/output1.png", "/Users/kunalgupta/Documents/packages/sceneprogrenderer/output2.png", "/Users/kunalgupta/Documents/packages/sceneprogrenderer/output3.png", "/Users/kunalgupta/Documents/packages/sceneprogrenderer/output4.png"])
 # renderer.render_360("/Users/kunalgupta/Documents/opttool2.blend", "/Users/kunalgupta/Documents/packages/sceneprogrenderer/output.mp4")

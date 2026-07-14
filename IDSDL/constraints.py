@@ -14,6 +14,14 @@ class Raytracer2D:
 
         self.aabb = {obj: self.enhance_aabb(obj.get_aabb()) for obj in self.objects}
 
+    def _aabb_of(self, obj):
+        """AABB for any object, including a composed GROUP used as a constraint
+        target (e.g. a category-default clearance on a bar station). The cache is
+        built from the flattened leaves, so group targets are added lazily."""
+        if obj not in self.aabb:
+            self.aabb[obj] = self.enhance_aabb(obj.get_aabb())
+        return self.aabb[obj]
+
     def enhance_aabb(self, aabb):
         margin = 0.05
         aabb = np.asarray(aabb, dtype=np.float32)
@@ -26,8 +34,8 @@ class Raytracer2D:
         )
 
     def overlap(self, obj1, obj2):
-        aabb1 = self.aabb[obj1]
-        aabb2 = self.aabb[obj2]
+        aabb1 = self._aabb_of(obj1)
+        aabb2 = self._aabb_of(obj2)
         return self.aabb_overlap(aabb1, aabb2)
 
     def aabb_overlap(self, aabb1, aabb2):
@@ -52,8 +60,8 @@ class Raytracer2D:
         return True, float(degree)
 
     def dist_in_xpos(self, obj1, obj2):
-        aabb1 = self.aabb[obj1]
-        aabb2 = self.aabb[obj2]
+        aabb1 = self._aabb_of(obj1)
+        aabb2 = self._aabb_of(obj2)
 
         xmin1, ymin1, zmin1 = aabb1[0]
         xmax1, ymax1, zmax1 = aabb1[1]
@@ -89,8 +97,8 @@ class Raytracer2D:
         return xmin2 - xmax1
 
     def dist_in_xneg(self, obj1, obj2):
-        aabb1 = self.aabb[obj1]
-        aabb2 = self.aabb[obj2]
+        aabb1 = self._aabb_of(obj1)
+        aabb2 = self._aabb_of(obj2)
 
         xmin1, ymin1, zmin1 = aabb1[0]
         xmax1, ymax1, zmax1 = aabb1[1]
@@ -126,8 +134,8 @@ class Raytracer2D:
         return xmin1 - xmax2
 
     def dist_in_zpos(self, obj1, obj2):
-        aabb1 = self.aabb[obj1]
-        aabb2 = self.aabb[obj2]
+        aabb1 = self._aabb_of(obj1)
+        aabb2 = self._aabb_of(obj2)
 
         xmin1, ymin1, zmin1 = aabb1[0]
         xmax1, ymax1, zmax1 = aabb1[1]
@@ -163,8 +171,8 @@ class Raytracer2D:
         return zmin2 - zmax1
 
     def dist_in_zneg(self, obj1, obj2):
-        aabb1 = self.aabb[obj1]
-        aabb2 = self.aabb[obj2]
+        aabb1 = self._aabb_of(obj1)
+        aabb2 = self._aabb_of(obj2)
 
         xmin1, ymin1, zmin1 = aabb1[0]
         xmax1, ymax1, zmax1 = aabb1[1]
@@ -206,8 +214,17 @@ class Raytracer2D:
         if dir not in ["x+", "x-", "z+", "z-"]:
             raise ValueError("Invalid direction. Use 'x+', 'x-', 'z+', or 'z-'.")
 
+        # A composed-group target contains its own members in the flattened object
+        # list — they must not count as intruders in the group's clearance band.
+        own = set(obj.get_children()) if getattr(obj, "children", None) else set()
+        if own:
+            own.add(obj)
+            objects = [o for o in self.objects if o not in own]
+        else:
+            objects = self.objects
+
         if dir == "x+":
-            for other in self.objects:
+            for other in objects:
                 if other is obj:
                     continue
                 tmp = self.dist_in_xpos(obj, other)
@@ -216,7 +233,7 @@ class Raytracer2D:
                     nearest_obj = other
 
         elif dir == "x-":
-            for other in self.objects:
+            for other in objects:
                 if other is obj:
                     continue
                 tmp = self.dist_in_xneg(obj, other)
@@ -225,7 +242,7 @@ class Raytracer2D:
                     nearest_obj = other
 
         elif dir == "z+":
-            for other in self.objects:
+            for other in objects:
                 if other is obj:
                     continue
                 tmp = self.dist_in_zpos(obj, other)
@@ -234,7 +251,7 @@ class Raytracer2D:
                     nearest_obj = other
 
         elif dir == "z-":
-            for other in self.objects:
+            for other in objects:
                 if other is obj:
                     continue
                 tmp = self.dist_in_zneg(obj, other)
@@ -324,7 +341,8 @@ class ClearanceConstraint(ConstraintBase):
         self.distance = float(distance)
         self.omit_objs = [] if omit_objs is None else omit_objs
 
-        assert dir in ["front", "sides", "all"], "Type must be 'front', 'sides', or 'all'"
+        assert dir in ["front", "sides", "all", "front_back", "front_sides"], \
+            "Type must be 'front', 'sides', 'all', 'front_back', or 'front_sides'"
         self.dir = dir
 
         super().__init__(group)
@@ -332,7 +350,7 @@ class ClearanceConstraint(ConstraintBase):
     def compute_gradients(self):
         raytracer = Raytracer2D(self.group)
 
-        if self.dir == "front" or self.dir == "all":
+        if self.dir in ("front", "all", "front_back", "front_sides"):
             if self.is_aligned_zpos(self.obj):
                 dist, nearest_obj = raytracer.compute_free_space(self.obj, "z+")
                 if dist < self.distance and nearest_obj is not None:
@@ -361,7 +379,7 @@ class ClearanceConstraint(ConstraintBase):
                     self.obj.grad += np.array([delta / 2, 0, 0], dtype=np.float32) * self.weight
                     nearest_obj.grad += np.array([-delta / 2, 0, 0], dtype=np.float32) * self.weight
 
-        if self.dir == "sides" or self.dir == "all":
+        if self.dir in ("sides", "all", "front_sides"):
             if self.is_aligned_zpos(self.obj) or self.is_aligned_zneg(self.obj):
                 dist, nearest_obj = raytracer.compute_free_space(self.obj, "x+")
                 if dist < self.distance and nearest_obj is not None:
@@ -388,7 +406,7 @@ class ClearanceConstraint(ConstraintBase):
                     self.obj.grad += np.array([0, 0, delta / 2], dtype=np.float32) * self.weight
                     nearest_obj.grad += np.array([0, 0, -delta / 2], dtype=np.float32) * self.weight
 
-        if self.dir == "all":
+        if self.dir in ("all", "front_back"):
             if self.is_aligned_zpos(self.obj):
                 dist, nearest_obj = raytracer.compute_free_space(self.obj, "z-")
                 if dist < self.distance and nearest_obj is not None:
@@ -417,6 +435,56 @@ class ClearanceConstraint(ConstraintBase):
                     self.obj.grad += np.array([-delta / 2, 0, 0], dtype=np.float32) * self.weight
                     nearest_obj.grad += np.array([delta / 2, 0, 0], dtype=np.float32) * self.weight
                     
+class CategoryClearanceConstraint(ConstraintBase):
+    """Usage clearances from the category-default table in IDSDL/default_constraints.py
+    (counters keep a customer aisle, cabinets keep door swing, ...). Scans the group's
+    children once at construction, matches each by its identity description — an asset's
+    own, or for a composed group the description of its anchor chain — and expands every
+    match into a standard ClearanceConstraint on the group-level child (never a leaf
+    frozen inside it, since the push must move the whole unit). RoomGroup registers one
+    automatically when auto_clearances=True; any group can also add it explicitly."""
+
+    ANCHOR_CHAIN_MAX_DEPTH = 3
+
+    def __init__(self, group):
+        self.name = "CategoryClearanceConstraint"
+        self.type = "GRADIENT"
+        self.weight = 1.0
+        super().__init__(group)
+        self.expanded = self._expand()
+
+    @classmethod
+    def _identity_desc(cls, obj, depth=0):
+        d = getattr(obj, "description", None)
+        if d:
+            return d
+        anchor = getattr(obj, "anchor", None)
+        if anchor is not None and depth < cls.ANCHOR_CHAIN_MAX_DEPTH:
+            return cls._identity_desc(anchor, depth + 1)
+        return None
+
+    def _expand(self):
+        from IDSDL.default_constraints import default_clearance_for
+        expanded = []
+        for c in self.group.children:
+            if getattr(c, "is_proxy", False) or getattr(c, "ignore_overlap", False) \
+                    or getattr(c, "is_light", False):
+                continue
+            desc = self._identity_desc(c)
+            rule = default_clearance_for(desc)
+            if rule is None:
+                continue
+            distance, direction = rule
+            expanded.append(ClearanceConstraint(self.group, c,
+                                                distance=distance, dir=direction))
+            print(f"[CategoryClearance] {distance} m ({direction}) for "
+                  f"'{(desc or '')[:60]}'")
+        return expanded
+
+    def compute_gradients(self):
+        pass  # the expanded ClearanceConstraints registered above do the pushing
+
+
 class AccessConstraint(ConstraintBase):
     def __init__(self, group, obj, target, min_dist=0.1, max_dist=0.15, dir="front"):
         self.name = "AccessConstraint"
@@ -849,7 +917,11 @@ class VisibilityConstraint(ConstraintBase):
             )
 
         else:
-            raise ValueError("Invalid direction for trapezoid construction")
+            # Diagonal sightline: the trapezoid is only defined for near-axis-aligned
+            # source->target. Degrade to a no-op rather than aborting the whole compile,
+            # so one awkward visibility call can't sink a scene. (Author lesson: keep the
+            # viewer and target roughly axis-aligned — see workflow/constraints.md.)
+            return None
 
         return trapezoid
 
@@ -888,6 +960,8 @@ class VisibilityConstraint(ConstraintBase):
     def compute_gradients(self):
         raytracer = Raytracer2D(self.group)
         trapezoid = self.build_trapezoid(self.source, self.target)
+        if trapezoid is None:
+            return
 
         v1 = self.source.get_location()
         v2 = self.target.get_location()
@@ -1002,7 +1076,17 @@ Do not output anything except a room rescale instruction or 'no rescale'.
         super().__init__(group)
 
     def compute_gradients(self):
-        render = self.group.render()
+        # Judge room proportions from inside the room. The generic render()
+        # uses exterior cameras, which for a closed room only see the outer
+        # box; render_interior_combined() gives the VLM an interior view.
+        if hasattr(self.group, "render_interior_combined"):
+            try:
+                render = self.group.render_interior_combined()
+            except Exception:
+                render = self.group.render()
+        else:
+            render = self.group.render()
+
         occupancy_ratio = self.group.compute_occupancy_ratio()
         descriptions = self.group.get_descriptions()
 
@@ -1054,10 +1138,54 @@ class WallOverlapConstraint(ConstraintBase):
 
         return "\n".join(feedback), status
 
+    def _aabb_overlap(self, a, b, margin=0.005):
+        """True if a and b actually intersect in all 3 axes (beyond a small margin). The margin is
+        small (5mm) on purpose: two wall-flush items overlap only ~1cm along the wall-normal axis,
+        so a large margin silently misses real interpenetration (a wall mirror inside a toilet)."""
+        try:
+            amin, amax = a.get_aabb()
+            bmin, bmax = b.get_aabb()
+        except Exception:
+            return False
+        return all(float(amin[i]) < float(bmax[i]) - margin and
+                   float(bmin[i]) < float(amax[i]) - margin for i in range(3))
+
+    def check_geometric_overlap(self):
+        """Beyond slot-bucket conflicts, flag wall-mounted items whose AABB actually intersects
+        another placed object (e.g. a wall mirror overlapping the vanity below/beside it). The
+        slot check can't see this: floor wall-furniture isn't bucketed, and adjacent slots can
+        still collide. Returns a list of human-readable overlap warnings."""
+        wall_objs = [o for wall in self.group.wall_assets.values()
+                     for slot in wall.values() for o in slot]
+        others = list(getattr(self.group, "children", []))
+        warnings, seen = [], set()
+        for w in wall_objs:
+            if getattr(w, "ignore_overlap", False):
+                continue
+            for o in others:
+                if o is w or getattr(o, "ignore_overlap", False):
+                    continue
+                key = tuple(sorted((id(w), id(o))))
+                if key in seen:
+                    continue
+                if self._aabb_overlap(w, o):
+                    seen.add(key)
+                    warnings.append(
+                        f"wall-mounted '{self._describe_obj(w)}' geometrically overlaps "
+                        f"'{self._describe_obj(o)}'")
+        return warnings
+
     def compute_gradients(self):
         feedback, status = self.check_overlap_wall()
-        if not status:
+        geom = self.check_geometric_overlap()
+        for g in geom:
+            print(f"[WallOverlapConstraint] WARNING (geometric overlap): {g}")
+        if not status and not geom:
             return "no wall overlap"
+        if geom:
+            feedback = (feedback + "\n" if feedback else "") + \
+                       "Actual (AABB) overlaps involving wall-mounted items:\n" + "\n".join(geom)
+            status = True
 
         current_placement = f"""
 back_wall: left -> {self._describe_bucket('back_wall', 'left')}
@@ -1085,14 +1213,88 @@ Consider moving overlapping assets to different wall positions to resolve these 
 """
     
 
+class RotationConstraint(ConstraintBase):
+    """VLM check on object orientation within an anchor group.
+
+    Placement bakes a fixed rotation, which is often wrong for
+    orientation-sensitive arrangements: chairs that should face the conversation
+    center, or a desk/table whose front (drawers, usable side) must face its
+    paired chair rather than sit rotated 180 degrees away. This renders the group
+    and asks the VLM to flag such issues. Like the other VLM constraints it only
+    emits text — act on it with group.face(obj, toward=...) / group.rotate(obj, deg).
+    """
+
+    def __init__(self, group):
+        self.name = "RotationConstraint"
+        self.type = "VLM"
+
+        self.VLM = LLM(
+            system_desc="""
+You are given an image showing front, right, back, left renders of a furniture
+arrangement or a room interior. Judge whether each object is ORIENTED (rotated)
+correctly for its function:
+- Seating (chairs, sofas, stools, benches) should face the shared focal point of the
+  group (e.g. the central table) or face the people they converse with — not face away
+  or sit sideways to the group.
+- A desk, console, dresser or table with a clear front (drawers, knee-well, usable side)
+  should have that front toward its paired chair/user, not rotated ~180 degrees away.
+- Rows or grids of seats/desks (classroom, lecture, dining bench) should all face the
+  same focal point — the teacher's desk, lectern, screen, or front of the room — not
+  away from it or in mixed directions.
+- Objects with no meaningful front (rugs, round tables, plants, lamps) never need rotation.
+
+If something is mis-oriented, respond with one short instruction per object, like:
+- rotate accent chair to face the coffee table
+- rotate desk by 180
+
+If every object is correctly oriented, respond with exactly:
+no rotation
+
+Do not output anything except rotation instructions or 'no rotation'.
+""",
+        )
+
+        super().__init__(group)
+
+    def compute_gradients(self):
+        # Judge orientation from the right viewpoint: a closed RoomGroup must be
+        # seen from inside (exterior cameras only see the outer box), while an open
+        # anchor group is judged from its exterior 4-view.
+        if hasattr(self.group, "render_interior_combined"):
+            try:
+                render = self.group.render_interior_combined()
+            except Exception:
+                render = self.group.render()
+        else:
+            render = self.group.render()
+
+        descriptions = self.group.get_descriptions()
+
+        if isinstance(descriptions, str):
+            object_desc = descriptions
+        else:
+            object_desc = ",".join(descriptions)
+
+        prompt = f"""
+The arrangement has the following objects: {object_desc}
+Reason about whether any object is rotated incorrectly for its function and, if so,
+say which object to rotate and toward what.
+"""
+
+        response = self.VLM(prompt, image_paths=[render])
+        return response
+
+
 CONSTRAINTS = [
     OverlapConstraint,
     ClearanceConstraint,
+    CategoryClearanceConstraint,
     AccessConstraint,
     OutOfBoundsConstraint,
     VisibilityConstraint,
     ObjectProportionsConstraint,
     RoomProportionsConstraint,
+    RotationConstraint,
     # RenderingConstraint,
     WallOverlapConstraint,
 ]
@@ -1145,6 +1347,13 @@ class GradSolver:
     def compute_gradients(self):
         for constraint in self.group.grad_constraints:
             constraint.compute_gradients()
+
+        # Static objects (e.g. the invisible door-clearance proxy) exert force on
+        # their neighbours via the constraints above, but must never move themselves.
+        # Zero their accumulated gradient so the action sampler can't translate them.
+        for obj in self.objects:
+            if getattr(obj, "is_static", False):
+                obj.grad = np.zeros(3, dtype=np.float32)
 
         if len(self.objects) == 0:
             return 0.0
@@ -1256,8 +1465,10 @@ class GradSolver:
         return objects, actions, dists
 
     def _snap_overlaps(self):
-        """Deterministic pass: push any still-overlapping pair apart by their penetration depth."""
+        """Deterministic pass: push any still-overlapping pair apart by their penetration depth.
+        Returns True if it moved anything (so a caller can tell whether it did work)."""
         objs = self.objects
+        moved = False
         for _ in range(20):
             any_overlap = False
             for i in range(len(objs)):
@@ -1271,6 +1482,7 @@ class GradSolver:
                     if ox <= 0 or oz <= 0:
                         continue
                     any_overlap = True
+                    moved = True
                     if ox <= oz:
                         d = ox / 2 + 1e-3
                         sign = 1.0 if o1.get_location()[0] < o2.get_location()[0] else -1.0
@@ -1283,6 +1495,7 @@ class GradSolver:
                         o2.translate(0, 0, sign * d)
             if not any_overlap:
                 break
+        return moved
 
     def _clamp_to_bounds(self):
         """Hard-clamp any objects still outside room boundaries after gradient optimization.
@@ -1292,11 +1505,12 @@ class GradSolver:
         This pass guarantees correctness regardless of solver convergence.
         """
         if not hasattr(self.group, "WIDTH") or not hasattr(self.group, "DEPTH"):
-            return
+            return False
 
         WIDTH = float(self.group.WIDTH)
         DEPTH = float(self.group.DEPTH)
 
+        moved = False
         for obj in self.objects:
             if getattr(obj, "ignore_overlap", False):
                 continue
@@ -1319,6 +1533,42 @@ class GradSolver:
 
             if abs(dx) > 1e-6 or abs(dz) > 1e-6:
                 obj.translate(dx, 0, dz)
+                moved = True
+        return moved
+
+    def _settle(self, rounds=12):
+        """Reconcile the two deterministic guarantees — no overlaps AND in-bounds — which
+        fight each other in a tight room: separating a pair can push one object out of bounds,
+        and clamping it back in can shove it into a neighbour. Running snap ONCE then clamp ONCE
+        (the old order) can therefore END on an overlap that nothing re-separates — the source of
+        two dining tables interpenetrating in a small room. Instead alternate: snap to no-overlap,
+        clamp; if the clamp moved anything, re-snap and repeat. Converges to a state that is both
+        overlap-free and in-bounds whenever the room is large enough to hold the furniture; in a
+        genuinely too-small (infeasible) room it exits after `rounds` and leaves a residual overlap
+        for `overlap_pairs()` / RoomGroup._warn_overlaps to surface."""
+        self._snap_overlaps()
+        for _ in range(rounds):
+            if not self._clamp_to_bounds():
+                break          # clamp was a no-op -> the last snap's overlap-free state is in-bounds
+            self._snap_overlaps()
+        # Always end IN-BOUNDS. In a feasible room the loop already converged and this is a no-op; in
+        # an infeasible (too-small) room it forces the residual infeasibility to show up as an OVERLAP
+        # (which _warn_overlaps reports) rather than an object left poking out of the room.
+        self._clamp_to_bounds()
+
+    def overlap_pairs(self, min_penetration=0.02):
+        """Residual overlapping (obj1, obj2, ox, oz) pairs among the current objects, ignoring
+        pairs flagged ignore_overlap and penetrations below `min_penetration` m on either axis."""
+        objs = [o for o in self.objects if not getattr(o, "ignore_overlap", False)]
+        pairs = []
+        for i in range(len(objs)):
+            for j in range(i + 1, len(objs)):
+                a1, a2 = objs[i].get_aabb(), objs[j].get_aabb()
+                ox = float(min(a1[1, 0], a2[1, 0]) - max(a1[0, 0], a2[0, 0]))
+                oz = float(min(a1[1, 2], a2[1, 2]) - max(a1[0, 2], a2[0, 2]))
+                if ox > min_penetration and oz > min_penetration:
+                    pairs.append((objs[i], objs[j], ox, oz))
+        return pairs
 
     def __call__(self):
         if len(self.objects) == 0:
@@ -1339,8 +1589,9 @@ class GradSolver:
                 action = action * self.lr
                 obj.translate(action[0], action[1], action[2])
 
-        self._snap_overlaps()
-        self._clamp_to_bounds()
+        # Reconcile no-overlap AND in-bounds together (see _settle) — running snap then a single
+        # clamp can re-introduce an overlap the clamp created and nothing undoes.
+        self._settle()
 
 
 
