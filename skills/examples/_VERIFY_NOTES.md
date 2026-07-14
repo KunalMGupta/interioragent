@@ -1,7 +1,12 @@
 # Retrofit verification notes (2026-07-13)
 
 All 52 worked examples now ship a phase-gated `<name>_v1.py`. Every one is `lint_program`-clean,
-but **only `bedroom_v1.py` has been BUILT since the gating retrofit** (phase 1, verified clean).
+but **only `bedroom_v1.py` and `bar_v1.py` have been BUILT since the gating retrofit** (phase 1,
+both verified clean). The remaining 20 retrofits are the queue:
+`bathroom casino children_room computer_room dental_office executive_office florist_shop game_room
+garage gym hair_salon jewelry_shop library lobby locker_room meeting_room restaurant retail_store
+toy_shop warehouse` — run each with `workbench run skills/examples/<name>_v1.py --phase 1`
+(~1–4 min each; needs the GPU — CPU Blender is impractically slow).
 This file is the checklist for the verification round: the judgement calls the retrofit had to
 make, the issues it flagged, and what a build must confirm for each scene.
 
@@ -37,7 +42,9 @@ listed per scene are *in addition* to that.
   floor-to-ceiling window.
 
 ## Per-scene notes
-- **bar** — does the phase-2 corner palm change the phase-1 floor solve? (corner slot; should only add)
+- **bar** — **phase-1 PASSED (2026-07-13)**: `no rotation`, `no wall overlap`; the phase-2 corner
+  palm did not disturb the solve. Shell vote `rescale 1.1` ignored per the partial-build rule
+  (full build had converged at 0.95).
 - **bathroom** — original "reads a touch tight" observation still open.
 - **bedroom** — phase 1 verified; **phases 2–3 not re-run**. Declined the phase-1 `rescale 1.4` vote.
 - **casino** — judgement calls: stool row kept in phase 1 (it sets the bar slot's depth); chandelier
