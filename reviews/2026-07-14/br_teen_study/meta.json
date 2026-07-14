@@ -1,0 +1,7 @@
+{
+ "title": "Teen bedroom with study corner",
+ "category": "bedroom",
+ "brief": "Single bed + nightstand, WorkstationGroup study desk (screen faces the chair), stocked corner bookshelf, green beanbag, posters, denim-blue/maple palette.",
+ "program": "scenes/batch_0714/br_teen_study.py",
+ "verdict": "CONVERGED, fully clean (no rescale / no rotation / no wall overlap). Build 2 shrank the oversized flush-mount disc (modulate_scale 0.4)."
+}

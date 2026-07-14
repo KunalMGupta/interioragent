@@ -1,0 +1,7 @@
+{
+ "title": "Japandi minimalist living room",
+ "category": "living room",
+ "brief": "Sparse Japandi lounge: low wood-frame sofa facing a low TV console across a bare oak table, jute pouf, paper tripod lamp, fig, one ink artwork, paper-lantern pendant.",
+ "program": "scenes/batch_0714/lr_japandi.py",
+ "verdict": "CONVERGED: no rotation / no wall overlap, no lints; mild rescale 0.92 held (sparse is the brief)."
+}

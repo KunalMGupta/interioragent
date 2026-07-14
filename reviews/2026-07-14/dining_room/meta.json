@@ -1,0 +1,7 @@
+{
+ "title": "Dining room (flagship)",
+ "category": "dining room",
+ "program": "scenes/dining_room.py",
+ "verdict": "converged clean (see skills/examples/dining_room.md)",
+ "brief": "Classic dining room: rectangular table + chairs, sideboard, pendant, art."
+}

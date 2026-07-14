@@ -1,0 +1,7 @@
+{
+ "title": "Home office / study",
+ "category": "study room",
+ "brief": "Centre WorkstationGroup facing the front window (power layout), tall stocked bookcase off-centre, leather armchair + brass floor lamp reading corner, rug under the desk zone.",
+ "program": "scenes/batch_0714/st_home_office.py",
+ "verdict": "CONVERGED: no rotation / no wall overlap; rescale 0.8 vote RECORDED and held \u2014 flag in feedback if the room reads too airy."
+}

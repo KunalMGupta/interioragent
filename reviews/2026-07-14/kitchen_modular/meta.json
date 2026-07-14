@@ -1,0 +1,7 @@
+{
+ "title": "Modular-run kitchen (recipe B)",
+ "category": "kitchen",
+ "program": "skills/examples/kitchen_v1.py",
+ "verdict": "converged clean (kitchen.md recipe B)",
+ "brief": "Warm marble kitchen assembled from modules: cook run + hood row, island + stools, dining."
+}

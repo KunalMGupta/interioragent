@@ -1,0 +1,7 @@
+{
+ "title": "Bedroom (flagship)",
+ "category": "bedroom",
+ "program": "skills/examples/bedroom_v1.py",
+ "verdict": "converged clean; phase-1 verified in the 2026-07-13 round (bedroom.md)",
+ "brief": "Master bedroom: bed + nightstands, wardrobe, dresser, soft palette."
+}

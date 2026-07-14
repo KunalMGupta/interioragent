@@ -28,7 +28,9 @@ PHASE = current_phase()   # 1 anchors / 2 surfaces / 3 walls+mood (default 3 = a
 scene = SceneProgRoom("BathroomPowderCompact", seed=33)
 
 # ---- pinned heroes (audited on the retrieve contact sheets, 2026-07-14) -------------------------
-VANITY = "hssd/ca21a1bc1ea4a44666751bbe7fb6853eafdec2ef"  # black single vanity SET — cabinet, sink
+# hssd/ca21a1bc floated 0.17 m at phase 1 (off-center mesh origin — the lint says swap, never
+# compensate); replaced with the next type-tagged single from vanity_types.json.
+VANITY = "hssd/6b408a09af773f17c06c960ad0ec13f2434638d9"  # single vanity SET — cabinet, sink
                                                           # AND its own matching mirror in one mesh
                                                           # (top similarity 0.74). Tagged 'single'
                                                           # in vanity_types.json, so AddAsset

@@ -1,0 +1,7 @@
+{
+ "title": "Straight-set galley kitchen (front island)",
+ "category": "kitchen",
+ "brief": "Straight 8/11 fitted set (fridge included) at 2.2 m, bare-top island + riding pendant parallel in front (KitchenIslandGroup front mode), 2 stools, 2-top dining, corner-pinned.",
+ "program": "scenes/batch_0714/kt_galley_straight.py",
+ "verdict": "CONVERGED: no rotation / no wall overlap, no lints; rescale 0.88 held per the interior-camera bound. KitchenIslandGroup 'front' mode verified in production (island parallel to the run, stools seated)."
+}

@@ -1,0 +1,7 @@
+{
+ "title": "Writer's studio",
+ "category": "study room",
+ "brief": "Flat-desk WorkstationGroup near the window, beige daybed, low stocked bookshelf, plants, framed prints, sheer curtains; laptop + rotary phone carry the vintage cue (no typewriter mesh exists).",
+ "program": "scenes/batch_0714/st_writer_studio.py",
+ "verdict": "CONVERGED. Build 1 fully clean; build 2 (fixture shrink only) flip-flopped a 'rotate daybed to face desk' vote + rescale 0.9 \u2014 identical program, opposite verdicts = VLM noise class; declined on the render (wall daybed correctly faces the room). Ceiling-disc fixture fixed at 0.4."
+}

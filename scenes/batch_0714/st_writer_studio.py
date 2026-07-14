@@ -100,7 +100,9 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.1) as room:
         room.place_on_wall_right_center(
             scene.AddAsset("a framed vintage botanical illustration print", width=0.7))
         # calm warm ceiling light: compact flush fixture, enlarged + low density (starfield lint)
+        # Build 1: the picked flush mount rendered as a giant ceiling DISC spanning half the
+        # room (kitchen v2's drum class) — shrink the fixture, don't touch density.
         room.add_lighting("a flat round LED flush mount ceiling light", density=0.02,
-                          modulate_scale=1.5)
+                          modulate_scale=0.4)
 
 scene.export("st_writer_studio.blend")

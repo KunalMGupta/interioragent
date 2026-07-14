@@ -1,0 +1,7 @@
+{
+ "title": "Hotel-style bathroom",
+ "category": "bathroom",
+ "brief": "Double vanity, walk-in glass shower in a wall END slot, toilet set, teak bench with plush towels + candles, towel ladder, grey marble + warm wood.",
+ "program": "scenes/batch_0714/ba_hotel_double.py",
+ "verdict": "CONVERGED: no rotation / no wall overlap, no lints; rescale 0.86 held (enclosed-bath brief)."
+}

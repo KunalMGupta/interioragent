@@ -120,6 +120,9 @@ with scene.RoomGroup(modulate_scale=0.8, randomness=0.1) as room:
         room.place_window_standard("right_wall", position="center",
                                    curtain="simple grey curtains")
         # ONE flush disc per ~area: 0.015 for a small bedroom (0.02+ starfields)
-        room.add_lighting("a flat round LED flush mount ceiling light", density=0.015)
+        # Build 1: the picked flush mount rendered as a ~2 m ceiling DISC (the kitchen v2 drum
+        # class — size lever is modulate_scale, add_lighting takes no asset_id).
+        room.add_lighting("a flat round LED flush mount ceiling light", density=0.015,
+                          modulate_scale=0.4)
 
 scene.export("br_teen_study.blend")

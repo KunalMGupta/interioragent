@@ -1,0 +1,7 @@
+{
+ "title": "Spa master bathroom (flagship)",
+ "category": "bathroom",
+ "program": "skills/examples/bathroom_v1.py",
+ "verdict": "converged; deliberate 0.72 tightness documented (bathroom.md)",
+ "brief": "Spa bath: freestanding tub under window, walk-in shower, warm-wood double vanity, brass."
+}
