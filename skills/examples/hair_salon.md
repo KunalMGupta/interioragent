@@ -131,7 +131,7 @@ layer, last. Added inside the `RoomGroup`:
     room.place_on_wall_front_center(scene.AddAsset("a neon salon sign"))
     room.place_door("left_wall", position="right")
     room.place_window_standard("right_wall", position="center", curtain="sheer white curtains")
-scene.export("salon_pretty.blend")
+scene.export("hair_salon.blend")
 ```
 
 **Phase-3 checks:** `WallOverlapConstraint` (art not colliding with door/window), and the final

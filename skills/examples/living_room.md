@@ -2,8 +2,7 @@
 
 Status: **built & VLM-clean** (warm modern living room, [livingroom_v1.py](livingroom_v1.py), seed=42).
 Built coarse-to-fine through the workbench; final compile returns `no rescale` /
-`no rescale` / `no wall overlap`. The older `test.py` seed remains a second
-reference for nested-group patterns (see bottom).
+`no rescale` / `no wall overlap`.
 
 ## Prompt this covers
 - "a warm, modern living room with a central sofa-and-armchairs seating area
@@ -99,7 +98,8 @@ scene.export("livingroom_v1.blend")
   `room.add_visibility(sofa, tv)` if a TV is introduced;
   `room.add_clearance(sofa, dir="front")` to guarantee legroom to the coffee table.
 
-## Secondary reference — `test.py` (nested-group patterns)
-Shows `AroundGroup.place_arc` for chairs around a table and a nested
-(side table + lamp) RelativeGroup placed as a single unit on a couch — useful when
-you need sub-assemblies.
+## Secondary reference — nested-group patterns
+For `AroundGroup.place_arc` (chairs arced around a table) and a nested
+(side table + lamp) RelativeGroup placed as a single unit, see `tests.py`
+(tests 02/03/07) and `docs_figures.py` — useful when you need sub-assemblies.
+(The old root `test.py` that demonstrated these was scratch and has been removed.)
