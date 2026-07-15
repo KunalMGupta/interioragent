@@ -1,7 +1,0 @@
-{
- "title": "Compact powder room",
- "category": "bathroom",
- "brief": "Four-object jewel box at 0.6 scale: single vanity SET (own mirror), toilet SET, towel ladder, plant; deep-teal walls, no window.",
- "program": "scenes/batch_0714/ba_powder_compact.py",
- "verdict": "CONVERGED after swapping the floating vanity mesh (hssd/6b408a09); deliberately tight jewel-box shell; rescale 0.9 held."
-}

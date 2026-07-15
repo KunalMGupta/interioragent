@@ -1,7 +1,0 @@
-{
- "title": "Sunny breakfast nook",
- "category": "dining room",
- "brief": "Round oak tripod table + 4 woven-seat chairs, white sideboard with fruit/vase/pothos vignette, jute rug, rattan dome pendant, sheer-curtained window.",
- "program": "scenes/batch_0714/dr_breakfast_nook.py",
- "verdict": "CONVERGED: no rotation / no wall overlap; rescale 1.03 = neutral."
-}

@@ -1,7 +1,0 @@
-{
- "title": "U-kitchen with attached peninsula (NEW today)",
- "category": "kitchen",
- "program": "skills/examples/kitchen_set_v3.py",
- "verdict": "converged clean 2026-07-14 (no rotation / no wall overlap, no lints)",
- "brief": "Navy U fitted set, island attached at the longer wing's frontal tip across the mouth (KitchenIslandGroup tip mode), 1 stool, dining beyond."
-}

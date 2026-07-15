@@ -2,7 +2,7 @@
 
 How to actually write a scene program. Distilled from the DSL source; treat the
 source as ground truth if something here drifts. Verified examples: `tests.py`
-(per-feature unit scenes), `docs_figures.py`, and the worked programs in
+(per-feature unit scenes), `tools/docs_figures.py`, and the worked programs in
 `skills/examples/*_v1.py`.
 
 ## Coordinate system

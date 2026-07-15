@@ -81,3 +81,10 @@ tools/lamp_ontop_test.py
 
 # asset-shop batches (downloads, previews, per-asset working dirs)
 shops/
+
+# Internal human-review boards (feedback blocks addressed to the maintainer; the durable
+# lessons are folded into skills/examples/). Dev-only scratch, like shops/<batch>.
+reviews/
+
+# Internal session scratch / running TODO log ("delete when drained"). Not release content.
+NEXT_STEPS.md

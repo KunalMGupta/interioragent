@@ -1,7 +1,0 @@
-{
- "title": "Farmhouse dining room",
- "category": "dining room",
- "brief": "2.4 m rustic plank table with cross-back chairs one side + a bench on the other, host chairs at the ends, low rustic sideboard, iron cage-lantern pendant, cream curtains.",
- "program": "scenes/batch_0714/dr_farmhouse.py",
- "verdict": "CONVERGED: no rotation / no wall overlap; rescale 0.96 = neutral."
-}

@@ -7,8 +7,9 @@ blind to. Read the flagship `.md` for the pattern; read THIS for what changes ac
 the review-driven rules. The programs are the code (paths in the table at the bottom); the reusable
 snippets are inlined below.
 
-The review board is `reviews/2026-07-14/REVIEW.md` (19 scenes, one Feedback block each). 15 approved,
-3 sent back for rework, 1 fixed on the spot — all recorded there.
+The round was human-reviewed on an internal review board (19 scenes, one feedback block each; the
+`reviews/` boards are dev-only scratch, not part of the release): 15 approved, 3 sent back for rework,
+1 fixed on the spot. The durable findings are distilled below.
 
 ## The variations, by category — what changes off the flagship
 

@@ -1,7 +1,0 @@
-{
- "title": "Cozy living room (flagship)",
- "category": "living room",
- "program": "scenes/work/living_room_cozy.py",
- "verdict": "converged clean (see skills/examples/living_room_cozy.md)",
- "brief": "Warm cozy living room: sofa cluster + coffee table, TV wall, layered lamps, rug."
-}

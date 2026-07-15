@@ -102,7 +102,7 @@ scene.export("first_scene.blend")
 python first_scene.py     # writes first_scene.blend
 ```
 
-Open the result in Blender, or render it with the helpers in `render_docs.py`.
+Open the result in Blender to inspect it.
 
 ## Core concepts
 
@@ -134,9 +134,7 @@ planner_core/       # InteriorPlanner — RAG-based design-image generator
   rag.py            #   SkillsRAG — embedding retrieval over the skills library
 assets/             # planner data: skills.json (rag_cache.npz built on first run)
 tests.py            # IDSDL feature test suite
-docs_figures.py     # builds the documentation example scenes and renders them
-render_docs.py      # render any results/*.blend from top-down / perspective views
-build_preview.py    # generate a standalone HTML preview of the docs
+tools/            # dev tooling (docs_figures.py builds+renders example figures, etc.)
 ```
 
 ## Running the tests

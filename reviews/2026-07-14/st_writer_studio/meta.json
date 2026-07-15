@@ -1,7 +1,0 @@
-{
- "title": "Writer's studio",
- "category": "study room",
- "brief": "Flat-desk WorkstationGroup near the window, beige daybed, low stocked bookshelf, plants, framed prints, sheer curtains; laptop + rotary phone carry the vintage cue (no typewriter mesh exists).",
- "program": "scenes/batch_0714/st_writer_studio.py",
- "verdict": "CONVERGED after the 2026-07-14 region-separation fix (desk \u2192 back-right third, shelf \u2192 back wall, window \u2192 back-right, so the left-wall daybed keeps circulation): no rotation, no wall overlap. VLM advised 'rescale room by 0.65' (reads a touch empty now the two groups sit apart) \u2014 NOT applied; tightening would trade back against the circulation the fix restored."
-}

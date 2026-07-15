@@ -1,7 +1,0 @@
-{
- "title": "Mid-century entertaining lounge",
- "category": "living room",
- "brief": "Tufted leather sofa + two mustard armchairs ringed around a round walnut table, credenza with record player + gallery wall, stocked bar cart, brass floor lamp, teal accent.",
- "program": "scenes/batch_0714/lr_midcentury.py",
- "verdict": "CONVERGED: no rotation / no wall overlap, no lints; rescale 0.95 ~ neutral."
-}

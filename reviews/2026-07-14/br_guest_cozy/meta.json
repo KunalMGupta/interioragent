@@ -1,7 +1,0 @@
-{
- "title": "Cozy guest bedroom",
- "category": "bedroom",
- "brief": "Double bed with layered bedding + foot bench, symmetric nightstand/lamp pairs, styled dresser, armchair + floor-lamp reading vignette, landscape art over the headboard, greige/oak.",
- "program": "scenes/batch_0714/br_guest_cozy.py",
- "verdict": "CONVERGED: no rotation / no wall overlap. Wall-occlusion warning = the benign art-above-the-headboard class (fully visible in the render). Grow vote 1.1 held."
-}

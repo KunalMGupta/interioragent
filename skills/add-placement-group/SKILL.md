@@ -93,7 +93,7 @@ example in `skills/examples/hair_salon.md`.
 > `add_lighting` pendant) — lights are `is_light` children, skipped by AABBs, so the entry-gap
 > math still sees only the counter while the pendant rides along. Worked in
 > `skills/examples/kitchen.md` (U peninsula: `kitchen_set_v3.py`; L pocket: `kitchen_l_v1.py`);
-> numeric tests 52–53 in `tests.py`, figure `extra_kitchen_island` in `docs_figures.py`.
+> numeric tests 52–53 in `tests.py`, figure `extra_kitchen_island` in `tools/docs_figures.py`.
 
 ## Golden rules (do not break these)
 
@@ -105,7 +105,7 @@ example in `skills/examples/hair_salon.md`.
    with the `with scene.XGroup() as g:` idiom. Nothing else in scene.py changes.
 3. **Reuse, don't reinvent.** Build on existing primitives and inherit `compile()`. Do not write a
    new compile/optimization engine.
-4. **Always verify twice**: a `tests.py` case with numeric assertions **and** a `docs_figures.py`
+4. **Always verify twice**: a `tests.py` case with numeric assertions **and** a `tools/docs_figures.py`
    render you actually inspect. A group is not "done" until both pass.
 
 ## What you can reuse (existing primitives)
@@ -182,7 +182,7 @@ Add a `test_NN()` that builds the group, `scene.bind(group)`, then **asserts geo
 relative checks), and register it in the `TESTS` dict. Example assertions: stacked levels abut;
 mirrored pair symmetric about anchor; pile has zero pairwise AABB overlap; ring radii ordered.
 
-### 4. Render & visually verify with `docs_figures.py`
+### 4. Render & visually verify with `tools/docs_figures.py`
 Add a `extra_<name>()` figure function and a `FIGURES` entry, render top-down + perspective, and
 **open the PNGs to confirm** the layout looks right (not just that it ran).
 
@@ -195,8 +195,7 @@ use in the worked example (`skills/examples/<scene>.md`) of the scene that motiv
 ```bash
 mkdir -p results
 OPENAI_API_KEY=<key> conda run -n interioragent python tests.py <NN>
-OPENAI_API_KEY=<key> conda run -n interioragent python docs_figures.py extra_<name>
-python build_preview.py   # refresh the standalone docs preview
+OPENAI_API_KEY=<key> conda run -n interioragent python tools/docs_figures.py extra_<name>
 ```
 Then Read the rendered `docs/assets/scenes/extra_<name>_*.png` and confirm correctness.
 
@@ -232,7 +231,7 @@ Procedure:
 - [ ] New class only in `IDSDL/groups_extra.py`; core logic untouched.
 - [ ] One-line factory added to `scene.py`; `with scene.XGroup() as g:` works.
 - [ ] `tests.py` case with numeric assertions, registered in `TESTS`, passes.
-- [ ] `docs_figures.py` figure rendered and visually inspected (top-down + perspective).
+- [ ] `tools/docs_figures.py` figure rendered and visually inspected (top-down + perspective).
 - [ ] Documented as a worked-precedent blockquote in this file + taught in the motivating
       scene's `skills/examples/<scene>.md`.
 - [ ] (External repo) cloned under `external/` and git-ignored; runs out-of-process; output

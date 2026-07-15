@@ -1,7 +1,0 @@
-{
- "title": "Library-style study",
- "category": "study room",
- "brief": "Three tall stocked walnut bookcases in back-wall slots (centre clear), central reading table with 2 chairs + banker's lamp + globe, armchair corner, deep-green walls over dark oak.",
- "program": "scenes/batch_0714/st_library_study.py",
- "verdict": "CONVERGED: no rotation / no wall overlap; rescale 0.8 vote recorded \u2014 the room reads sparse for 'library'; good candidate for feedback (more shelves? tighter shell?)."
-}
