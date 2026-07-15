@@ -37,7 +37,7 @@ Generated with [Meshy](https://www.meshy.ai) from a text prompt; no third-party 
 
 ## Provenance pending
 
-Ingested before provenance was recorded; identification in progress (tools/attribution_recover.py).
+Ingested before provenance was recorded; identification pending (manual — see shops/attribution/HELP.md).
 
 - `custom/049182127609e8712ab86df11e06180a626afe87` — White retractable projection screen with an aluminium housing and a grey project
 - `custom/06463870baa87e6e753b983a48dee9aeae3e2859` — Large dark wood-framed chalkboard with a black writing surface and a bottom ledg

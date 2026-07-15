@@ -266,7 +266,7 @@ def ingest_paths(glbs, category=None, manifest=None, manifest_path=None, workers
         print(f"[ingest] WARNING: {len(no_prov)} asset(s) ingested WITHOUT provenance "
               f"(author/license unknown): {', '.join(no_prov[:5])}{'…' if len(no_prov) > 5 else ''}\n"
               "          Pass --manifest with a per-file {'provenance': {source, author, url, "
-              "license}} block, or recover it later with tools/attribution_recover.py.")
+              "license}} block.")
     try:
         write_attributions()
     except Exception as e:                       # the doc must never break an ingest
@@ -279,7 +279,7 @@ def write_attributions(out_path=None):
 
     Grouped by license; Meshy generations are their own section (AI-generated, no third-party
     author); entries with no provenance are listed as pending so the gap stays visible until
-    tools/attribution_recover.py (or a human) settles them."""
+    a human settles them."""
     meta = _load_meta()
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     out_path = out_path or os.path.join(root, "ATTRIBUTIONS.md")
@@ -319,8 +319,8 @@ def write_attributions(out_path=None):
         lines.append("")
     if pending:
         lines += ["## Provenance pending", "",
-                  "Ingested before provenance was recorded; identification in progress "
-                  "(tools/attribution_recover.py).", ""]
+                  "Ingested before provenance was recorded; identification pending "
+                  "(manual — see shops/attribution/HELP.md).", ""]
         for mid, entry in pending:
             lines.append(f"- `{mid}` — {entry.get('description', '')[:80]}")
         lines.append("")
