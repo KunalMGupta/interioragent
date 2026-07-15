@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch the IDSDL MCP server from any clone location (referenced by .mcp.json,
+# Launch the InteriorAgent MCP server from any clone location (referenced by .mcp.json,
 # which runs it with cwd = repo root).
 # Python resolution: $IDSDL_PYTHON > the interioragent conda env if present > python3 on PATH.
 cd "$(dirname "$0")/.."

@@ -359,7 +359,7 @@ rotation issue you can *see*; the VLM rotation text is just a hint.
   undone by `_repin_wall_furniture`); consoles below the art stay; unresolvable cases
   emit a `[RoomGroup] WARNING`. Rebuild: wardrobe beside the print, art fully visible,
   no new votes. Details in workflow/constraints.md.
-- **[TOOLING GOTCHA — `run_scene` mtime-fallback]** {#vlm-tooling-gotcha-run-scene-mtime-fallback} `mcp__idsdl__run_scene` reports whichever
+- **[TOOLING GOTCHA — `run_scene` mtime-fallback]** {#vlm-tooling-gotcha-run-scene-mtime-fallback} `mcp__interioragent__run_scene` reports whichever
   `report.json` is **newest by mtime across all `tmp/*` dirs**, so when a build **errors before writing
   its own report** (or another run finished more recently) it surfaces a *different scene's* renders +
   feedback — I got a full **garage** back for a retail program (`ok=False`, but the images/asset-list
@@ -815,7 +815,7 @@ rotation issue you can *see*; the VLM rotation text is just a hint.
   note ("brightness is a SKY setting, never `add_lighting`") to its dark mirror: for a DIM room, drop
   the sky *and* the budget. Applies to any bar / cinema / speakeasy / nightclub brief.
 - **[wine_cellar v1, TOOLING — MCP `run_scene` renders ignore the program's `IDSDL_SKY`]** {#vlm-wine-cellar-v1-tooling-mcp-run-scene-renders} The same
-  program renders BRIGHT through `mcp__idsdl__run_scene` and DIM through `python workbench.py run
+  program renders BRIGHT through `mcp__interioragent__run_scene` and DIM through `python workbench.py run
   <prog>` (verified back-to-back at an identical 90 W budget). The warm MCP server has already
   imported the renderer, so `INTERIOR_SKY_STRENGTH` is bound before the program's `os.environ` line
   ever executes — `run_scene` is subprocess-isolated for the BUILD but not for import-time constants.

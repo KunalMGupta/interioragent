@@ -18,7 +18,7 @@ part was that bathroom **fixtures are "set assets" with unreliable scale metadat
 `../workflow/asset_selection.md` ("Set assets") and `../workflow/coarse_to_fine.md`.
 
 ## Prompt / plan
-"a pretty / spa-style master bathroom." Planner (ALWAYS run it first — `idsdl__plan`) returned: white
+"a pretty / spa-style master bathroom." Planner (ALWAYS run it first — `interioragent__plan`) returned: white
 marble **grounded with warm wood + brass**, freestanding oval tub under a window as the hero with a
 **statement brass chandelier**, walk-in glass shower, **warm-wood double vanity** with brass mirror,
 ferns/eucalyptus + candles + plush towels. Skipping the planner gives a generic 3-piece bath.

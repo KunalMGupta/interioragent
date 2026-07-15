@@ -310,7 +310,7 @@ the ~687 MB embeddings on every CLI call. The shared logic lives in `IDSDL/servi
 
 The `mcp` dependency is covered by `pip install -r requirements.txt`.
 Registration is `.mcp.json` (project-scoped; Claude Code discovers it on session start and
-prompts to approve `idsdl` — it launches `tools/idsdl_mcp.sh`, which picks `$IDSDL_PYTHON`,
+prompts to approve `interioragent` — it launches `tools/interioragent_mcp.sh`, which picks `$IDSDL_PYTHON`,
 then the `interioragent` conda env if present, then `python3`). Requires `OPENAI_API_KEY` in
 the environment **at launch** — the warm process snapshots it. If the key rotates mid-session,
 call the **reload_credentials** tool (pass the fresh key, or write `OPENAI_API_KEY=...` to
@@ -324,8 +324,8 @@ launcher by absolute path — it anchors itself to the repo, so no working direc
 ```json
 {
   "mcpServers": {
-    "idsdl": {
-      "command": "/abs/path/to/interioragent/tools/idsdl_mcp.sh",
+    "interioragent": {
+      "command": "/abs/path/to/interioragent/tools/interioragent_mcp.sh",
       "env": {
         "IDSDL_PYTHON": "/abs/path/to/conda/envs/interioragent/bin/python",
         "OPENAI_API_KEY": "sk-..."
@@ -342,7 +342,7 @@ answered and status/browse tools work mid-build (heavy tools themselves run one 
 Give your client a generous per-tool timeout for those calls, or use the
 `generate_scene_start/status/result` job tools for the full pipeline.
 
-Tools (`mcp__idsdl__*`): **retrieve / inspect** (route+resolve a query → candidate contact sheet
+Tools (`mcp__interioragent__*`): **retrieve / inspect** (route+resolve a query → candidate contact sheet
 inline), **browse** (montage of dataset matches), **reselect / show / pin** (session-memory picks
 — instant, no re-retrieval; `pin` → the `AddAsset(asset_id=…)` snippet), **candidates / gallery /
 pool_add** (pool curation), **ingest_glbs** (custom-asset ingestion + auto re-warm), **shop_search

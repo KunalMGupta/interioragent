@@ -1,7 +1,7 @@
 """IDSDL MCP server (stdio) — warm, typed tools for the asset-discovery loop.
 
 Run:  (from the repo root, in the project env)  PYTHONPATH=. python -m IDSDL.service.mcp_server
-Registered via the repo's .mcp.json so Claude Code exposes the tools as mcp__idsdl__*.
+Registered via the repo's .mcp.json so Claude Code exposes the tools as mcp__interioragent__*.
 
 The heavy state (687MB embeddings + retrievers + router) loads ONCE here and is reused across
 all tool calls. Tools return a short text summary PLUS inline preview images, and the server
@@ -30,7 +30,7 @@ from mcp.server.fastmcp import FastMCP, Image
 
 from IDSDL.service import core
 
-mcp = FastMCP("idsdl")
+mcp = FastMCP("interioragent")
 
 
 # ---- stdout guard (library prints must NOT hit the stdio protocol channel) ----
@@ -598,7 +598,7 @@ def flow_override(flow_id: str, reason: str) -> str:
 
 def main():
     if not os.environ.get("OPENAI_API_KEY"):
-        print("[idsdl-mcp] FATAL: OPENAI_API_KEY not set; retrieval/LLM calls will fail.",
+        print("[interioragent-mcp] FATAL: OPENAI_API_KEY not set; retrieval/LLM calls will fail.",
               file=sys.stderr)
     try:
         with _quiet():
@@ -606,12 +606,12 @@ def main():
     except FileNotFoundError as e:
         # The most common fresh-clone failure: datasets.zip was never installed. Say so
         # plainly on stderr — the MCP client only shows "server failed" otherwise.
-        print(f"[idsdl-mcp] FATAL: {e}", file=sys.stderr)
-        print("[idsdl-mcp] The asset datasets are not installed. Download datasets.zip and "
+        print(f"[interioragent-mcp] FATAL: {e}", file=sys.stderr)
+        print("[interioragent-mcp] The asset datasets are not installed. Download datasets.zip and "
               "extract it into IDSDL/datasets/ (see README: Installation), then reconnect.",
               file=sys.stderr)
         sys.exit(1)
-    print(f"[idsdl-mcp] warm: {info['models']} models loaded; serving stdio.", file=sys.stderr)
+    print(f"[interioragent-mcp] warm: {info['models']} models loaded; serving stdio.", file=sys.stderr)
     mcp.run()
 
 
