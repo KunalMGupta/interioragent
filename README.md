@@ -132,8 +132,11 @@ cold-reloading the ~687 MB embeddings on every call.
 
 **Claude Code:** just open this repo — [`.mcp.json`](.mcp.json) is discovered on session
 start and prompts to approve `interioragent`. Then ask the agent to design a room; the
-**howto** tool orients a fresh agent, and **flow_start** walks it through the full 9-gate
-recipe with mechanically validated evidence at each step.
+**howto** tool orients a fresh agent, and **flow_start** walks it through the gated recipe
+with mechanically validated evidence at each step. By default the flow runs in **inference
+mode** — it ends at the finished `.blend` and treats the knowledge library (`skills/`) as
+read-only; pass `teach=true` (or set `IDSDL_TEACH=1`) to append the write-back gate that
+distills the scene into `skills/` and grows the library.
 
 **Claude Desktop** (or any client that doesn't launch from the repo root) — point at the
 launcher by absolute path; it anchors itself to the repo:
@@ -177,9 +180,12 @@ build on errors), **run_scene** (build+render a DSL program → VLM feedback + r
 **generate_scene_start / _status / _result** (the full `main.py` pipeline as a background job —
 15–45 min, with live strip previews while it runs).
 
-**Guided-flow tools** — the 9-gate recipe as a server-side state machine
+**Guided-flow tools** — the worked-example recipe as a server-side state machine
 (`IDSDL/service/flow.py`): **howto**, **flow_start / flow_status / flow_advance /
-flow_override**. Each gate's card says what to do and what evidence to bring back; evidence is
+flow_override**. Two modes: **inference** (default, 8 gates — plan → retrieve → asset audit →
+author → three phased builds → judge — ending at the `.blend`, `skills/` untouched) and
+**teach** (`flow_start(prompt, teach=true)`, adding the 9th write-back gate that grows the
+knowledge library). Each gate's card says what to do and what evidence to bring back; evidence is
 validated mechanically (files exist, program lints clean, FRESH phase-N build report, no
 unresolved `[Lint]`/`WARNING` lines) before the next step is revealed, and overrides are
 recorded in the flow's provenance. State is file-backed under `tmp/flows/`, so a disconnected

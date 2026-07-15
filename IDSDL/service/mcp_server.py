@@ -549,24 +549,30 @@ def generate_scene_result(job_id: str) -> list:
     return out
 
 
-# ---- Tier E: the guided 9-gate flow (IDSDL/service/flow.py) --------------------
+# ---- Tier E: the guided gated flow (IDSDL/service/flow.py) ---------------------
 @mcp.tool()
 def howto() -> str:
-    """START HERE if you are new to this server: what IDSDL is, the 9-gate scene-generation
-    recipe distilled from the worked examples, and which tools to use at each gate."""
+    """START HERE if you are new to this server: what InteriorAgent is, the gated
+    scene-generation recipe distilled from the worked examples, which tools to use at each
+    gate, and the two flow modes (inference vs. teach)."""
     from IDSDL.service import flow
     return flow.howto()
 
 
 @mcp.tool()
-def flow_start(prompt: str) -> str:
+def flow_start(prompt: str, teach: bool = False) -> str:
     """Begin a guided scene generation for a text prompt. Returns step 1's card: what to do,
     the exact commands, and the evidence to bring back. Each subsequent gate (flow_advance)
     validates your evidence mechanically before revealing the next step — this is how the
-    best scenes were built. State is file-backed; flow_status resumes after a disconnect."""
+    best scenes were built. State is file-backed; flow_status resumes after a disconnect.
+
+    Default mode is INFERENCE: 8 gates ending at the judged .blend, and the knowledge
+    library (skills/) is read-only. Pass teach=true ONLY when the run's explicit goal is
+    to grow the library — it appends a 9th WRITE BACK gate that distills the scene into
+    skills/."""
     from IDSDL.service import flow
     with _quiet():
-        return flow.flow_start(prompt)
+        return flow.flow_start(prompt, teach)
 
 
 @mcp.tool()
