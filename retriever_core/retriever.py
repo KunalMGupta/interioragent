@@ -19,7 +19,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .catalog import KnowledgeCatalog, ROOT, _read
+from .catalog import KnowledgeCatalog, ROOT, _read, _parse_frontmatter
 
 # Included in every bundle regardless of selection — the non-negotiable base.
 CORE_DOCS = [
@@ -154,12 +154,26 @@ class TraceRetriever:
             raw = self._parse_json(raw)
         primary = self._clean_ids(raw.get("primary_examples"), "example")
         secondary = self._clean_ids(raw.get("secondary_examples"), "example")
+        examples = (primary + [e for e in secondary if e not in primary])[:3]
+
+        # Lessons: drop core-flagged picks (their doc is in every bundle anyway),
+        # then GRAPH-EXPAND — a selected example's [[wiki]]-linked lessons come
+        # along automatically; that link was written because the lesson fires there.
+        lessons = [l for l in self._clean_ids(raw.get("lessons"), "lesson")
+                   if not (self.catalog.by_id(l).extras or {}).get("core")]
+        for ex in examples:
+            for e in self.catalog.links(ex, "wiki"):
+                dst = self.catalog.by_id(e.dst)
+                if dst and dst.kind == "lesson" and not dst.extras.get("core") \
+                        and e.dst not in lessons:
+                    lessons.append(e.dst)
+
         return {
             "procedural_signature": str(raw.get("procedural_signature", "")).strip(),
             "reasoning": str(raw.get("reasoning", "")).strip(),
-            "examples": (primary + [e for e in secondary if e not in primary])[:3],
+            "examples": examples,
             "workflow_docs": self._clean_ids(raw.get("workflow_docs"), "workflow"),
-            "lessons": self._clean_ids(raw.get("lessons"), "lesson"),
+            "lessons": lessons,
         }
 
     def retrieve(self, prompt: str, plan: str | None = None,
@@ -190,7 +204,8 @@ class TraceRetriever:
 
         parts.append("\n# Core references (always included)")
         for rel in CORE_DOCS:
-            parts.append(f"\n### {rel}\n{_read(rel)}")
+            _, body = _parse_frontmatter(_read(rel))
+            parts.append(f"\n### {rel}\n{body}")
 
         if sel["examples"]:
             parts.append("\n# Matched example recipes (copy the closest skeleton, don't start from scratch)")

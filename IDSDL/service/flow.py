@@ -131,9 +131,12 @@ EVIDENCE: {"score": <0-10 your honest design-match score>,
         "title": "9/9 WRITE BACK — grow the knowledge base",
         "card": """Distill what you learned so the next scene benefits:
   - skills/examples/<name>.md   (recipe: layout idea, gotchas, feedback log)
+    START IT WITH FRONTMATTER (id/kind/family/category/pattern) — the catalog
+    reads the frontmatter, see any sibling example for the shape
   - skills/examples/<name>_v1.py (the converged program, beside it)
-  - add a row to skills/examples/README.md KEEPING THE TABLE FORMAT (parsed!)
-  - append concrete feedback->action entries to skills/workflow/vlm_feedback.md
+  - add a one-line row to skills/examples/README.md (the human index)
+  - append feedback->action entries to skills/workflow/vlm_feedback.md,
+    each with a unique `{#vlm-<scene>-<topic>}` anchor after the bold prefix
 EVIDENCE: {"example_md": "<path>", "program_copy": "<path>"}""",
     },
 ]
@@ -292,11 +295,16 @@ def _validate(step_key, evidence, state):
         if not py or not os.path.isfile(py):
             errs.append(f"program_copy does not exist: {py!r}")
         readme = os.path.join(REPO_ROOT, "skills", "examples", "README.md")
-        if md and os.path.isfile(md) and os.path.isfile(readme):
-            stem = os.path.splitext(os.path.basename(md))[0]
-            if stem not in open(readme).read():
-                errs.append(f"add a '{stem}' row to skills/examples/README.md "
-                            f"(keep the table format — the retriever parses it)")
+        if md and os.path.isfile(md):
+            if not open(md).read().startswith("---\n"):
+                errs.append(f"{md} has no frontmatter — start it with "
+                            "'---\\nid: example:<name>\\nkind: example\\n...' "
+                            "(the catalog reads the frontmatter; copy a sibling's shape)")
+            if os.path.isfile(readme):
+                stem = os.path.splitext(os.path.basename(md))[0]
+                if stem not in open(readme).read():
+                    errs.append(f"add a '{stem}' row to skills/examples/README.md "
+                                f"(the human index)")
 
     return errs
 
