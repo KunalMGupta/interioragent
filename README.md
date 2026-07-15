@@ -117,24 +117,36 @@ top-down and perspective renders of every feature.
 
 ## Repository layout
 
+Two layers: **`IDSDL/` is the scene DSL + build engine**, and **`generator_core` / `planner_core` /
+`retriever_core` are an orchestration tier *above* it** that drives the engine to turn a text prompt
+into a finished scene. Dependencies flow one way — `*_core → IDSDL`, never the reverse.
+
 ```
-IDSDL/
+IDSDL/                # THE ENGINE — the scene DSL, solver, retrieval, renderer
   scene.py          # SceneProgRoom — the top-level scene API
   object.py         # SceneProgObject — base object, transforms, geometry queries
-  groups.py         # RelativeGroup / AroundGroup / GridGroup / RoomGroup /
-                    #   BasicRoomGroup / SentenceASCIIGenerator
+  groups.py         # RelativeGroup / AroundGroup / GridGroup / RoomGroup / BasicRoomGroup
   constraints.py    # gradient + VLM constraints and the layout solvers
+  default_constraints.py  # keyword-matched auto clearances (see skills/workflow/constraint_playbook.md)
   wall.py           # walls, floor, ceiling
   door.py, window.py# architectural openings
   renderer/         # Blender rendering helpers
-  datasets/         # asset retrievers (large data fetched separately)
+  datasets/         # 3D-MESH retrievers over FutureHSSD/HSSD (large data fetched separately)
+  shop/             # asset ACQUISITION pipeline (Sketchfab/Meshy -> normalize -> ingest)
+  service/          # MCP server (mcp_server.py) + shared core.py; the integration hub
   assets/           # bundled door / window / curtain / wall-texture assets
-planner_core/       # InteriorPlanner — RAG-based design-image generator
-  planner.py        #   generate() + edit() over an LLM image model
-  rag.py            #   SkillsRAG — embedding retrieval over the skills library
+
+generator_core/     # ORCHESTRATION — SceneGenerator: plan -> retrieve -> author -> build -> critic
+planner_core/       # InteriorPlanner (LLM design brief + collage) + SkillsRAG (skills retrieval)
+retriever_core/     # TraceRetriever — reasons over the markdown lesson catalog (no embeddings)
+
 assets/             # planner data: skills.json (rag_cache.npz built on first run)
+skills/             # the worked-example library (examples/*.md + *_v1.py) + workflow guides
+main.py             # text -> finished scene, fully automatic (drives generator_core)
+workbench.py        # build/inspect a single scene program; the day-to-day dev CLI
+batchgen.py         # batch scene-gen harness -> a self-contained review HTML
 tests.py            # IDSDL feature test suite
-tools/            # dev tooling (docs_figures.py builds+renders example figures, etc.)
+tools/              # dev tooling (docs_figures.py builds+renders example figures, etc.)
 ```
 
 ## Running the tests

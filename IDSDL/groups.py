@@ -1,3 +1,23 @@
+"""Spatial-composition primitives — the group vocabulary of the DSL.
+
+This is a large module (imported by every scene); it is organised as class families, in this order:
+
+    AnchorGroup            base: an anchor + objects placed relative to it (shared place_* verbs)
+      RelativeGroup        place objects on the anchor's faces (left/right/front/back, diagonals)
+      AroundGroup          arrange objects AROUND a central anchor (arc / circle / rectilinear)
+    GridGroup              regular deterministic rows/grids (skips the overlap optimisation)
+    RoomGroup              the room shell + wall/floor/ceiling placement + the layout solve
+                           (the largest class — walls, doors, windows, auto-clearances, lighting)
+    BasicRoomGroup         a thin RoomGroup variant
+
+    AlphabetGenerator / WordGenerator / SentenceASCIIGenerator
+                           a self-contained ASCII-art-in-3D feature (LLM-backed; sceneprogllm is
+                           imported lazily inside it, so it costs nothing unless used)
+
+A full split into submodules is a worthwhile future refactor but is deferred — every scene imports
+`IDSDL.groups`, and several methods use function-local imports to break cycles with renderer/lints/
+vlm_placement, so a split needs care.
+"""
 import os
 import random
 import shutil
@@ -2901,11 +2921,14 @@ class RoomGroup(SceneProgObject):
 
     def recenter(self):
         self.scene.bind(self)
-        
-from sceneprogllm import LLM
-import ast
+
+
 class AlphabetGenerator:
     def __init__(self):
+        # sceneprogllm pulls in the LLM stack — a heavy, optional dependency. Import it lazily
+        # here (only when the ASCII-art generator is actually instantiated) instead of at module
+        # level, so `import IDSDL.groups` (which every scene does) does not eagerly load it.
+        from sceneprogllm import LLM
         self.llm = LLM(
             system_desc=f"""
 You are a large language model based assistant, expert at generating ASCII art representations for alphabets and numbers.
@@ -2971,6 +2994,7 @@ Your Response:
 User Input: Generate ASCII art for '{query}'
 Your Response:
 """
+        import ast
         response = self.llm(prompt)
         response = self._sanitize_output(response)
         response = ast.literal_eval(response)

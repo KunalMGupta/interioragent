@@ -1430,7 +1430,12 @@ fi
         scale = mesh.bounds[1,0] - mesh.bounds[0,0]
         return "tmp/stacked.glb", scale
     
-FUTURE_HSSD_ASSET_RETRIEVERS = [
+def _build_future_hssd_retrievers():
+    # Instantiate the specialised retriever registry. Loads the ~700 MB futurehssd embeddings
+    # ONCE (shared via _NPZ_CACHE). Deferred behind the module __getattr__ below so that importing
+    # this module for the DSL / lints / tests does NOT pay the load — the registry builds on first
+    # ACCESS to FUTURE_HSSD_ASSET_RETRIEVERS, not at import time.
+    return [
     FutureHSSDAssetRetriever(),
     CaseGoodsRetriever(),
     CeilingObjectRetriever(),
@@ -1458,7 +1463,26 @@ FUTURE_HSSD_ASSET_RETRIEVERS = [
     ShopFixtureRetriever(),
     CherryBlossomRetriever(),
     SceneMotifCoderObject(),
-]
+    ]
+
+
+def _future_hssd_retrievers():
+    """The registry, built on first use and cached as the module global (so service/core.py's
+    reassignment of FUTURE_HSSD_ASSET_RETRIEVERS stays the single source of truth)."""
+    g = globals()
+    if "FUTURE_HSSD_ASSET_RETRIEVERS" not in g:
+        g["FUTURE_HSSD_ASSET_RETRIEVERS"] = _build_future_hssd_retrievers()
+    return g["FUTURE_HSSD_ASSET_RETRIEVERS"]
+
+
+def __getattr__(name):
+    # PEP 562: lazily build the registry the first time FUTURE_HSSD_ASSET_RETRIEVERS is accessed
+    # (module.ATTR or `from ... import`), so a plain `import` of this module stays cheap. Once
+    # built it lives in globals(), so __getattr__ stops firing and reassignment works normally.
+    if name == "FUTURE_HSSD_ASSET_RETRIEVERS":
+        return _future_hssd_retrievers()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 class SceneProgAssetRetriever:
     def __init__(self, seed=None, acquire=None):
@@ -1470,7 +1494,7 @@ class SceneProgAssetRetriever:
         self.acquire = level(acquire)
 
         self.retrievers = {}
-        for retriever in FUTURE_HSSD_ASSET_RETRIEVERS:
+        for retriever in _future_hssd_retrievers():   # module-internal ref -> explicit accessor
             self.retrievers[retriever.name] = retriever
 
         retriever_context = ""
