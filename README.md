@@ -407,9 +407,10 @@ on creative tasks.
 
 ## License
 
-Code and documentation are released under [CC BY-NC 4.0](LICENSE) (Attribution-NonCommercial).
-Commercial use requires separate permission. The 3D asset datasets (3D-FUTURE, HSSD, custom
-ingests) are downloaded separately and remain governed by their own licenses — see the
+Code and documentation are released under the [MIT License](LICENSE). The vendored
+[three.js](https://github.com/mrdoob/three.js) viewer (`IDSDL/vendor/three/`) is MIT-licensed
+by the Three.js Authors. The 3D asset datasets (3D-FUTURE, HSSD, custom
+ingests) are downloaded separately and are **not** covered by the MIT license — see the
 dataset-terms notice in [Installation](#installation) and accept the upstream terms at the
 official [3D-FUTURE](https://tianchi.aliyun.com/dataset/98063) and
 [HSSD](https://huggingface.co/datasets/hssd/hssd-models) pages before using the bundles.
