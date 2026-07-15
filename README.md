@@ -61,7 +61,16 @@ that fails without the previous one:
   ```
 - **Asset datasets** — the 3D furniture datasets and retrieval index are **not** in git;
   they ship as a bundle you extract **at the repo root** (everything lands in git-ignored
-  paths: `IDSDL/datasets/...`, `IDSDL/assets/`, `assets/`). Two sizes:
+  paths: `IDSDL/datasets/...`, `IDSDL/assets/`, `assets/`).
+
+  > **Dataset terms — read first.** The bundles below repackage assets from
+  > [3D-FUTURE](https://tianchi.aliyun.com/dataset/98063) (Alibaba) and
+  > [HSSD](https://huggingface.co/datasets/hssd/hssd-models) (Hab-lab, CC BY-NC), provided
+  > purely as a convenience for research reproduction. Before downloading, please visit the
+  > official sources above and accept their respective terms of use — your use of the
+  > bundled assets is governed by those upstream licenses, not by this repository's license.
+
+  Two sizes:
   - **Quick demo (~14 GB)** —
     [`idsdl_datasets_mini.zip`](https://interioragent-datasets.s3.amazonaws.com/idsdl_datasets_mini.zip):
     the curated library of ~3k proven assets (every asset a past build chose or a worked
@@ -400,4 +409,7 @@ on creative tasks.
 
 Code and documentation are released under [CC BY-NC 4.0](LICENSE) (Attribution-NonCommercial).
 Commercial use requires separate permission. The 3D asset datasets (3D-FUTURE, HSSD, custom
-ingests) are downloaded separately and remain governed by their own licenses.
+ingests) are downloaded separately and remain governed by their own licenses — see the
+dataset-terms notice in [Installation](#installation) and accept the upstream terms at the
+official [3D-FUTURE](https://tianchi.aliyun.com/dataset/98063) and
+[HSSD](https://huggingface.co/datasets/hssd/hssd-models) pages before using the bundles.
