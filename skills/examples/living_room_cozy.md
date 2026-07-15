@@ -1,3 +1,13 @@
+---
+id: example:living_room_cozy
+kind: example
+family: hero-anchor-room
+category: "cozy living room"
+pattern: "Hearth focal wall + facing conversation cluster"
+---
+> **Digest (from the pattern index):** **Hearth focal wall + facing conversation cluster** — sectional `facing="back"` at the wall-center fireplace (clearance FREE via `CategoryClearanceConstraint`), gallery art stacked above it; leather chair+ottoman+table+lamp nook as one faced sub-group; teaches corner-vs-straight mesh form (phase-1 catch), rug `size` ≤0.8 for a room-dominating cluster, "a room-size vote that never flips is signal — one final-phase application converges", and forced out the core `_repin_wall_furniture` fix (thin wall furniture drifted off its wall via the solver's exploration floor — VLM-invisible, user-caught) + reversed-front wall art (front-cache 180 + compare the catalog preview)
+
+
 # Cozy living room — worked example
 
 Scene: `scenes/work/living_room_cozy.py` (seed=42), planner-driven **"Cozy Hearth-Centric Living

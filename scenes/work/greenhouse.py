@@ -48,7 +48,7 @@ PHASE = current_phase()   # 1 anchors / 2 surfaces / 3 walls+mood (default 3 = a
 
 scene = SceneProgRoom("Greenhouse", seed=52)
 
-# --- pinned assets (every preview eyeballed; audit notes in scenes/notes/greenhouse.md) ---
+# --- pinned assets (every preview eyeballed; audit notes in skills/examples/logs/greenhouse.md) ---
 _BENCH    = "hssd/291a6b41232b94554e4a613e65fc08bd34274724"  # rustic wooden console + LOWER SHELF = the potting-bench form
 _PLANT_LU = "hssd/c7a9fcbab796f68f91b16ab2bc5edd05f477d26f"  # lush green indoor plant (the workhorse bench plant)
 _PLANT_TC = "future/76b98744-c079-456e-9376-046b1399c40c"    # succulent in a TERRACOTTA pot (carries the terracotta tone)

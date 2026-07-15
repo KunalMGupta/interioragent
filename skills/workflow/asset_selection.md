@@ -1,3 +1,9 @@
+---
+id: workflow:asset_selection
+kind: collection
+role: "Retrieval playbooks, one per section, parsed as lesson:asset/<slug>"
+---
+
 # Asset selection (agentic retrieval)
 
 `AddAsset(query)` shortlists candidates by embedding similarity, then a **VLM picks by
@@ -5,8 +11,7 @@ looking at each candidate's preview render** (not just its text description). Th
 stops "a small desk lamp" returning a workstation. See [dsl_reference.md](../dsl_reference.md)
 for the API.
 
-## Scene kickoff: assets BEFORE placements (do this first, every new scene)
-
+## Scene kickoff: assets BEFORE placements (do this first, every new scene) {#asset-scene-kickoff-assets-before-placements-do-th}
 Most of a believable scene is having the right *meshes* available. Settle the asset library for
 the category **before** you write a single placement — placement work on a thin asset set just
 produces a tidy arrangement of wrong objects. The repeatable process (proven on the hair salon):
@@ -31,7 +36,7 @@ produces a tidy arrangement of wrong objects. The repeatable process (proven on 
 
 Worked end-to-end in [../examples/hair_salon.md](../examples/hair_salon.md).
 
-## Batch retrieval stress test (do this right after the asset map)
+## Batch retrieval stress test (do this right after the asset map) {#asset-batch-retrieval-stress-test-do-this-right-af}
 Before writing any placement, **route the whole candidate list at once and audit it** — a cheap way
 to answer "are most of the assets actually available?" up front (a library asked exactly this). Loop
 the warm router over ~40 queries and print `sim | query | chosen-desc`; the descriptions alone tell
@@ -64,7 +69,7 @@ Three failure modes the audit catches that a similarity number ALONE won't (read
   chairs BAKED into the mesh; if a group supplies its own seating that double-seats it. Pin a BARE piece
   or add "no chairs". (Inverse of the [[set-assets-and-scaling]] idea — here the set is what to avoid.)
 
-## Inspect & override (the feedback loop)
+## Inspect & override (the feedback loop) {#asset-inspect-override-the-feedback-loop}
 - **See a pick:** `python workbench.py inspect "<query>"` → prints the contact-sheet path
   (open it), the `VLM decision` (`chose #N: <reason>`), and the ranked candidates with
   preview paths. Add `--render` to render the top finalists in-engine.
@@ -79,7 +84,7 @@ Three failure modes the audit catches that a similarity number ALONE won't (read
   recompile-safe) — the preferred fix. Or `scene.reselect_asset(obj, i_or_model)` for a
   post-hoc swap (then recompile).
 
-## Baked-in selection preferences (hard rules in the picker)
+## Baked-in selection preferences (hard rules in the picker) {#asset-baked-in-selection-preferences-hard-rules-in}
 The visual picker (`IDSDL/datasets/retrievers.py`, `visual_llm`) enforces these so you
 rarely have to override:
 
@@ -98,7 +103,7 @@ rarely have to override:
 - **GOOD** `b5281b81131311b05c3707d977da166addba8661` — bare flat top on legs;
   `c6ee2a801e720442092ed6497935cc067158e761` — flat top with simple drawers.
 
-## Performance
+## Performance {#asset-performance}
 - **Embeddings load once.** `futurehssd.npz` (~700 MB) and the metadata json are loaded a
   single time and shared across all retrievers (was loaded per-retriever → ~12 s / ~13.6 GB
   at import; now ~2 s / ~0.7 GB). Automatic.
@@ -112,7 +117,7 @@ rarely have to override:
   Needs a seeded scene. A missed/extra entry is harmless (that AddAsset just resolves
   normally). Only helps the first (uncached) build — repeat builds hit the cache anyway.
 
-## Retriever pools (routing) — mind category gaps
+## Retriever pools (routing) — mind category gaps {#asset-retriever-pools-routing-mind-category-gaps}
 A query is first routed to a category retriever, each of which searches a **curated id
 pool**, not the whole dataset. So an asset absent from the routed pool can never be picked,
 even if it exists. Worked example: chalkboards used to route to `WallArtRetriever` (decor:
@@ -150,7 +155,7 @@ clearly-better general asset can still surface. NOTE: adding a NEW retriever CLA
 — `run_scene` (subprocess-isolated) picks it up immediately, but the warm MCP `retrieve`/`inspect` tools
 only reflect it after a server restart (`refresh_retrievers` rebuilds instances but does not re-import).
 
-## "Set assets" — bundled categories (vanities, toilets)
+## "Set assets" — bundled categories (vanities, toilets) {#asset-set-assets-bundled-categories-vanities-toile}
 Some categories are **complete sets** in the mesh and must be retrieved + placed as ONE unit, never
 as separable parts: a vanity = cabinet+sink+counter; a toilet = bowl+cistern+flush-buttons+TP-holder.
 Don't query for a bare seat / sink / toiletries — they only exist inside the set. Each earns a
@@ -170,7 +175,7 @@ Two scaling rules for these (and bathroom fixtures generally — their `scale` m
   `SceneProgRoom._apply_vanity_metadata`). Floating/wall-hung sets
   mount via the `bottom=` kwarg now on every `place_on_*_wall_*` method.
 
-## Ingesting new assets (grow the library)
+## Ingesting new assets (grow the library) {#asset-ingesting-new-assets-grow-the-library}
 Drop in `.glb` files from anywhere and make them first-class retrieval assets:
 ```bash
 python -m IDSDL.ingest <zip-of-glbs> [--category <pool>] [--manifest manifest.json]
@@ -196,7 +201,7 @@ are routed/ranked/previewed/picked/`AddAsset`-loaded exactly like dataset assets
 (`--workers`), idempotent (sha1 dedup). A `manifest.json` (`{"<file.glb>": {"description":...,
 "scale":..., "placement":...}}`) overrides any field; `--category` appends the ids to a pool.
 
-## Reusing ANOTHER scene's ingested meshes (check the glb bounds first)
+## Reusing ANOTHER scene's ingested meshes (check the glb bounds first) {#asset-reusing-another-scene-s-ingested-meshes-chec}
 Ingested assets are a shared library — the operating room's `hospital.zip` handed the laboratory a
 real microscope, autoclave and gas-cylinder cart. Two rules before you pin one:
 
@@ -222,7 +227,7 @@ real microscope, autoclave and gas-cylinder cart. Two rules before you pin one:
    round-trip strips (→ flat white). Write back under the **same filename** and the asset id, its
    embedding and every existing pin stay valid — no re-ingest, no re-pin.
 
-## Building / curating a category pool (the reliable way)
+## Building / curating a category pool (the reliable way) {#asset-building-curating-a-category-pool-the-reliab}
 Pools are best built by **over-generating then hand-curating**, not by trusting one search:
 
 1. **Over-generate candidates** — `python workbench.py candidates <category> [--topk 10]`
@@ -238,7 +243,7 @@ Pools are best built by **over-generating then hand-curating**, not by trusting 
 
 This is how the category pools should be grown — curation over automatic search.
 
-## When it still picks wrong
+## When it still picks wrong {#asset-when-it-still-picks-wrong}
 1. `workbench.py inspect "<query>"` to see the shortlist + reasoning.
 2. If a good asset is in the list but unpicked → pin it: `AddAsset(..., asset_id=...)`.
 3. If the **shortlist itself** lacks a good option → rephrase the query (more specific /

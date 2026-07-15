@@ -1,3 +1,13 @@
+---
+id: example:locker_room
+kind: example
+family: rows-runs-corridors
+category: "locker room"
+pattern: "Long rows — flush-on-wall or down the centre (never `place_on_<side>`)"
+---
+> **Digest (from the pattern index):** **Long rows** flush-on-wall or down the centre (never `place_on_<side>`)
+
+
 # Locker room — worked example
 
 A premium fitness/team **locker room**, built from the planner target "Pro Locker Spine & Wet-Dry

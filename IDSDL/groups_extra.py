@@ -16,6 +16,8 @@ Motifs implemented (gaps relative to the HSM motif taxonomy):
     RingsGroup     - concentric surround rings (motif: multi-ring surround)
     MirrorStationGroup - wall mirror + facing floor item + counter/shelf (salon/gym/vanity)
     WorkstationGroup   - desk + operator chair + computer/monitor + distributed desk accessories
+    KitchenIslandGroup - island/peninsula attached to a fitted U/L/straight kitchen set by
+                         rasterising the set's real footprint (tip / pocket / front modes)
 """
 import numpy as np
 
@@ -498,4 +500,414 @@ class WorkstationGroup(AnchorGroup):
             if self._computer in items:
                 self.face(self._computer, toward=self._chair if self._chair is not None else self.anchor)
 
+        return super().compile()
+
+
+# ---------------------------------------------------------------------------
+# Kitchen footprint analysis (pure functions, unit-testable without a scene)
+# ---------------------------------------------------------------------------
+
+_KI_CELL = 0.06          # raster cell, metres
+_KI_ARM_COVERAGE = 0.45  # border coverage above which an adjacent border counts as an arm/wing
+_KI_BASE_COVERAGE = 0.75 # a border must cover this much of its edge to be a candidate base run
+                         # (kept permissive: a run whose modules differ in depth rasters ragged;
+                         # the most-arms + longest-span tie-break disambiguates the candidates)
+
+_KI_BORDERS = ("-x", "+x", "-z", "+z")
+_KI_OPPOSITE = {"-x": "+x", "+x": "-x", "-z": "+z", "+z": "-z"}
+_KI_ADJACENT = {"-x": ("-z", "+z"), "+x": ("-z", "+z"),
+                "-z": ("-x", "+x"), "+z": ("-x", "+x")}
+# 2D (x, z) unit vector pointing OUT of the grid through each border
+_KI_AXIS = {"-x": np.array([-1.0, 0.0]), "+x": np.array([1.0, 0.0]),
+            "-z": np.array([0.0, -1.0]), "+z": np.array([0.0, 1.0])}
+
+
+def _ki_surface_points(obj, budget=60000):
+    """World-space sample points of every leaf mesh under ``obj``: vertices plus AREA-WEIGHTED
+    random points on the triangle surfaces (deterministic seed). Vertex-only sampling leaves
+    big flat cabinet panels (two huge triangles) empty at raster resolution and the footprint
+    degrades to noise — the surfaces themselves must be sampled."""
+    chunks = []
+
+    def rec(o):
+        for c in o.children:
+            rec(c)
+        if o.vertices is None:
+            return
+        v = np.asarray(o.get_world_transform().transform_points(o.vertices))
+        chunks.append(v)
+        if o.faces is not None and len(o.faces):
+            f = np.asarray(o.faces)
+            a, b, c = v[f[:, 0]], v[f[:, 1]], v[f[:, 2]]
+            area = 0.5 * np.linalg.norm(np.cross(b - a, c - a), axis=1)
+            total = float(area.sum())
+            if total > 0:
+                counts = np.maximum(1, np.rint(area / total * budget)).astype(int)
+                idx = np.repeat(np.arange(len(f)), counts)
+                rng = np.random.default_rng(0)      # deterministic: same mesh -> same raster
+                r1 = np.sqrt(rng.random(len(idx)))
+                r2 = rng.random(len(idx))
+                chunks.append(a[idx] * (1 - r1)[:, None]
+                              + b[idx] * (r1 * (1 - r2))[:, None]
+                              + c[idx] * (r1 * r2)[:, None])
+
+    rec(obj)
+    if not chunks:
+        raise ValueError(f"KitchenIslandGroup: '{obj.name}' has no mesh geometry to analyse.")
+    return np.concatenate(chunks, axis=0)
+
+
+def _ki_footprint_grid(pts, cell=_KI_CELL):
+    """Occupancy grid of the BASE-height band of ``pts`` over their XZ AABB.
+
+    The band starts just above the plinth and stops at counter height (<= 1.0 m, or half the
+    total height for a short run), so bundled wall cabinets / hoods high in a full-height set
+    don't pollute the floor footprint. Returns (occ[nx, nz], (x0, z0), cell)."""
+    y0 = float(pts[:, 1].min())
+    h = float(np.ptp(pts[:, 1]))
+    hi = y0 + (min(1.0, 0.5 * h) if h > 1.2 else h)
+    band = pts[(pts[:, 1] >= y0 + 0.04) & (pts[:, 1] <= hi)]
+    if len(band) < 16:
+        band = pts
+    x0, z0 = float(band[:, 0].min()), float(band[:, 2].min())
+    # cap the raster at ~48 cells across: classification needs shape, not 6 cm detail, and a
+    # coarser grid is far more robust to sampling gaps on a big set
+    cell = max(cell, float(np.ptp(band[:, 0])) / 48.0, float(np.ptp(band[:, 2])) / 48.0)
+    nx = max(2, int(np.ceil(float(np.ptp(band[:, 0])) / cell)))
+    nz = max(2, int(np.ceil(float(np.ptp(band[:, 2])) / cell)))
+    occ = np.zeros((nx, nz), dtype=bool)
+    ix = np.clip(((band[:, 0] - x0) / cell).astype(int), 0, nx - 1)
+    iz = np.clip(((band[:, 2] - z0) / cell).astype(int), 0, nz - 1)
+    occ[ix, iz] = True
+    return occ, (x0, z0), cell
+
+
+def _ki_border_coverage(occ):
+    """Fraction of each border band's edge length that has ANY occupied cell (band thickness
+    18% of the grid, min 2 cells). A full run reads ~1.0; a U's short wing ~0.7; the mere
+    side-spill of a perpendicular run ~0.3."""
+    nx, nz = occ.shape
+    tx = max(2, int(round(0.18 * nx)))
+    tz = max(2, int(round(0.18 * nz)))
+    return {
+        "-x": float(occ[:tx, :].any(axis=0).mean()),
+        "+x": float(occ[-tx:, :].any(axis=0).mean()),
+        "-z": float(occ[:, :tz].any(axis=1).mean()),
+        "+z": float(occ[:, -tz:].any(axis=1).mean()),
+    }
+
+
+def _ki_classify(occ, cell=_KI_CELL):
+    """Classify a kitchen footprint as U / L / straight.
+
+    The base run is the candidate border (coverage >= _KI_BASE_COVERAGE) with the MOST
+    qualifying arms, tie-broken by physical span — coverage alone ties a U's base run with its
+    own full-length wing. Returns dict(shape, base, arms={border: coverage}, coverage, fill)."""
+    cov = _ki_border_coverage(occ)
+    nx, nz = occ.shape
+    span = {"-x": nz * cell, "+x": nz * cell, "-z": nx * cell, "+z": nx * cell}
+    fill = float(occ.mean())
+
+    candidates = [b for b in _KI_BORDERS if cov[b] >= _KI_BASE_COVERAGE]
+    if not candidates:
+        candidates = [max(cov, key=lambda b: cov[b])]
+
+    def arms_of(b):
+        return {a: cov[a] for a in _KI_ADJACENT[b] if cov[a] >= _KI_ARM_COVERAGE}
+
+    base = max(candidates, key=lambda b: (len(arms_of(b)), span[b], cov[b]))
+    arms = arms_of(base)
+
+    if fill > 0.7:
+        shape = "straight"      # a solid slab lights every border; it has no cavity to arm
+        arms = {}
+    elif len(arms) == 2:
+        shape = "U"
+    elif len(arms) == 1:
+        shape = "L"
+    else:
+        shape = "straight"
+    return {"shape": shape, "base": base, "arms": arms, "coverage": cov, "fill": fill}
+
+
+def _ki_raster_str(occ):
+    """ASCII footprint, z increasing downward (rows) and x rightward (columns)."""
+    return "\n".join(
+        "".join("#" if occ[i, j] else "." for i in range(occ.shape[0]))
+        for j in range(occ.shape[1]))
+
+
+class KitchenIslandGroup(AnchorGroup):
+    """Attach an island / dining counter to a fitted kitchen set the way a kitchen designer
+    would, by analysing the set's REAL footprint (rasterised from its mesh) instead of its AABB:
+
+    - ``tip``    (U-shaped sets): the island attaches at the frontal tip of the LONGER wing and
+      runs across the U's mouth, half-enclosing the cook zone and leaving a single walk-in gap
+      at the other wing (a peninsula/G-kitchen). ``min_entry`` guards the gap; the island is
+      shrunk if it would seal the mouth.
+    - ``pocket`` (L-shaped sets): the island floats in the concave middle of the L — inside the
+      set's AABB, centred in the quadrant the counters don't occupy — with ``min_aisle``
+      clearance to both runs. Also works inside a deep U's cavity.
+    - ``front``  (straight sets): the classic galley — the island runs parallel to the run,
+      ``min_aisle`` in front of it.
+
+    ``mode="auto"`` picks tip / pocket / front for U / L / straight respectively. The analysis
+    (ASCII raster, border coverages, wing lengths, chosen attachment) is printed at compile so
+    the choice is auditable. The whole unit is rigid: place it in the room with ONE corner op
+    (kitchen.md's alignment rules apply to the composed group exactly as to a bare set) and pin
+    it with ``is_static = True``.
+
+    The island and stools necessarily sit inside the set's AABB (that is the point), so they are
+    flagged ``ignore_overlap`` — the 2D footprint clash with the set is not a real one. Example::
+
+        with scene.KitchenIslandGroup() as kz:
+            kz.set_anchor(scene.AddAsset("...", asset_id=U_SET))
+            kz.place_island(scene.AddAsset("a kitchen island counter", asset_id=ISLAND))
+            kz.place_stools(3 * scene.AddAsset("a counter stool", asset_id=STOOL))
+        ...
+        room.place_on_back_right_corner(kz, facing="front")
+        kz.is_static = True
+    """
+
+    STOOL_GAP = 0.08        # island outward face -> stool front
+    MIN_ISLAND_WIDTH = 0.6  # below this, shrinking the island to protect the entry is refused
+
+    def __init__(self, scene, name=None, cell=_KI_CELL):
+        super().__init__(scene, name=name)
+        self.cell = cell
+        # Deterministic, self-auditing layout: the per-group VLM proportion render is waste
+        # (and the room-level VLM still vets the whole scene).
+        self.vlm_solver = None
+        self._island = None
+        self._island_opts = {}
+        self._stools = []
+        self._stool_gap = self.STOOL_GAP
+        self.analysis = None    # filled by _layout(); exposed for tests / offline audits
+
+    # ---- slot setters: record + parent; positioned in _layout() at compile ----
+    def place_island(self, island, mode="auto", wing="auto",
+                     min_entry=0.9, min_aisle=0.75, attach_overlap=0.05):
+        """The island/peninsula counter (required). ``wing`` (tip mode) is one of
+        ``"auto"|"-x"|"+x"|"-z"|"+z"`` in the SET'S OWN frame as printed by the raster —
+        ``auto`` attaches at the longer wing. ``attach_overlap`` sinks the attached end this far
+        into the wing so the joint reads as continuous joinery, not two nearby blocks."""
+        self._island = island
+        self._island_opts = dict(mode=mode, wing=wing, min_entry=float(min_entry),
+                                 min_aisle=float(min_aisle), attach_overlap=float(attach_overlap))
+        self.add_child(island)
+        return island
+
+    def place_stools(self, stools, gap=None):
+        """Counter stools, seated in a straight row along the island's OUTWARD face (the side
+        away from the cook zone), each facing the island. A parallel row, deliberately NOT
+        fanned at the island's centre point (bar.md's place_rectilinear rule)."""
+        self._stools = self.to_list(stools)
+        if gap is not None:
+            self._stool_gap = float(gap)
+        for s in self._stools:
+            self.add_child(s)
+        return stools
+
+    # ---- geometry helpers ----
+    @staticmethod
+    def _rot_deg(u):
+        """Rotation (deg) that turns local +z into the 2D direction ``u`` under the DSL's yaw
+        convention (x' = x cos a + z sin a, z' = -x sin a + z cos a)."""
+        return float(np.degrees(np.arctan2(u[0], u[1])))
+
+    def _layout(self):
+        if self.anchor is None:
+            raise ValueError("KitchenIslandGroup needs set_anchor(<kitchen set>) before compile.")
+        if self._island is None:
+            raise ValueError("KitchenIslandGroup needs place_island(<counter>) before compile.")
+
+        opts = self._island_opts
+        pts = _ki_surface_points(self.anchor)
+        occ, (gx0, gz0), cell = _ki_footprint_grid(pts, self.cell)
+        info = _ki_classify(occ, cell)
+        nx, nz = occ.shape
+        gx1, gz1 = gx0 + nx * cell, gz0 + nz * cell
+        cov = info["coverage"]
+        tag = "[KitchenIslandGroup]"
+        print(f"{tag} set footprint {nx * cell:.2f} x {nz * cell:.2f} m, fill {info['fill']:.2f}; "
+              f"border coverage " + " ".join(f"{b}:{cov[b]:.2f}" for b in _KI_BORDERS))
+        print(_ki_raster_str(occ))
+
+        # occupied cell centres, world metres
+        ii, jj = np.nonzero(occ)
+        px = gx0 + (ii + 0.5) * cell
+        pz = gz0 + (jj + 0.5) * cell
+        P = np.stack([px, pz], axis=1)
+
+        base = info["base"]
+        n = _KI_AXIS[_KI_OPPOSITE[base]]          # away from the base run, into the room
+        s_n = P @ n                                # scalar coord of each occupied cell along n
+        corners = np.array([[gx0, gz0], [gx0, gz1], [gx1, gz0], [gx1, gz1]])
+        cn = corners @ n
+        base_edge_n, far_n = float(cn.min()), float(cn.max())
+
+        # base-run thickness: leading full-ish slices from the base edge
+        prof_axis = 1 if base in ("-x", "+x") else 0     # mean over the axis PERPENDICULAR to n
+        slices = occ.mean(axis=prof_axis)                # coverage per slice along n
+        if base in ("+x", "+z"):
+            slices = slices[::-1]
+        thick_cells = 1
+        while thick_cells < len(slices) and slices[thick_cells] >= 0.5:
+            thick_cells += 1
+        base_front_n = base_edge_n + thick_cells * cell
+
+        def arm_metrics(w):
+            """(tip_n, inner_s) for arm at border ``w``: how far it runs from the base edge, and
+            the scalar coord (along +w's axis) of its inner face past the base run."""
+            e = _KI_AXIS[w]                       # toward the arm
+            s_e = P @ e
+            ce = corners @ e
+            arm_band = s_e >= float(ce.max()) - max(2, int(round(0.18 * (nx if w in ("-x", "+x") else nz)))) * cell
+            tip_n = float(s_n[arm_band].max()) + 0.5 * cell if arm_band.any() else base_front_n
+            beyond = s_n > base_front_n
+            half = s_e > (float(ce.min()) + float(ce.max())) / 2.0
+            sel = beyond & half
+            inner_s = float(s_e[sel].min()) - 0.5 * cell if sel.any() else float(ce.max())
+            return tip_n, inner_s
+
+        mode = opts["mode"]
+        if mode == "auto":
+            mode = {"U": "tip", "L": "pocket", "straight": "front"}[info["shape"]]
+        self.analysis = dict(info, mode=mode, grid=(nx, nz), cell=cell)
+
+        island = self._island
+        wi, hi_, di = (float(v) for v in island.get_whd())
+        min_aisle = opts["min_aisle"]
+
+        if mode == "tip":
+            if len(info["arms"]) < 2:
+                raise ValueError(f"{tag} tip mode needs a U footprint; analysis says "
+                                 f"{info['shape']} (arms {info['arms']}). Pass mode= explicitly "
+                                 f"or pick a U set.")
+            wing = opts["wing"]
+            lens = {w: arm_metrics(w)[0] - base_edge_n for w in info["arms"]}
+            if wing == "auto":
+                wing = max(lens, key=lens.get)
+                if abs(max(lens.values()) - min(lens.values())) < 0.05:
+                    print(f"{tag} wings are near-equal ({lens}); attached at {wing} — pass "
+                          f"wing= to choose explicitly.")
+            elif wing not in info["arms"]:
+                raise ValueError(f"{tag} wing={wing!r} is not an arm of this set "
+                                 f"(arms: {list(info['arms'])}).")
+            other = _KI_OPPOSITE[wing]
+            e = _KI_AXIS[wing]                    # toward the attach wing
+            tip_n, inner_s = arm_metrics(wing)
+            _, inner_other = arm_metrics(other)
+            mouth = inner_s - (-inner_other)      # clear span between the two wings' inner faces
+            print(f"{tag} shape=U base={base} wings: " +
+                  ", ".join(f"{w} {lens[w]:.2f} m" for w in lens) +
+                  f" -> attach at {wing}; mouth {mouth:.2f} m")
+
+            ov = opts["attach_overlap"]
+            entry = mouth + ov - wi
+            if entry < opts["min_entry"]:
+                new_w = mouth + ov - opts["min_entry"]
+                if new_w < self.MIN_ISLAND_WIDTH:
+                    print(f"{tag} WARNING: mouth {mouth:.2f} m cannot fit an island "
+                          f">= {self.MIN_ISLAND_WIDTH} m plus a {opts['min_entry']} m entry — "
+                          f"island left at {wi:.2f} m; entry gap {entry:.2f} m is TIGHT.")
+                else:
+                    print(f"{tag} island {wi:.2f} m would leave a {entry:.2f} m entry "
+                          f"(< {opts['min_entry']} m) — shrunk to {new_w:.2f} m.")
+                    island.scale_only_width(new_w)
+                    wi = float(island.get_width())
+                    entry = mouth + ov - wi
+            print(f"{tag} island {wi:.2f} m across the mouth, flush with the {wing} wing tip; "
+                  f"entry gap {entry:.2f} m at the {other} side.")
+            c_n = tip_n - di / 2.0                # far face flush with the wing's frontal tip
+            c_s = inner_s + ov - wi / 2.0         # attached end sunk `ov` into the wing
+            cx, cz = e * c_s + n * c_n
+            out_dir = n
+            self.analysis.update(wing=wing, mouth=mouth, entry=entry, tip_n=tip_n)
+
+        elif mode == "pocket":
+            if info["shape"] == "straight" or not info["arms"]:
+                raise ValueError(f"{tag} pocket mode needs an L (or U) footprint; analysis says "
+                                 f"{info['shape']}. Pass mode='front' for a straight set.")
+            # pocket bounds: past the base run along n; between the arm inner faces (or the open
+            # AABB edges) across. For an L, one side is an arm and the other is open.
+            lo_n, hi_n = base_front_n, far_n
+            s_bounds = []
+            for w in _KI_ADJACENT[base]:
+                e = _KI_AXIS[w]
+                ce = corners @ e
+                if w in info["arms"]:
+                    tip_n_w, inner_w = arm_metrics(w)
+                    s_bounds.append((e, inner_w))
+                    hi_n = min(hi_n, max(tip_n_w, base_front_n + 2 * cell)) if info["shape"] == "U" else hi_n
+                else:
+                    s_bounds.append((e, float(ce.max())))
+            (e1, b1), (e2, b2) = s_bounds         # e2 = -e1; span across is [-b2, b1] along e1
+            lo_s, hi_s = -b2, b1
+            c_n = (lo_n + hi_n) / 2.0
+            c_s = (lo_s + hi_s) / 2.0
+            aisle_base = (c_n - di / 2.0) - lo_n
+            print(f"{tag} shape={info['shape']} base={base} arms {list(info['arms'])} -> pocket "
+                  f"{hi_s - lo_s:.2f} x {hi_n - lo_n:.2f} m; island centred at its middle.")
+            span = hi_s - lo_s
+            if wi > span - 2 * min_aisle:
+                new_w = span - 2 * min_aisle
+                if new_w >= self.MIN_ISLAND_WIDTH:
+                    print(f"{tag} island {wi:.2f} m leaves < {min_aisle} m aisles across the "
+                          f"{span:.2f} m pocket — shrunk to {new_w:.2f} m.")
+                    island.scale_only_width(new_w)
+                    wi = float(island.get_width())
+                else:
+                    print(f"{tag} WARNING: pocket span {span:.2f} m is tight for the island "
+                          f"({wi:.2f} m); aisles will be narrow.")
+            if aisle_base < min_aisle:
+                print(f"{tag} WARNING: aisle to the base run is {aisle_base:.2f} m "
+                      f"(< {min_aisle} m) — consider a shallower island or a bigger room.")
+            cx, cz = e1 * c_s + n * c_n
+            out_dir = n
+            self.analysis.update(pocket=(hi_s - lo_s, hi_n - lo_n), aisle_base=aisle_base)
+
+        elif mode == "front":
+            run_w = (gx1 - gx0) if base in ("-z", "+z") else (gz1 - gz0)
+            e = _KI_AXIS[_KI_ADJACENT[base][1]]   # +x for a z base, +z for an x base
+            mid_s = float((corners @ e).min() + (corners @ e).max()) / 2.0
+            c_n = base_front_n + min_aisle + di / 2.0
+            print(f"{tag} shape={info['shape']} base={base} -> galley island {min_aisle:.2f} m "
+                  f"in front of the {run_w:.2f} m run.")
+            cx, cz = e * mid_s + n * c_n
+            out_dir = n
+
+        else:
+            raise ValueError(f"{tag} unknown mode {mode!r} (tip / pocket / front / auto).")
+
+        island.set_rotation(self._rot_deg(out_dir))
+        island.set_location(float(cx), self.compute_obj_y(island), float(cz))
+        island.ignore_overlap = True              # it sits inside the set's AABB by design
+
+        # stools: a straight parallel row along the island's outward face, each facing it
+        if self._stools:
+            e_along = np.array([out_dir[1], -out_dir[0]])   # island's long axis
+            stool_rot = self._rot_deg(-out_dir)
+            row_n = float(np.array([cx, cz]) @ out_dir) + di / 2.0
+            c_along = float(np.array([cx, cz]) @ e_along)
+            # a shrunken island seats fewer stools — drop the overflow instead of overlapping them
+            sw = max(float(s.get_width()) for s in self._stools)
+            max_n = max(1, int(wi // (sw + 0.05)))
+            if len(self._stools) > max_n:
+                print(f"{tag} island is {wi:.2f} m wide — seats {max_n} of the "
+                      f"{len(self._stools)} stools; dropping the rest.")
+                for st in self._stools[max_n:]:
+                    self.children.remove(st)
+                self._stools = self._stools[:max_n]
+            N = len(self._stools)
+            for k, st in enumerate(self._stools):
+                _, _, sd = (float(v) for v in st.get_whd())
+                frac = (k + 1) / (N + 1) - 0.5
+                p = e_along * (c_along + frac * wi) + out_dir * (row_n + self._stool_gap + sd / 2.0)
+                st.set_rotation(stool_rot)
+                st.set_location(float(p[0]), self.compute_obj_y(st), float(p[1]))
+                st.ignore_overlap = True
+
+    def compile(self):
+        self._layout()
         return super().compile()

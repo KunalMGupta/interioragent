@@ -2,7 +2,7 @@
 
 How to actually write a scene program. Distilled from the DSL source; treat the
 source as ground truth if something here drifts. Verified examples: `tests.py`
-(per-feature unit scenes), `docs_figures.py`, and the worked programs in
+(per-feature unit scenes), `tools/docs_figures.py`, and the worked programs in
 `skills/examples/*_v1.py`.
 
 ## Coordinate system
@@ -24,6 +24,22 @@ scene.export("out.blend")                       # runs Blender; writes the .blen
 
 Per run, the scene owns a unique scratchpad `scene.run_dir = tmp/<timestamp>_<pid>_<rand>/`.
 All renders/intermediate meshes go there. `scene.vlm_feedback` accumulates VLM text.
+
+**`acquire=` — what to do when the DATASET cannot serve an asset query.** Default `"low"`: take
+the dataset's best hit, however wrong. That is usually right, and it is always reproducible — but
+below a top-1 similarity of ~0.55 the "best hit" stops being the thing you asked for and nothing
+downstream ever says so ("a chemistry fume hood" resolves to a kitchen chimney hood; "a hospital
+defibrillator" to a wheelchair). Raise the dial and the retriever fills a MEASURED gap itself:
+
+```python
+scene = SceneProgRoom("Chapel", seed=3, acquire="mid")   # search Sketchfab for real gaps
+scene = SceneProgRoom("Lab",    seed=3, acquire="high")  # ...and GENERATE (Meshy) if the web has none
+```
+
+`mid` is free but slow (minutes per gap); `high` spends Meshy credits. Both try the dataset first
+and only engage on a measured gap, an acquisition that fails to close its gap is rolled back out
+of the library, and a failure always falls back to the old behaviour — the scene still builds.
+Full rules: [acquire-assets/SKILL.md](acquire-assets/SKILL.md).
 
 ## Assets
 
@@ -313,7 +329,7 @@ is deterministic (no solve), so keep its `randomness` modest. Good defaults: sea
       room.add_visibility(sofa, tv)                        # keep the sofa→tv sightline clear
   ```
   Methods (each registers a hook; returns self):
-  - `add_clearance(obj, distance=0.5, dir="front"|"sides"|"all", omit_objs=None)` → `ClearanceConstraint`
+  - `add_clearance(obj, distance=0.5, dir="front"|"sides"|"all"|"front_back"|"front_sides", omit_objs=None)` → `ClearanceConstraint` (`front_back` = front+behind, e.g. a treadmill mount/dismount; `front_sides` = front+left+right, e.g. a reception desk queue+walk-around)
   - `add_access(obj, target, min_dist=0.1, max_dist=0.15, dir="front"|"sides")` → `AccessConstraint`
   - `add_visibility(source, target)` → `VisibilityConstraint`
   - low-level escape hatch: `add_constraint_hook(lambda g: g.SomeConstraint(...))`

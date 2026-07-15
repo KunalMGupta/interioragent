@@ -148,8 +148,9 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.08) as room:
 
     room.place_on_center(sterile_core, facing="front")
     # The sterile ring is what actually SIZES the room (game_room's cue-stroke rule): a scrub
-    # team must be able to walk a full loop around the table.
-    room.add_clearance(or_table, distance=1.2, dir="all")
+    # team must be able to walk a full loop around the table. That 1.2 all clearance is now
+    # AUTOMATIC — "operating table" keyword-matches the auto layer (default_constraints.py,
+    # frozen 2026-07-14), so no manual add_clearance is needed here.
 
     # BACK = equipment/head wall: two tall supply cabinets in the LEFT/RIGHT slots. Never a wall
     # CENTRE: interior cameras sit at ~1.4-1.5 m at each wall's centre, so a taller fixture there

@@ -1,3 +1,13 @@
+---
+id: example:bedroom
+kind: example
+family: hero-anchor-room
+category: "master bedroom"
+pattern: "Core residential — symmetric hero (bed) + a self-contained reading-nook sub-group"
+---
+> **Digest (from the pattern index):** Core residential — **symmetric hero** (bed) + a self-contained reading-nook sub-group
+
+
 # Bedroom — worked example ("Warm Traditional Master Suite")
 
 Status: **built & VLM-clean** as `scenes/work/bedroom.py` (seed=41), planner-driven, iterated on VLM

@@ -1,3 +1,9 @@
+---
+id: workflow:coarse_to_fine
+kind: workflow
+role: "The phase plan: hero groups -> shell -> props -> vibe; always-on core doc"
+---
+
 # Coarse-to-fine workflow
 
 Build a scene in three phases, cheapest-impact-last. Rationale: the floor

@@ -35,7 +35,7 @@ from IDSDL.scene import SceneProgRoom
 
 scene = SceneProgRoom("LockerRoom", seed=15)
 
-# --- pinned assets (audited previews; see scenes/work/locker_room.md) ---
+# --- pinned assets (audited previews; see skills/examples/locker_room.md) ---
 _LOCKERS = "future/e96b46b7-a9f5-4e2e-b1d7-0dfc670d5461"          # grey vented full-height metal locker bank
 _BENCH   = "hssd/1ccdd93676483606fdf96f81d6111a7c0e3b1d9f"        # slatted oak bench, black legs
 _CUBBY   = "hssd/c075ced257f48c753d22d3bd3400186d6de319da"        # 6-compartment wood cube (towel cubbies)

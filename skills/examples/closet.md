@@ -1,3 +1,15 @@
+---
+id: example:closet
+kind: example
+family: rows-runs-corridors
+category: "walk-in closet / dressing room"
+pattern: "Narrow corridor with DEEP cabinetry both sides — the camera rule applied at DESIGN time"
+read_for:
+  - "READ FOR ANY NARROW ROOM WITH LOADED LONG WALLS (closet, pantry, galley, utility, archive)"
+---
+> **Digest (from the pattern index):** **Narrow corridor with DEEP cabinetry both sides — the camera rule applied at DESIGN time** — library's twin runs + a dressing island/ottoman hero, but the real lesson is arithmetic: the interior camera sits only `0.04 × room_dimension` in from the wall OPPOSITE the one it shoots, so a deep wardrobe at a wall's CENTRE *contains* that camera and returns a black view the VLM loop calls clean. Put tall bays in the wall END slots and keep both long-wall centres under ~1.3 m (folded-goods shelf, shoe rack) ⇒ four clear views on the first build. **READ FOR ANY NARROW ROOM WITH LOADED LONG WALLS** (closet, pantry, galley, utility, archive). Forced out a core lint (**`[Lint] … is EMBEDDED IN …`**) after a wall shelf shipped **0.45 m inside a wardrobe** with the whole loop reporting `no wall overlap`: wall furniture sits at `row_centers[]` whose pitch is set by each row's FLOOR occupants, so two adjacent wall items can be placed closer than their own widths allow — and a `bottom=`-mounted piece MUST be `ignore_overlap`, which `GradSolver.overlap_pairs` filters out, so nothing ever checks it again. **Three long items on one wall is an ARITHMETIC ((wᵢ+wⱼ)/2 ≤ the row pitch), not a slot count.** Also: **room DEPTH = 3 wall slots × the WIDEST wall item**, so an 8 m closet is fixed by trimming the wall items, never by obeying the shrink vote (which would overflow the fixed runs — locker_room); a "floating shoe shelf" IS a wall unit (mount it with `bottom=`+`ignore_overlap`+`is_static`, don't swap it), and stacking 3 shelves in ONE slot gives a shoe column; uniform scaling couples W to H, so a mesh whose aspect fights your slot grid is the WRONG MESH (a 2.5×1.93 closet system fitted to the slot came out 1.39 m — a stunted run); only 2 of 12 shoe racks in the dataset actually hold shoes
+
+
 # Walk-in closet — worked example ("Boutique Walk-In Wardrobe")
 
 A luxury **walk-in closet / dressing room**, built from the planner target "Boutique Walk-In
@@ -51,7 +63,7 @@ frames. Same story for closet systems — so *mass what exists* rather than ship
   the aisles. Aspect ratio is a layout property — check it before falling in love with a preview.
 
 ## THE LAYOUT: keep both long-wall CENTRES low (the camera rule, derived not discovered)
-`renderer/utils.py::render_interior_walls` puts each camera on the room centreline at
+`IDSDL/renderer/utils.py::render_interior_walls` puts each camera on the room centreline at
 `eye = 0.55 x ceiling_height`, `inset = 0.92` — i.e. **`0.04 x room_dimension` in from the wall
 OPPOSITE the one it is looking at**. In a 4.6 m wide closet that is **~0.18 m**. A 0.58 m deep
 wardrobe standing at a wall's CENTRE therefore *contains* the camera that looks at the other wall,

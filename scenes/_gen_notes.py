@@ -1,9 +1,9 @@
-"""Generate scenes/notes/<name>.md review notes from a structured table.
+"""Generate skills/examples/logs/<name>.md review notes from a structured table.
 Run: python scenes/_gen_notes.py    (writes one note per category)."""
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-NOTES = os.path.join(HERE, "notes")
+NOTES = os.path.join(HERE, "..", "skills", "examples", "logs")
 
 # name: (pattern, jitter/randomness used, review focus, gap risk + risky assets)
 DATA = {

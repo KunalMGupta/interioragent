@@ -9,9 +9,9 @@ from PIL import Image, ImageEnhance, ImageDraw, ImageFont
 
 # --- Shared, load-once caches -------------------------------------------------
 # futurehssd.npz is ~700 MB and futurehssd.json ~7.5 MB. They are IDENTICAL for every
-# retriever, but all ~19 FutureHSSD retrievers are instantiated at import time, so loading
-# them per-instance cost ~12 s and ~13.6 GB of redundant work on every run. Load once and
-# share (read-only data) across all instances.
+# retriever in the registry (built lazily on first access, see module __getattr__ at the
+# bottom), so loading them per-instance would cost ~12 s and ~13.6 GB of redundant work per
+# run. Load once and share (read-only data) across all instances.
 _NPZ_CACHE = {}
 _JSON_CACHE = {}
 
@@ -22,8 +22,33 @@ _CUSTOM_NPZ = os.path.join(_CUSTOM_DIR, "custom.npz")
 _CUSTOM_JSON = os.path.join(_CUSTOM_DIR, "custom.json")
 
 
+_MESH_ROOTS = {
+    "future": os.path.join(os.path.dirname(__file__), "futurehssd", "3D-FUTURE-models"),
+    "hssd": os.path.join(os.path.dirname(__file__), "futurehssd", "HSSD-models"),
+    "custom": os.path.join(_CUSTOM_DIR, "models"),
+}
+
+
+def _mesh_present(mid) -> bool:
+    """Does this id's mesh exist on disk? Mirrors model_to_path_scale exactly
+    (flat <root>/<key>.glb for all three kinds — validated 0 false positives
+    over the full 29k library)."""
+    kind, _, key = str(mid).partition("/")
+    root = _MESH_ROOTS.get(kind)
+    if root is None:
+        return True
+    return os.path.exists(os.path.join(root, key + ".glb"))
+
+
 def _load_embeddings(path):
     if path not in _NPZ_CACHE:
+        if not os.path.exists(path):
+            raise FileNotFoundError(
+                f"Asset dataset missing: {path}\n"
+                "Retrieval needs the embeddings/mesh datasets, which are distributed separately "
+                "from the git repo. Download a datasets bundle and extract it at the repo root "
+                "(see README: Installation)."
+            )
         data = np.load(path)
         emb, mods = data["all_embeddings"], data["all_models"]
         if os.path.exists(_CUSTOM_NPZ):
@@ -33,7 +58,22 @@ def _load_embeddings(path):
                 # don't cast models: custom ids ("custom/<sha1>") are wider than the base
                 # <U45 dtype; np.concatenate widens automatically.
                 mods = np.concatenate([mods, cd["all_models"]])
-        _NPZ_CACHE[path] = (emb, mods)
+        # THE LIBRARY IS WHAT'S ON DISK. The index (npz/json) can name assets whose mesh
+        # isn't installed — the tracked custom index on a fresh clone, or the full index
+        # against the curated MINI datasets bundle. Surfacing only ids with meshes makes a
+        # partial install degrade to a smaller library instead of a trimesh crash mid-build.
+        present = np.array([_mesh_present(m) for m in mods], dtype=bool)
+        n, n_all = int(present.sum()), len(mods)
+        if n == 0:
+            raise FileNotFoundError(
+                "The asset index is present but NO meshes were found under "
+                f"{os.path.dirname(_MESH_ROOTS['future'])} — the datasets bundle is not "
+                "extracted (or landed in the wrong place). See README: Installation."
+            )
+        if n < n_all:
+            print(f"[retrievers] library on disk: {n} of {n_all} indexed assets have meshes; "
+                  "retrieval is limited to them (minimal/partial install).")
+        _NPZ_CACHE[path] = (emb[present], mods[present])
     return _NPZ_CACHE[path]
 
 
@@ -51,6 +91,35 @@ from langchain_openai import OpenAIEmbeddings
 from sceneprogllm import LLM
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))  # Ensure the current directory is in the path
 
+
+class _LazyLLM:
+    """Defer sceneprogllm.LLM construction to first use.
+
+    Building an LLM eagerly constructs its OpenAI client, which raises without OPENAI_API_KEY —
+    and the retriever registry (hence SceneProgRoom) would then be un-constructible keyless.
+    Everything that never talks to the LLM (linting, offline tests, browsing cached candidates)
+    stays usable; the first real call raises one actionable error instead."""
+
+    def __init__(self, *args, **kwargs):
+        self._args, self._kwargs = args, kwargs
+        self._llm = None
+
+    def _real(self):
+        if self._llm is None:
+            if not os.getenv("OPENAI_API_KEY"):
+                raise RuntimeError(
+                    "OPENAI_API_KEY is not set. This step queries an OpenAI model; "
+                    "export OPENAI_API_KEY=... (see README: Installation)."
+                )
+            self._llm = LLM(*self._args, **self._kwargs)
+        return self._llm
+
+    def __call__(self, *args, **kwargs):
+        return self._real()(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._real(), name)
+
 class SceneProgAssetRetrieverBase:
     def __init__(self):
         self.name = "SceneProgAssetRetrieverBase"
@@ -62,31 +131,6 @@ class SceneProgAssetRetrieverBase:
         scale = ...
         return path, scale
     
-    def create_model(self, description):
-        import os
-        import requests
-        from scipy.spatial.transform import Rotation as R
-        import numpy as np
-        import trimesh
-        response = requests.post(os.getenv("GENERATE_GLB"), json={"text": description})
-        cwd = os.getcwd()
-        os.makedirs(f"{cwd}/tmp", exist_ok=True)
-        random_name = os.urandom(16).hex()
-        path = f"{cwd}/tmp/{random_name}.glb"
-        if response.status_code == 200:
-            with open(path, "wb") as f:
-                f.write(response.content)
-        else:
-            raise Exception("Failed to generate 3D model")
-
-        mesh = trimesh.load(path, force="mesh")
-        rotation = R.from_euler('y', 30, degrees=True)
-        rotation = np.hstack((rotation.as_matrix(), np.array([[0], [0], [0]])))
-        rotation = np.vstack((rotation, np.array([0, 0, 0, 1])))
-        mesh.apply_transform(rotation)
-        mesh.export(path)
-        return path
-
 class FutureHSSDAssetRetriever(SceneProgAssetRetrieverBase):
     USE_VISUAL_SELECTION = True   # pick candidates by looking at preview images
     PICK_K = 6                    # number of candidates shown to the visual picker
@@ -103,11 +147,10 @@ This is the default retriever for SceneProg. Unless specified otherwise, always 
 3. A simple wooden table
 4. A modern lounge chair
 """
-        self.encoder = OpenAIEmbeddings(model="text-embedding-3-large", api_key=os.getenv("OPENAI_API_KEY"))
+        self._encoder = None  # constructed lazily: see the `encoder` property
         self.all_embeddings, self.all_models = _load_embeddings(
             os.path.join(os.path.dirname(__file__), "assets/futurehssd.npz")
         )
-        # breakpoint()
         self.config = {
             "FUTURE_PATH_MODELS" : os.path.join(os.path.dirname(__file__), "futurehssd/3D-FUTURE-models"),
             "HSSD_PATH_MODELS" : os.path.join(os.path.dirname(__file__), "futurehssd/HSSD-models"),
@@ -131,7 +174,7 @@ This is the default retriever for SceneProg. Unless specified otherwise, always 
             "future/90579f33-88b9-4805-be6d-69a596011576",
         ]
         
-        self.llm = LLM(
+        self.llm = _LazyLLM(
             system_desc="""
 Given a list of asset descriptions, pick the best one that matches the query. Respond by giving the name of the asset example: "hssd/b0bb0cce08a2dbc01c8e3b64ac59fffe10c73015", "future/fcb7b0b7-e74f-4397-907c-37cd2fe9efbc", etc.
 """,
@@ -141,7 +184,7 @@ Given a list of asset descriptions, pick the best one that matches the query. Re
 
         # Agentic visual selection: pick the best candidate by LOOKING at the
         # datasets' pre-rendered preview images (not just their text descriptions).
-        self.visual_llm = LLM(
+        self.visual_llm = _LazyLLM(
             system_desc="""
 You are choosing the single best 3D asset for a scene from a numbered grid of candidate
 preview renders.
@@ -171,6 +214,36 @@ Respond with the chosen number and a brief reason.
         self.last_candidates = []
         self.last_sheet = None
         self.last_reasoning = None
+
+    @property
+    def encoder(self):
+        # Lazy: constructing OpenAIEmbeddings raises without a key, and plenty of useful work
+        # (linting, browsing cached candidates, offline tests) never embeds a query.
+        if self._encoder is None:
+            if not os.getenv("OPENAI_API_KEY"):
+                raise RuntimeError(
+                    "OPENAI_API_KEY is not set. Asset retrieval embeds queries with OpenAI; "
+                    "export OPENAI_API_KEY=... (see README: Installation)."
+                )
+            self._encoder = OpenAIEmbeddings(model="text-embedding-3-large",
+                                             api_key=os.getenv("OPENAI_API_KEY"))
+        return self._encoder
+
+    def reload_library(self):
+        """Re-read the index so assets ingested DURING this process become retrievable.
+
+        The embeddings and metadata are loaded once at construction and memoised in module-level
+        caches, so a freshly ingested asset is invisible to a long-lived retriever — which is
+        exactly the situation the acquisition ladder creates (IDSDL/shop/acquire.py): it fills a
+        gap mid-scene and then needs to hand the new asset back to the very query that triggered
+        it."""
+        _NPZ_CACHE.clear()
+        _JSON_CACHE.clear()
+        self.all_embeddings, self.all_models = _load_embeddings(
+            os.path.join(os.path.dirname(__file__), "assets/futurehssd.npz"))
+        self.metadata = _load_json_cached(
+            os.path.join(os.path.dirname(__file__), "assets/futurehssd.json"))
+        return len(self.all_models)
 
     def remove_bad_assets(self, top_models, top_similarities):
         # Filter out bad assets
@@ -378,7 +451,12 @@ Pick the single numbered candidate that best matches the query.
 
         path, scale = self.model_to_path_scale(model)
         if hasattr(self, "floor_plants"):
-            scale = np.random.uniform(0.6, 1)  # Random scale for floor plants
+            # Size variety for floor plants, derived from the model id rather than the
+            # global RNG — deterministic, so a seeded scene reproduces the same plant
+            # sizes run to run (the global stream broke reproducibility here).
+            import hashlib
+            h = int(hashlib.md5(str(model).encode()).hexdigest()[:8], 16)
+            scale = 0.6 + 0.4 * (h % 1000) / 999.0
         return {"path": path, "scale": scale, "model": model,
                 "candidates": candidates, "sheet": sheet, "reasoning": reasoning}
 
@@ -472,7 +550,7 @@ Typically, this includes furniture like cabinets, shelves, bookcases, etc.
 3. An empty wall mounted wooden shelf.
 4. A wall mounted shelf with decorative items.
 """
-        self.classifier = LLM(
+        self.classifier = _LazyLLM(
             system_desc="""
 Given a query, you should tell me whether the request is for a floor cabinet/shelf or a wall mounted shelf. Also tell me whether the request is for an empty cabinet/shelf or a cabinet/shelf with items on it. 
 Must respond by giving a JSON object with the keys "placement" and "empty". Lastly, you also need to reword the query removing references to empty or placement, while focusing only on the characteristics of the cabinet/shelf.
@@ -616,7 +694,7 @@ class Painting:
         vertices[:,0] *= 1.0
         vertices[:,1] *= 1.0
 
-        self.llm = LLM(
+        self.llm = _LazyLLM(
             system_desc="""
 Given a description of a painting or a scenery, generate a high quality image. 
 """,
@@ -691,16 +769,19 @@ response_format="image",
         )
         self.mesh = trimesh.util.concatenate([self.canvas, frame])
 
-        os.makedirs(os.path.join(os.path.dirname(__file__), "/tmp"), exist_ok=True)        
-        self.mesh.export(os.path.join(os.path.dirname(__file__), f"/tmp/painting_{uid}.glb"))
+        # NB: os.path.join(dirname, "/tmp") would discard the first component and write to the
+        # SYSTEM /tmp; use the same run-local tmp/ dir as the rest of the build outputs.
+        out_path = os.path.join("tmp", f"painting_{uid}.glb")
+        os.makedirs("tmp", exist_ok=True)
+        self.mesh.export(out_path)
 
-        self.mesh = trimesh.load(os.path.join(os.path.dirname(__file__), f"/tmp/painting_{uid}.glb"), force='mesh', process=False)
+        self.mesh = trimesh.load(out_path, force='mesh', process=False)
         vertices = self.mesh.vertices
         vertices -= np.mean(vertices, axis=0)
         self.mesh.vertices = vertices
-        self.mesh.export(os.path.join(os.path.dirname(__file__), f"/tmp/painting_{uid}.glb"))
+        self.mesh.export(out_path)
 
-        return os.path.join(os.path.dirname(__file__), f"/tmp/painting_{uid}.glb"), 1.0
+        return out_path, 1.0
     
 class WallArtRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -1359,62 +1440,12 @@ Retrieves cherry blossom tree
         return self.path, 1.8
     
 
-class SceneMotifCoderObject(SceneProgAssetRetrieverBase):
-    def __init__(self):
-        super().__init__()
-        self.name = "SceneMotifCoderObject"
-        self.description = f"""
-This tool returns 'stacked' objects based on an input description which can be used like any other objects in the scene program. 
-Particularly useful when the user wants to add a specific arrangement of objects in the scene, for example, a stack of "5" books instead of just "a stack of books" for which the TableTopDecorRetriever can be used.
-The SceneMotifCoderObject is helpful in generating specific arrangements of objects that are not easily retrievable using the other retrievers. It can generate arrangements like stacks, rows, grids, etc. based on the input description.
-"""
-        self.examples = """
-Following are a few examples of this tool in action:
-Example 1:
-scene.SceneMotifCoderObject('A table with a chair in front of it')
-## Adds a new object to the scene where a chair is placed in front of a table
-Example 2:
-scene.SceneMotifCoderObject('A stack of 5 cups')
-## Adds a new object to the scene where 5 cups are stacked on top of each other
-Example 3:
-scene.SceneMotifCoderObject('A grid of 5x5 chairs')
-## Adds a new object to the scene where 25 chairs are arranged in a 5x5 grid
-"""
-
-    def __call__(self, query):
-        code = f"""
-#!/bin/bash
-# Path to the Python executable
-PYTHON_EXECUTABLE="/opt/miniconda3/envs/smc/bin/python"
-# Path to the inference script
-SCRIPT_PATH="/<path to smc>/smc/inference.py"
-
-# Arguments for the script
-DESC="{query}"
-OUT_DIR="/<path to sceneprog>/sceneprog/tmp/"
-
-cd /<path to smc>/smc
-# Execute the Python script with the arguments
-$PYTHON_EXECUTABLE $SCRIPT_PATH --desc "$DESC" --out_dir "$OUT_DIR"
-
-# Wait for the program to complete and check exit status
-if [ $? -eq 0 ]; then
-    echo "Inference completed successfully."
-else
-    echo "Inference failed with exit code $?."
-    exit 1
-fi
-"""
-        with open("tmp/smc_run.sh", "w") as f:
-            f.write(code)
-        import os
-        os.system(f"bash tmp/smc_run.sh")
-        import trimesh
-        mesh = trimesh.load("tmp/stacked.glb", process=False, force='mesh')
-        scale = mesh.bounds[1,0] - mesh.bounds[0,0]
-        return "tmp/stacked.glb", scale
-    
-FUTURE_HSSD_ASSET_RETRIEVERS = [
+def _build_future_hssd_retrievers():
+    # Instantiate the specialised retriever registry. Loads the ~700 MB futurehssd embeddings
+    # ONCE (shared via _NPZ_CACHE). Deferred behind the module __getattr__ below so that importing
+    # this module for the DSL / lints / tests does NOT pay the load — the registry builds on first
+    # ACCESS to FUTURE_HSSD_ASSET_RETRIEVERS, not at import time.
+    return [
     FutureHSSDAssetRetriever(),
     CaseGoodsRetriever(),
     CeilingObjectRetriever(),
@@ -1441,15 +1472,38 @@ FUTURE_HSSD_ASSET_RETRIEVERS = [
     DesktopWorkstationRetriever(),
     ShopFixtureRetriever(),
     CherryBlossomRetriever(),
-    SceneMotifCoderObject(),
-]
+    ]
+
+
+def _future_hssd_retrievers():
+    """The registry, built on first use and cached as the module global (so service/core.py's
+    reassignment of FUTURE_HSSD_ASSET_RETRIEVERS stays the single source of truth)."""
+    g = globals()
+    if "FUTURE_HSSD_ASSET_RETRIEVERS" not in g:
+        g["FUTURE_HSSD_ASSET_RETRIEVERS"] = _build_future_hssd_retrievers()
+    return g["FUTURE_HSSD_ASSET_RETRIEVERS"]
+
+
+def __getattr__(name):
+    # PEP 562: lazily build the registry the first time FUTURE_HSSD_ASSET_RETRIEVERS is accessed
+    # (module.ATTR or `from ... import`), so a plain `import` of this module stays cheap. Once
+    # built it lives in globals(), so __getattr__ stops firing and reassignment works normally.
+    if name == "FUTURE_HSSD_ASSET_RETRIEVERS":
+        return _future_hssd_retrievers()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 class SceneProgAssetRetriever:
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, acquire=None):
         self.seed = seed
+        # How hard to try when the DATASET cannot serve a query: low (default — make do with what
+        # we have) / mid (search Sketchfab) / high (search, then generate with Meshy). See
+        # IDSDL/shop/acquire.py. Falls back to the IDSDL_ACQUIRE env var when not passed.
+        from IDSDL.shop.acquire import level
+        self.acquire = level(acquire)
 
         self.retrievers = {}
-        for retriever in FUTURE_HSSD_ASSET_RETRIEVERS:
+        for retriever in _future_hssd_retrievers():   # module-internal ref -> explicit accessor
             self.retrievers[retriever.name] = retriever
 
         retriever_context = ""
@@ -1460,7 +1514,7 @@ Description: {retriever.description}
 Example Queries: {retriever.examples}
 """
 
-        self.llm = LLM(
+        self.llm = _LazyLLM(
             system_desc=f"""
 Given a query, you need to select the most relevant asset retriever from the list of available asset retrievers.
 Here is the list of available asset retrievers:
@@ -1521,6 +1575,24 @@ reasoning: ...
         family); for the few special retrievers without it, falls back to a direct call and
         best-effort candidate capture (these are rare and not used concurrently in scenes).
         """
+        # THE DATASET GETS FIRST REFUSAL. Only if it demonstrably cannot serve this query — a
+        # measured similarity gap, not a hunch — and only if the caller raised the acquisition
+        # dial above "low", do we go out and fetch or generate the thing. maybe_acquire returns an
+        # id to PIN, because we acquired that asset for THIS query and some retrievers are pool-
+        # restricted and would never see it otherwise. It never raises: a failed acquisition just
+        # falls through to the dataset's best hit, i.e. the old behaviour.
+        if pin is None and self.acquire != "low":
+            from IDSDL.shop import acquire as A
+            base = self.retrievers["FutureHSSDAssetRetriever"]
+            got = A.maybe_acquire(base, query, self.acquire)
+            if got:
+                # Resolve an acquired asset through the BASE retriever, not the router: the router
+                # might send, say, a wall-mounted asset to a pool-restricted retriever whose pool
+                # this brand-new id is not in, and the pin would be silently dropped.
+                d = base.resolve(query, got)
+                d["retriever"] = "FutureHSSDAssetRetriever (acquired)"
+                return d
+
         name, retriever = self._route(query)
         if hasattr(retriever, "resolve"):
             d = retriever.resolve(query, pin)

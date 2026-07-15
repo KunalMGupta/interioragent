@@ -1,7 +1,7 @@
 """IDSDL MCP server (stdio) — warm, typed tools for the asset-discovery loop.
 
 Run:  (from the repo root, in the project env)  PYTHONPATH=. python -m IDSDL.service.mcp_server
-Registered via the repo's .mcp.json so Claude Code exposes the tools as mcp__idsdl__*.
+Registered via the repo's .mcp.json so Claude Code exposes the tools as mcp__interioragent__*.
 
 The heavy state (687MB embeddings + retrievers + router) loads ONCE here and is reused across
 all tool calls. Tools return a short text summary PLUS inline preview images, and the server
@@ -9,25 +9,66 @@ remembers the last candidate set so reselect/show/pin are instant (no re-retriev
 
 IMPORTANT: the underlying retriever code print()s to stdout; on stdio MCP, stdout is the
 JSON-RPC channel, so every tool body runs under _quiet() which redirects stdout->stderr.
+
+CONCURRENCY MODEL: the LONG tools (run_scene, shop_run, shop_apply, ingest_glbs, plan,
+plan_refine) are async and run their bodies in a worker thread, so the event loop stays
+responsive during a minutes-long build — pings answered, status/browse tools usable,
+cancellations noticed. A single _HEAVY semaphore keeps at most ONE long body running at a
+time: the warm singletons, SESSION and the stdout guard were written under whole-server
+serialization, and the semaphore preserves that assumption for the heavy paths while the
+cheap tools stay interleavable.
 """
 import contextlib
 import io
 import os
 import sys
+import threading
 from dataclasses import dataclass, field
 
+import anyio.to_thread
 from mcp.server.fastmcp import FastMCP, Image
 
 from IDSDL.service import core
 
-mcp = FastMCP("idsdl")
+mcp = FastMCP("interioragent")
 
 
 # ---- stdout guard (library prints must NOT hit the stdio protocol channel) ----
+# Refcounted and thread-safe: with heavy tools in worker threads, a cheap tool on the
+# event loop can overlap a heavy one; the swap happens only on the 0<->1 transitions,
+# so stdout stays redirected while ANY tool body is running.
+_QUIET_LOCK = threading.Lock()
+_QUIET_DEPTH = 0
+_REAL_STDOUT = None
+
+
 @contextlib.contextmanager
 def _quiet():
-    with contextlib.redirect_stdout(sys.stderr):
+    global _QUIET_DEPTH, _REAL_STDOUT
+    with _QUIET_LOCK:
+        if _QUIET_DEPTH == 0:
+            _REAL_STDOUT = sys.stdout
+            sys.stdout = sys.stderr
+        _QUIET_DEPTH += 1
+    try:
         yield
+    finally:
+        with _QUIET_LOCK:
+            _QUIET_DEPTH -= 1
+            if _QUIET_DEPTH == 0 and _REAL_STDOUT is not None:
+                sys.stdout = _REAL_STDOUT
+
+
+# ---- heavy-tool offload ---------------------------------------------------------
+# One long-running body at a time, in a worker thread. See CONCURRENCY MODEL above.
+_HEAVY = threading.Semaphore(1)
+
+
+async def _offload(body):
+    def guarded():
+        with _HEAVY:
+            return body()
+    return await anyio.to_thread.run_sync(guarded)
 
 
 def _llm_tool(body):
@@ -236,22 +277,87 @@ def pool_add(category: str, ids: list[str], create: bool = False) -> str:
 
 
 @mcp.tool()
-def ingest_glbs(zip_path: str, category: str | None = None, manifest_path: str | None = None,
-                workers: int = 4) -> str:
+async def ingest_glbs(zip_path: str, category: str | None = None, manifest_path: str | None = None,
+                      workers: int = 4) -> str:
     """Ingest a zip of .glb files into the custom pool (render preview -> VLM caption -> embed),
     then re-warm so they're retrievable immediately. SLOW (cold Blender per asset). Supply glbs
     Y-up, front=+Z, real metres; a manifest.json overrides description/placement/scale per file."""
-    with _quiet():
-        d = core.ingest_glbs(zip_path, category=category, manifest_path=manifest_path, workers=workers)
+    def body():
+        with _quiet():
+            return core.ingest_glbs(zip_path, category=category, manifest_path=manifest_path,
+                                    workers=workers)
+    d = await _offload(body)
     lines = [f"ingested {d['n_added']} asset(s); re-warmed."]
     for a in d["added"]:
         lines.append(f"  + {a['model']}  ({a['placement']}, {a['scale']}m)  {(a['description'] or '')[:50]}")
     return "\n".join(lines)
 
 
+@mcp.tool()
+def shop_search(query: str, count: int = 12, license: str = "permissive") -> str:
+    """Search Sketchfab for free downloadable assets WITHOUT ingesting anything. Use this when
+    retrieve() has nothing good and you want to know whether the internet does. license:
+    permissive (cc0+by, default) | commercial-ok | any."""
+    with _quiet():
+        d = core.shop_search(query, count=count, license=license)
+    if not d["hits"]:
+        return f"no downloadable hits for {query!r}. Try a broader query or license='any'."
+    lines = [f"{d['n']} hit(s) for {query!r}:"]
+    for h in d["hits"]:
+        lines.append(f"  {h['name'][:44]:44s} {h['license'] or '?':22s} {h['faces'] or 0:>8,}f  {h['url']}")
+    lines.append("ingest them with shop_run(query). "
+                 + ("" if d["has_token"] else "NOTE: no SKETCHFAB_API_TOKEN — downloads will be "
+                    "handed to the user as manual links."))
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def shop_run(query: str, count: int = 6, source: str = "sketchfab", category: str | None = None,
+                   manual: bool = False, dry_run: bool = False) -> str:
+    """Search the web for an asset the library lacks, normalize it (single mesh, real metres,
+    front=+Z, verified on a re-render) and ingest it — then re-warm so retrieve() can find it
+    immediately. VERY SLOW (download + several Blender passes + VLM per candidate).
+
+    Anything the pipeline cannot judge confidently is NOT guessed: it lands on <batch>/HELP.md
+    for the user (`manual=True` is the same run, framed as a question). source='meshy' GENERATES
+    the asset instead of searching — that spends the user's Meshy credits, so only use it when
+    they have asked for it. dry_run=True normalizes but writes nothing to the library."""
+    def body():
+        with _quiet():
+            return core.shop_run(query, count=count, source=source, category=category,
+                                 manual=manual, dry_run=dry_run)
+    d = await _offload(body)
+    lines = [f"shop[{query!r}] {d['counts']}"]
+    for a in d["ingested"]:
+        lines.append(f"  + {a['asset_id']}  {a['object']}  ({a['width_m']} m wide)  [{a['license']}]")
+    for a in d["needs_you"]:
+        lines.append(f"  ? {a['key']}  {a['object']}  — {a['why']}")
+    for a in d["skipped"]:
+        lines.append(f"  - {a['key']} skipped: {a['why']}")
+    if d["needs_you"]:
+        lines.append(f"user must settle these in {d['help_md']}, then shop_apply(batch).")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def shop_apply(batch: str, category: str | None = None) -> str:
+    """Act on the answers the user wrote into <batch>/HELP.md (and any file they hand-downloaded
+    into <batch>/inbox/), ingest what they accepted, and re-warm."""
+    def body():
+        with _quiet():
+            return core.shop_apply(batch, category=category)
+    d = await _offload(body)
+    lines = [f"shop apply[{batch}] {d['counts']}"]
+    for a in d["ingested"]:
+        lines.append(f"  + {a['asset_id']}  {a['object']}  ({a['width_m']} m wide)")
+    for a in d["needs_you"]:
+        lines.append(f"  ? still open: {a['key']} — {a['why']}")
+    return "\n".join(lines)
+
+
 # ---- Tier C: long isolated jobs -----------------------------------------------
 @mcp.tool()
-def plan(prompt: str, top_k: int = 3) -> list:
+async def plan(prompt: str, top_k: int = 3) -> list:
     """Run the interior planner: a design brief (skill.txt) + a reference-collage (plan.png).
     Returns the brief text + the collage inline. ~tens of seconds (image generation)."""
     def body():
@@ -266,12 +372,12 @@ def plan(prompt: str, top_k: int = 3) -> list:
         if img:
             out.append(img)
         return out
-    return _llm_tool(body)
+    return await _offload(lambda: _llm_tool(body))
 
 
 @mcp.tool()
-def plan_refine(prompt: str, renders: list, prior: list = None,
-                instruction: str = None, top_k: int = 3) -> list:
+async def plan_refine(prompt: str, renders: list, prior: list = None,
+                      instruction: str = None, top_k: int = 3) -> list:
     """Planner REFINEMENT: generate an IMPROVED visual target from the current scene's renders
     (e.g. a render_collection collage in `renders`) plus the planner's prior target(s) in `prior`
     and the retrieved skills. The composer critiques the build against intent, then image-conditions
@@ -290,7 +396,7 @@ def plan_refine(prompt: str, renders: list, prior: list = None,
         if img:
             out.append(img)
         return out
-    return _llm_tool(body)
+    return await _offload(lambda: _llm_tool(body))
 
 
 @mcp.tool()
@@ -306,14 +412,16 @@ def lint_program(program_path: str) -> str:
 
 
 @mcp.tool()
-def run_scene(program_path: str, phase: int | None = None) -> list:
+async def run_scene(program_path: str, phase: int | None = None) -> list:
     """Build + render a DSL scene program. SLOW (3-8 min, cold Blender). Lints first (see
     lint_program) and refuses to build on errors. Returns the VLM feedback
     + asset picks + the interior room views inline (first few). Runs subprocess-isolated.
     `phase` (1 anchors / 2 surfaces / 3 all) builds a phase-gated program only up to that
     phase — a phase-1 layout check takes ~1 min instead of ~8 (see IDSDL/phases.py)."""
-    with _quiet():
-        d = core.run_scene(program_path, phase=phase)
+    def body():
+        with _quiet():
+            return core.run_scene(program_path, phase=phase)
+    d = await _offload(body)
     if not d["ok"] and not d["report"]:
         return [f"run failed:\n{d['stderr_tail']}"]
     rep = d["report"]
@@ -441,24 +549,30 @@ def generate_scene_result(job_id: str) -> list:
     return out
 
 
-# ---- Tier E: the guided 9-gate flow (IDSDL/service/flow.py) --------------------
+# ---- Tier E: the guided gated flow (IDSDL/service/flow.py) ---------------------
 @mcp.tool()
 def howto() -> str:
-    """START HERE if you are new to this server: what IDSDL is, the 9-gate scene-generation
-    recipe distilled from the worked examples, and which tools to use at each gate."""
+    """START HERE if you are new to this server: what InteriorAgent is, the gated
+    scene-generation recipe distilled from the worked examples, which tools to use at each
+    gate, and the two flow modes (inference vs. teach)."""
     from IDSDL.service import flow
     return flow.howto()
 
 
 @mcp.tool()
-def flow_start(prompt: str) -> str:
+def flow_start(prompt: str, teach: bool = False) -> str:
     """Begin a guided scene generation for a text prompt. Returns step 1's card: what to do,
     the exact commands, and the evidence to bring back. Each subsequent gate (flow_advance)
     validates your evidence mechanically before revealing the next step — this is how the
-    best scenes were built. State is file-backed; flow_status resumes after a disconnect."""
+    best scenes were built. State is file-backed; flow_status resumes after a disconnect.
+
+    Default mode is INFERENCE: 8 gates ending at the judged .blend, and the knowledge
+    library (skills/) is read-only. Pass teach=true ONLY when the run's explicit goal is
+    to grow the library — it appends a 9th WRITE BACK gate that distills the scene into
+    skills/."""
     from IDSDL.service import flow
     with _quiet():
-        return flow.flow_start(prompt)
+        return flow.flow_start(prompt, teach)
 
 
 @mcp.tool()
@@ -490,11 +604,22 @@ def flow_override(flow_id: str, reason: str) -> str:
 
 def main():
     if not os.environ.get("OPENAI_API_KEY"):
-        print("[idsdl-mcp] FATAL: OPENAI_API_KEY not set; retrieval/LLM calls will fail.",
+        print("[interioragent-mcp] FATAL: OPENAI_API_KEY not set; retrieval/LLM calls will fail.",
               file=sys.stderr)
-    with _quiet():
-        info = core.warm()
-    print(f"[idsdl-mcp] warm: {info['models']} models loaded; serving stdio.", file=sys.stderr)
+    try:
+        with _quiet():
+            info = core.warm()
+    except FileNotFoundError as e:
+        # The most common fresh-clone failure: datasets.zip was never installed. Say so
+        # plainly on stderr — the MCP client only shows "server failed" otherwise.
+        print(f"[interioragent-mcp] FATAL: {e}", file=sys.stderr)
+        print("[interioragent-mcp] The asset datasets are not installed. Download datasets.zip and "
+              "extract it into IDSDL/datasets/ (see README: Installation), then reconnect.",
+              file=sys.stderr)
+        sys.exit(1)
+    mode = " (MINIMAL curated library)" if info.get("minimal") else ""
+    print(f"[interioragent-mcp] warm: {info['models']} models loaded{mode}; serving stdio.",
+          file=sys.stderr)
     mcp.run()
 
 

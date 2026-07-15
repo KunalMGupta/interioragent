@@ -1,3 +1,13 @@
+---
+id: example:office_modern
+kind: example
+family: zoned-multi-zone
+category: "modern private office"
+pattern: "ONE hero zone + a corner-split storage backbone"
+---
+> **Digest (from the pattern index):** **ONE hero zone + a corner-split storage backbone** — the small-room sibling of executive_office (no lounge): a `WorkstationGroup` centre, `facing="back"` so the operator looks out at the window wall; bookcase LEFT + filing cabinet RIGHT with **back-center left EMPTY so the back camera can see the room** (the bakery blinded-view rule, applied at design time); two light walls, one print each. Teaches the empty-frame art trap caught at AUDIT time, and the sharpest texture lesson yet: **a matching bug and a rendering limit look identical** — verify the match offline against `wall_textures_embeddings.npz` (5 s, not an 8-min build), then remember a correct match still won't save a DARK tone from washing out
+
+
 # Modern private office — worked example (single hero work zone + storage backbone)
 
 Status: **built & VLM-clean** (`scenes/office_modern.py`, seed=21, 4 render passes: 2× phase-1,

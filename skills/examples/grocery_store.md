@@ -1,6 +1,16 @@
+---
+id: example:grocery_store
+kind: example
+family: retail-spine-loop
+category: "grocery store / supermarket"
+pattern: "Produce-first shop — and the two STRUCTURAL rules every scene needs."
+---
+> **Digest (from the pattern index):** **Produce-first shop — and the two STRUCTURAL rules every scene needs.** Identity is free (the `ShopFixtureRetriever` gondola/snack/beverage racks ship STOCKED — toy_shop at full strength), so the work is elsewhere. (1) **A ~1.9–2.0 m run at a wall CENTRE blinds that wall's camera** — the interior cameras stand at each wall centre at ~1.4 m, so v1's `left/right_wall_center` gondolas+coolers rendered both side views pure BLACK *under a totally clean feedback string*. Design the wall centres EMPTY (office_modern): gondolas moved to `back_wall_left/right` **flanking a 0.93 m counter the camera sees OVER** (and that's the money shot from the door), and the **DOOR takes the empty left-wall centre** — an opening claims no floor and blinds no camera. (2) **The shell is the SUM of 5 column maxima** (`compute_grid_dims`), so one wide group in one slot inflates the WHOLE room: a 3-wide produce row at `front` added its entire 4 m to the width (10.4 × 6.6 m) and made the shrink vote GROW to 0.5 as I chased it — re-slotting the tables into the columns the gondolas already paid for cost **nothing**. Also: every produce FIXTURE is empty → mass the product; the residual shrink vote is refuted with **arithmetic** (a rigid 2.02 m run in a 2.18 m column); re-check `add_lighting` density AFTER a `modulate_scale`
+
+
 # Grocery store / supermarket — worked example ("Produce-First Warm-Industrial Grocery")
 
-Status: **built & VLM-clean** (`scenes/work/grocery_store_v1.py`, seed=23, built through the guided
+Status: **built & VLM-clean** (`skills/examples/grocery_store_v1.py`, seed=23, built through the guided
 9-gate flow `flow_0713_025612_66b3`: 4 phase-1 layout builds + 1 phase-2 + 3 full). Final compile:
 **`no rotation` / `no wall overlap` / no `[Lint]`/WARNING lines**, at `modulate_scale=0.9`
 (**7.35 × 6.80 m = 50 m²**), with a residual `rescale room by 0.8` **declined by arithmetic** (below).

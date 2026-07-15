@@ -58,6 +58,12 @@ def main(argv=None):
         print("OPENAI_API_KEY is not set — every stage needs it.", file=sys.stderr)
         return 1
 
+    npz = Path(__file__).parent / "IDSDL/datasets/assets/futurehssd.npz"
+    if not npz.exists():
+        print(f"Asset datasets not installed ({npz} missing) — download datasets.zip and "
+              "extract it into IDSDL/datasets/ (see README: Installation).", file=sys.stderr)
+        return 1
+
     slug = re.sub(r"[^a-z0-9]+", "_", args.prompt.lower()).strip("_")[:40]
     out = Path(args.out or f"results/{slug}")
 

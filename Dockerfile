@@ -1,15 +1,17 @@
 FROM kunalg106/cuda121
 
-ENV BLENDER_PATH=/work/blender-4.5.4-linux-x64/blender
-ENV BLENDER_PYTHON=/work/blender-4.5.4-linux-x64/4.5/python/bin/python3.11
+# Blender lives OUTSIDE /work: the repo is volume-mounted at /work, and mounting
+# over the directory that holds Blender would shadow it (the original trap).
+ENV BLENDER_PATH=/opt/blender-4.5.4-linux-x64/blender
+ENV BLENDER_PYTHON=/opt/blender-4.5.4-linux-x64/4.5/python/bin/python3.11
 
-RUN mkdir -p /work && \
-    wget -q https://download.blender.org/release/Blender4.5/blender-4.5.4-linux-x64.tar.xz -O /tmp/blender.tar.xz && \
-    tar -xf /tmp/blender.tar.xz -C /work/ && \
+RUN wget -q https://download.blender.org/release/Blender4.5/blender-4.5.4-linux-x64.tar.xz -O /tmp/blender.tar.xz && \
+    tar -xf /tmp/blender.tar.xz -C /opt/ && \
     rm /tmp/blender.tar.xz
 
 RUN conda create -n interioragent python=3.12 -y
-RUN /opt/conda/envs/interioragent/bin/pip install numpy matplotlib trimesh scipy tqdm sceneprogllm sceneprogexec mcp==1.28.1 pillow
+COPY requirements.txt /tmp/requirements.txt
+RUN /opt/conda/envs/interioragent/bin/pip install -r /tmp/requirements.txt
 RUN /opt/conda/envs/interioragent/bin/sceneprogexec install sceneprogllm
 
 RUN apt-get update && apt-get install -y \
@@ -22,3 +24,7 @@ RUN apt-get update && apt-get install -y \
     libsm6 \
     libice6 \
     && rm -rf /var/lib/apt/lists/*
+
+# Usage: mount the repo (with datasets extracted) at /work and run from there:
+#   docker build -t interioragent .
+#   docker run -it -v "$PWD":/work -w /work -e OPENAI_API_KEY interioragent bash

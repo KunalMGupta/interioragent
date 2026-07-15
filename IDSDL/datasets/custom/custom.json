@@ -1488,7 +1488,15 @@
   "placement": "floor",
   "freetop": false,
   "on_top_or_inside": false,
-  "scale": 0.768
+  "scale": 0.768,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "1e03509704a3490e99a173e53b93e282",
+   "url": "https://sketchfab.com/3d-models/1e03509704a3490e99a173e53b93e282",
+   "license": "CC Attribution-NonCommercial-ShareAlike",
+   "author": "britishmuseum",
+   "name": "The Rosetta Stone"
+  }
  },
  "custom/6240c055b1a06d88b8af99f387969fb9f4147e18": {
   "description": "a cast iron letterpress printing press",
@@ -1524,5 +1532,288 @@
   "freetop": false,
   "on_top_or_inside": false,
   "scale": 0.61
+ },
+ "custom/c56e29ccc74da4c747b3714ecd21f5bc7fd778fe": {
+  "description": "Vintage Royal manual typewriter with a dark blue textured metal body and ivory keys.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.4533,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "0b6766c2df0e4901b8c387283d544027",
+   "url": "https://sketchfab.com/3d-models/0b6766c2df0e4901b8c387283d544027",
+   "license": "CC Attribution",
+   "author": "freddy1231",
+   "name": "Typewriter"
+  }
+ },
+ "custom/48fb69bac1f5a8f3d8fad5483d4f3dc1d966ee0f": {
+  "description": "Square orange felt bulletin board with a natural wood frame and assorted pinned notes.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.9,
+  "provenance": {
+   "source": "meshy",
+   "name": "a cork pinboard in a wooden frame with paper notes pinned to it (meshy #1)"
+  }
+ },
+ "custom/62d6d409ed05914327ce628b6c758b0e06fa73fe": {
+  "description": "Tall brown wooden pedestal with an eagle finial and burgundy velvet banners.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.0114,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "57027b38666e48098d3c1169ec4fdf21",
+   "url": "https://sketchfab.com/3d-models/57027b38666e48098d3c1169ec4fdf21",
+   "license": "CC Attribution",
+   "author": "iedu360.eu",
+   "name": "Orthodox Eagle Lectern \u2013 Patras"
+  },
+  "aliases": [
+   "Orthodox eagle lectern",
+   "church lectern"
+  ]
+ },
+ "custom/5d52b2a4231cb781037dbe4f8cb2bedf9064e612": {
+  "description": "Ancient brown-grey sandstone column fragment with intricate spiral carvings.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.3437,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "76b6e5f2cfe24733a4599c4c7d5b06a9",
+   "url": "https://sketchfab.com/3d-models/76b6e5f2cfe24733a4599c4c7d5b06a9",
+   "license": "CC Attribution",
+   "author": "Carolyn Twomey",
+   "name": "Deerhurst Baptismal Font"
+  },
+  "aliases": [
+   "baptismal font",
+   "stone baptismal font"
+  ]
+ },
+ "custom/f0aa5a5336811f136080381619e05ccb663721b8": {
+  "description": "Beige stone fountain column with carved floral frieze and Gothic metal crown finial on a stepped square base.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.2139,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "929d1a3e77c746b797c6c7376bb257d2",
+   "url": "https://sketchfab.com/3d-models/929d1a3e77c746b797c6c7376bb257d2",
+   "license": "CC Attribution",
+   "author": "Shiro Morturn",
+   "name": "Font, Church of St Mary, Kempsey"
+  },
+  "aliases": [
+   "baptismal font",
+   "stone baptismal font"
+  ]
+ },
+ "custom/b7b3457db2dd2aa2ad2c87765dfa41615a9cdf20": {
+  "description": "Dark brown wooden console table with a long rectangular top and carved apron.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.8013,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "677fc51dc1c84bf8b5fe9d2263f9d676",
+   "url": "https://sketchfab.com/3d-models/677fc51dc1c84bf8b5fe9d2263f9d676",
+   "license": "CC Attribution",
+   "author": "sharkbitestudios",
+   "name": "Tang Dyansty Altar Table"
+  },
+  "aliases": [
+   "altar table"
+  ]
+ },
+ "custom/b7786c70b417f0139c1d2991b6ed00fb78f1ecee": {
+  "description": "Industrial dark gray concrete pedestal with a rectangular stone-top table supported by black metal columns.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.8882,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "99d4eff5fe0544b9bf22b7a0b69cb169",
+   "url": "https://sketchfab.com/3d-models/99d4eff5fe0544b9bf22b7a0b69cb169",
+   "license": "CC Attribution",
+   "author": "DivyeSh PanchAl",
+   "name": "Sacrifice Table"
+  },
+  "aliases": [
+   "sacrifice table",
+   "altar table"
+  ]
+ },
+ "custom/652289695c42e48521dd1b332cb6b4cffd6b9222": {
+  "description": "White marble Baroque-style altar shrine with carved niches and a small central painting.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 2.0934,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "241be05f4982426a8b481b26fd24c3de",
+   "url": "https://sketchfab.com/3d-models/241be05f4982426a8b481b26fd24c3de",
+   "license": "CC Attribution",
+   "author": "JFN",
+   "name": "Siena - Duomo Piccolomini Altar (Scaniverse)"
+  },
+  "aliases": [
+   "Piccolomini Altar (Siena)",
+   "altar table"
+  ]
+ },
+ "custom/be6dcfec14a9dd1a6d469bbb594728826b35d868": {
+  "description": "Minimalist light-grey marble-textured stone coffee table.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.35,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "8357876dd2504c67840706b75241e56c",
+   "url": "https://sketchfab.com/3d-models/8357876dd2504c67840706b75241e56c",
+   "license": "CC Attribution",
+   "author": "mahrcheen",
+   "name": "Low poly stylized stone table"
+  },
+  "aliases": [
+   "stone table",
+   "altar table"
+  ]
+ },
+ "custom/801dcb37b0e6d1a5fd40a45b59acfcd9e2c9e5ad": {
+  "description": "Walnut wood pipe organ facade with tall silver metal pipes and a built-in keyboard console.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.5869,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "edde6b72a50a49c4bd470bad5efd6b74",
+   "url": "https://sketchfab.com/3d-models/edde6b72a50a49c4bd470bad5efd6b74",
+   "license": "CC Attribution",
+   "author": "Jdavis1220",
+   "name": "Pipe Organ Complete"
+  },
+  "aliases": [
+   "Pipe Organ",
+   "pipe organ"
+  ]
+ },
+ "custom/96da925c6a6a74153563bc51e035d0b1ce636e45": {
+  "description": "Large wooden pipe organ console with dark brown cabinetry, black metal pipes and brass accents.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 1.5,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "a8c0797a4a07498a9eadaead25e5e3e8",
+   "url": "https://sketchfab.com/3d-models/a8c0797a4a07498a9eadaead25e5e3e8",
+   "license": "CC Attribution",
+   "author": "Ryoce",
+   "name": "Pipe Organs"
+  },
+  "aliases": [
+   "Pipe organ (compact cabinet)",
+   "pipe organ"
+  ]
+ },
+ "custom/848f2b6d8ad4087b1d9cdad1b60bd56228d5f3b0": {
+  "description": "Small grey plastic countertop appliance with a rounded dome lid, digital display and blue control panel.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.2033,
+  "provenance": {
+   "source": "meshy",
+   "name": "a laboratory centrifuge (meshy #1)"
+  },
+  "aliases": [
+   "centrifuge",
+   "a laboratory centrifuge"
+  ]
+ },
+ "custom/79a6f0294e639e4518fb06bd3588735f59650ecd": {
+  "description": "Industrial grey stainless-steel wall-mounted lab fume hood with an open front.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.552,
+  "provenance": {
+   "source": "meshy",
+   "name": "a chemistry fume hood (meshy #1)"
+  },
+  "aliases": [
+   "fume hood",
+   "a chemistry fume hood"
+  ]
+ },
+ "custom/1388565231beaa915a417ac1f7b73071d39bd96b": {
+  "description": "White monocular compound microscope with a black eyepiece tube and blue adjustment knobs.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.1645,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "9562226299a045bab13c3d66f8593208",
+   "url": "https://sketchfab.com/3d-models/9562226299a045bab13c3d66f8593208",
+   "license": "CC Attribution",
+   "author": "Eugen Vahrushin",
+   "name": "Microscope"
+  },
+  "aliases": [
+   "Microscope",
+   "microscope"
+  ]
+ },
+ "custom/955adca69d77ca4bd23aded14467f2d737be6497": {
+  "description": "Antique brass compound microscope with a patinated brass body on a dark metal base.",
+  "placement": "NA",
+  "freetop": true,
+  "on_top_or_inside": true,
+  "scale": 0.1341,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "0be9c38a272c4c97a60e4f50ade2e094",
+   "url": "https://sketchfab.com/3d-models/0be9c38a272c4c97a60e4f50ade2e094",
+   "license": "CC0 Public Domain",
+   "author": "Virtual Museums of Ma\u0142opolska",
+   "name": "Compound microscope"
+  },
+  "aliases": [
+   "Compound microscope",
+   "microscope"
+  ]
+ },
+ "custom/5bdc10371f49331b4de3c40cd24f1c3c8b1ef241": {
+  "description": "Vintage black floor lamp with a woven rattan shaft and turned wood legs.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.1388,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "76c02ff95ca94d82b712eff696a14ec2",
+   "url": "https://sketchfab.com/3d-models/76c02ff95ca94d82b712eff696a14ec2",
+   "license": "CC0 Public Domain",
+   "author": "Virtual Museums of Ma\u0142opolska",
+   "name": "Compound microscope"
+  },
+  "aliases": [
+   "compound microscope",
+   "microscope"
+  ]
  }
 }

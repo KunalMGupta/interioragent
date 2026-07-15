@@ -1,3 +1,13 @@
+---
+id: example:computer_room
+kind: example
+family: repeated-unit-grid
+category: "computer lab"
+pattern: "Repeated-unit grid — a `WorkstationGroup` tiled across the floor"
+---
+> **Digest (from the pattern index):** **Repeated-unit grid** — a `WorkstationGroup` tiled across the floor
+
+
 # Computer room — example
 
 Status: built as `scenes/computer_room.py`. [`computer_room_v1.py`](computer_room_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record) — fully clean: `no rescale / no rotation / no wall overlap`.

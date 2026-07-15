@@ -171,18 +171,37 @@ def _process_one(glb, fname, sha, vlm, encoder, manifest):
         "scale": float(cap.get("scale") or 1.0),   # VLM-given width (m); asset supplied correctly scaled
     }
     entry.update(manifest.get(fname, {}))   # manifest overrides win
-    vec = np.array(encoder.embed_query(entry["description"]), dtype=np.float64)
+
+    # An asset is only ever as findable as the words it is indexed under, and the caption VLM
+    # names what it SEES, which is not always what the thing IS. A perfect Gothic confessional
+    # booth came back captioned without the word "confessional" anywhere in it — so it embedded at
+    # 0.41 against "a church confessional booth" and was, correctly by the numbers and absurdly in
+    # fact, judged not to be one. `aliases` carries the words we already knew and were discarding:
+    # what the triage VLM called it, and the query that went looking for it. They are indexed, not
+    # displayed, so the description stays clean.
+    text = entry["description"]
+    aliases = [a for a in (entry.get("aliases") or []) if a]
+    if aliases:
+        text = f"{text} (also: {'; '.join(aliases)})"
+    vec = np.array(encoder.embed_query(text), dtype=np.float64)
     return ("ok", mid, fname, entry, vec)
 
 
-def ingest_zip(zip_path, category=None, manifest_path=None, workers=4):
+def ingest_paths(glbs, category=None, manifest=None, manifest_path=None, workers=4):
+    """Ingest an explicit list of .glb paths. The zip entry point is a thin wrapper over this, and
+    IDSDL.shop calls it directly with the files it just normalized — a zip in between would only
+    be a temp file neither side wants.
+
+    `manifest` (a dict keyed by glb BASENAME) overrides any metadata field per file and wins over
+    the VLM caption, which is how the shop pins the `scale` it measured in Blender rather than
+    letting the captioner re-guess a width it already knows exactly."""
     from sceneprogllm import LLM
 
     _ensure_dirs()
-    manifest = {}
+    manifest = dict(manifest or {})
     if manifest_path and os.path.exists(manifest_path):
         with open(manifest_path) as f:
-            manifest = json.load(f)
+            manifest.update(json.load(f))
 
     vlm = LLM(system_desc=_CAPTION_SYS, response_format="json",
               response_params={"description": "str", "placement": "str",
@@ -196,6 +215,123 @@ def ingest_zip(zip_path, category=None, manifest_path=None, workers=4):
     lock = threading.Lock()
     added = []
 
+    todo = []
+    for glb in glbs:
+        fname, sha = os.path.basename(glb), _sha1(glb)
+        if f"custom/{sha}" in have:
+            print(f"  · {fname}: already ingested, skipping")
+        else:
+            # Claim the sha NOW, not just at registration: two inputs with identical bytes (the
+            # same glb under two paths in a zip, or a duplicated file in a --from-dir) would
+            # otherwise both pass this check and both register, putting the id and its embedding
+            # into the npz TWICE — after which retrieval returns the same asset as two hits.
+            have.add(f"custom/{sha}")
+            todo.append((glb, fname, sha))
+    print(f"[ingest] {len(glbs)} glb(s); processing {len(todo)} new with {workers} workers")
+
+    def _register(mid, fname, entry, vec):
+        # single-threaded section: append + SAVE INCREMENTALLY so a crash/kill keeps
+        # everything done so far (idempotent re-runs then skip them).
+        with lock:
+            meta[mid] = entry
+            models.append(mid)
+            embs.append(vec)
+            _save(meta, models, embs)
+            added.append((mid, entry))
+            print(f"  + {fname} -> {mid}\n      {entry['description'][:70]}\n"
+                  f"      placement={entry['placement']} freetop={entry['freetop']} "
+                  f"scale={entry['scale']:.2f}m")
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = [ex.submit(_process_one, glb, fname, sha, vlm, encoder, manifest)
+                for glb, fname, sha in todo]
+        for fut in as_completed(futs):
+            res = fut.result()
+            if res[0] == "ok":
+                _register(res[1], res[2], res[3], res[4])
+            else:
+                print(f"  ! {res[1]}: {res[2]}")
+
+    if added and category:
+        _add_to_category(category, [mid for mid, _ in added])
+    R._NPZ_CACHE.clear(); R._JSON_CACHE.clear()   # so a same-process reload sees new assets
+    print(f"[ingest] added {len(added)} asset(s); library now has {len(models)} custom asset(s).")
+
+    # The bundled library redistributes third-party works — CC-BY makes attribution a licence
+    # CONDITION, not a courtesy. Every ingest must therefore carry provenance (source, author,
+    # url, license) and keep ATTRIBUTIONS.md current. The shop pipeline supplies provenance via
+    # its manifest; a raw-zip ingest that can't should say where the meshes came from anyway.
+    no_prov = [mid for mid, entry in added if not entry.get("provenance")]
+    if no_prov:
+        print(f"[ingest] WARNING: {len(no_prov)} asset(s) ingested WITHOUT provenance "
+              f"(author/license unknown): {', '.join(no_prov[:5])}{'…' if len(no_prov) > 5 else ''}\n"
+              "          Pass --manifest with a per-file {'provenance': {source, author, url, "
+              "license}} block.")
+    try:
+        write_attributions()
+    except Exception as e:                       # the doc must never break an ingest
+        print(f"[ingest] could not regenerate ATTRIBUTIONS.md: {e}")
+    return added
+
+
+def write_attributions(out_path=None):
+    """Regenerate ATTRIBUTIONS.md (repo root) from custom.json provenance blocks.
+
+    Grouped by license; Meshy generations are their own section (AI-generated, no third-party
+    author); entries with no provenance are listed as pending so the gap stays visible until
+    a human settles them."""
+    meta = _load_meta()
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    out_path = out_path or os.path.join(root, "ATTRIBUTIONS.md")
+
+    by_license, generated, pending = {}, [], []
+    for mid, entry in sorted(meta.items()):
+        prov = entry.get("provenance") or {}
+        if prov.get("source") == "meshy":
+            generated.append((mid, entry, prov))
+        elif prov.get("author") or prov.get("url"):
+            by_license.setdefault(prov.get("license") or "Unspecified", []).append((mid, entry, prov))
+        else:
+            pending.append((mid, entry))
+
+    lines = [
+        "# Asset attributions",
+        "",
+        "The custom asset library (`IDSDL/datasets/custom/`) bundles 3D models ingested from",
+        "external sources. This file is GENERATED from the library's provenance records — do not",
+        "edit by hand; rerun `python -c \"from IDSDL.ingest import write_attributions; "
+        "write_attributions()\"` (every ingest also refreshes it).",
+        "",
+    ]
+    for lic in sorted(by_license):
+        lines += [f"## {lic}", ""]
+        for mid, entry, prov in by_license[lic]:
+            name = prov.get("name") or entry.get("description", "")[:60]
+            author = prov.get("author", "unknown author")
+            url = prov.get("url", "")
+            lines.append(f"- **{name}** by {author} — {url}  (`{mid}`)")
+        lines.append("")
+    if generated:
+        lines += ["## AI-generated (Meshy)", "",
+                  "Generated with [Meshy](https://www.meshy.ai) from a text prompt; no third-party author.", ""]
+        for mid, entry, prov in generated:
+            lines.append(f"- {prov.get('name') or entry.get('description', '')[:60]}  (`{mid}`)")
+        lines.append("")
+    if pending:
+        lines += ["## Provenance pending", "",
+                  "Ingested before provenance was recorded; identification pending "
+                  "(manual — see shops/attribution/HELP.md).", ""]
+        for mid, entry in pending:
+            lines.append(f"- `{mid}` — {entry.get('description', '')[:80]}")
+        lines.append("")
+    with open(out_path, "w") as f:
+        f.write("\n".join(lines))
+    n = sum(len(v) for v in by_license.values())
+    print(f"[ingest] ATTRIBUTIONS.md: {n} attributed, {len(generated)} generated, {len(pending)} pending")
+    return out_path
+
+
+def ingest_zip(zip_path, category=None, manifest_path=None, workers=4):
     with tempfile.TemporaryDirectory() as tmp:
         with zipfile.ZipFile(zip_path) as z:
             z.extractall(tmp)
@@ -203,47 +339,11 @@ def ingest_zip(zip_path, category=None, manifest_path=None, workers=4):
                       if p.lower().endswith(".glb")
                       and "__MACOSX" not in p
                       and not os.path.basename(p).startswith("._"))   # skip macOS junk
-
-        todo = []
-        for glb in glbs:
-            fname, sha = os.path.basename(glb), _sha1(glb)
-            if f"custom/{sha}" in have:
-                print(f"  · {fname}: already ingested, skipping")
-            else:
-                todo.append((glb, fname, sha))
-        print(f"[ingest] {len(glbs)} glb(s); processing {len(todo)} new with {workers} workers")
-
-        def _register(mid, fname, entry, vec):
-            # single-threaded section: append + SAVE INCREMENTALLY so a crash/kill keeps
-            # everything done so far (idempotent re-runs then skip them).
-            with lock:
-                meta[mid] = entry
-                models.append(mid)
-                embs.append(vec)
-                _save(meta, models, embs)
-                added.append((mid, entry))
-                print(f"  + {fname} -> {mid}\n      {entry['description'][:70]}\n"
-                      f"      placement={entry['placement']} freetop={entry['freetop']} "
-                      f"scale={entry['scale']:.2f}m")
-
-        with ThreadPoolExecutor(max_workers=workers) as ex:
-            futs = [ex.submit(_process_one, glb, fname, sha, vlm, encoder, manifest)
-                    for glb, fname, sha in todo]
-            for fut in as_completed(futs):
-                res = fut.result()
-                if res[0] == "ok":
-                    _register(res[1], res[2], res[3], res[4])
-                else:
-                    print(f"  ! {res[1]}: {res[2]}")
-
-    if added and category:
-        _add_to_category(category, [mid for mid, _ in added])
-    R._NPZ_CACHE.clear(); R._JSON_CACHE.clear()   # so a same-process reload sees new assets
-    print(f"[ingest] added {len(added)} asset(s); library now has {len(models)} custom asset(s).")
-    return added
+        return ingest_paths(glbs, category=category, manifest_path=manifest_path, workers=workers)
 
 
 def _add_to_category(category, ids):
+    category = os.path.basename(category)  # pool name, never a path
     path = os.path.join(os.path.dirname(R.__file__), "assets",
                         category if category.endswith(".json") else category + ".json")
     pool = []

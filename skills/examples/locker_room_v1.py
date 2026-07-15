@@ -32,7 +32,7 @@ PHASE = current_phase()   # 1 anchors / 2 surfaces / 3 walls+mood (default 3 = a
 
 scene = SceneProgRoom("LockerRoom", seed=15)
 
-# ---- pinned assets (audited previews; see scenes/work/locker_room.md) ------------------------
+# ---- pinned assets (audited previews; see skills/examples/locker_room.md) ------------------------
 LOCKERS = "future/e96b46b7-a9f5-4e2e-b1d7-0dfc670d5461"    # grey vented FULL-HEIGHT metal locker bank.
                                                            # Reads as a real locker; the black 3-door
                                                            # 902f9b5b has furniture-like tapered legs.

@@ -1,7 +1,17 @@
+---
+id: example:fast_food
+kind: example
+family: service-spine-counter
+category: "fast food / burger joint"
+pattern: "The category whose every FIXTURE is missing — and it still reads"
+---
+> **Digest (from the pattern index):** **The category whose every FIXTURE is missing — and it still reads** — no backlit menu board, no soda fountain and no fixed booth-and-table unit exist in the dataset, so each is SUBSTITUTED (menu board → a yellow product sign + an illuminated DINER sign as the lit band over the counter; fountain → the red Coca-Cola cooler + a retro drink machine on a short counter run; booth unit → bench + bare table + facing chair, composed). What actually names the shop is none of them: it is the **takeaway burger-and-fries carton massed at viewing height** on every table and the counter (the jewelry/bakery product rule at full strength — without it this is a red cafeteria). Layout = restaurant's zoned room, QSR edition (service line + kiosk as one rigid station on the back wall, booth run on a long wall, drink station + tray bin on the other, four-top field between, glass storefront). Teaches two hard DSL traps a lint cannot catch: **`place_door` positions are the wall's own `left\|center\|right` — there is no `"front"`** (a bare ValueError from `wall.py`, one build wasted), and **a floor-to-ceiling window claims ALL THREE slots of its wall, so a storefront FORCES the door onto a side wall**. Also: `place_on_top` on a booth group seats the meal on the BENCH CUSHION (compose the table as its own sub-unit); a TALL cooler goes in a CORNER, never a wall center; and the palette splits — `place_walls` takes ONE wall texture, so the walls carry the red and the PROPS carry the yellow. **v1.1 is the sharpest "a clean VLM loop is not a USABLE room" lesson yet**: a build that passed `no rescale`/`no rotation`/`no wall overlap` still had a POS screen turned broadside to the room, tables at BAR height towering over their own chairs (`AddAsset(width=…)` is a SINGLE-AXIS pin — it never touches the height), and booths floating off the wall they exist to back (a floor SLOT is a third of the ROOM, not of the wall). All three are object↔object ERGONOMIC relationships — screen↔operator, tabletop↔seat, seat-back↔wall — that NO VLM constraint checks; now defaults in [workflow/design_principles.md](../workflow/design_principles.md)
+
+
 # Fast food / burger joint — worked example
 
 Status: **built & VLM-clean** ("Backlit Menus, Fixed Booths, Bold Red-Yellow Identity",
-`scenes/work/fast_food_v1.py`, seed=47). Converged full build: `no rescale` / `no rotation` /
+`skills/examples/fast_food_v1.py`, seed=47). Converged full build: `no rescale` / `no rotation` /
 `no wall overlap`, no `[Lint]` lines, at `modulate_scale=0.85`. Built through the guided 9-gate
 flow (flow_0713_025725_afb6): one phase-1 layout iteration, one phase-2 pass, one full build,
 one vibe rebuild.

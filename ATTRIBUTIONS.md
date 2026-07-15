@@ -1,0 +1,258 @@
+# Asset attributions
+
+The custom asset library (`IDSDL/datasets/custom/`) bundles 3D models ingested from
+external sources. This file is GENERATED from the library's provenance records — do not
+edit by hand; rerun `python -c "from IDSDL.ingest import write_attributions; write_attributions()"` (every ingest also refreshes it).
+
+## CC Attribution
+
+- **Microscope** by Eugen Vahrushin — https://sketchfab.com/3d-models/9562226299a045bab13c3d66f8593208  (`custom/1388565231beaa915a417ac1f7b73071d39bd96b`)
+- **Deerhurst Baptismal Font** by Carolyn Twomey — https://sketchfab.com/3d-models/76b6e5f2cfe24733a4599c4c7d5b06a9  (`custom/5d52b2a4231cb781037dbe4f8cb2bedf9064e612`)
+- **Orthodox Eagle Lectern – Patras** by iedu360.eu — https://sketchfab.com/3d-models/57027b38666e48098d3c1169ec4fdf21  (`custom/62d6d409ed05914327ce628b6c758b0e06fa73fe`)
+- **Siena - Duomo Piccolomini Altar (Scaniverse)** by JFN — https://sketchfab.com/3d-models/241be05f4982426a8b481b26fd24c3de  (`custom/652289695c42e48521dd1b332cb6b4cffd6b9222`)
+- **Pipe Organ Complete** by Jdavis1220 — https://sketchfab.com/3d-models/edde6b72a50a49c4bd470bad5efd6b74  (`custom/801dcb37b0e6d1a5fd40a45b59acfcd9e2c9e5ad`)
+- **Pipe Organs** by Ryoce — https://sketchfab.com/3d-models/a8c0797a4a07498a9eadaead25e5e3e8  (`custom/96da925c6a6a74153563bc51e035d0b1ce636e45`)
+- **Sacrifice Table** by DivyeSh PanchAl — https://sketchfab.com/3d-models/99d4eff5fe0544b9bf22b7a0b69cb169  (`custom/b7786c70b417f0139c1d2991b6ed00fb78f1ecee`)
+- **Tang Dyansty Altar Table** by sharkbitestudios — https://sketchfab.com/3d-models/677fc51dc1c84bf8b5fe9d2263f9d676  (`custom/b7b3457db2dd2aa2ad2c87765dfa41615a9cdf20`)
+- **Low poly stylized stone table** by mahrcheen — https://sketchfab.com/3d-models/8357876dd2504c67840706b75241e56c  (`custom/be6dcfec14a9dd1a6d469bbb594728826b35d868`)
+- **Typewriter** by freddy1231 — https://sketchfab.com/3d-models/0b6766c2df0e4901b8c387283d544027  (`custom/c56e29ccc74da4c747b3714ecd21f5bc7fd778fe`)
+- **Font, Church of St Mary, Kempsey** by Shiro Morturn — https://sketchfab.com/3d-models/929d1a3e77c746b797c6c7376bb257d2  (`custom/f0aa5a5336811f136080381619e05ccb663721b8`)
+
+## CC Attribution-NonCommercial-ShareAlike
+
+- **The Rosetta Stone** by britishmuseum — https://sketchfab.com/3d-models/1e03509704a3490e99a173e53b93e282  (`custom/edb4327a7d4fde2f42693e365331175a88562f6c`)
+
+## CC0 Public Domain
+
+- **Compound microscope** by Virtual Museums of Małopolska — https://sketchfab.com/3d-models/76c02ff95ca94d82b712eff696a14ec2  (`custom/5bdc10371f49331b4de3c40cd24f1c3c8b1ef241`)
+- **Compound microscope** by Virtual Museums of Małopolska — https://sketchfab.com/3d-models/0be9c38a272c4c97a60e4f50ade2e094  (`custom/955adca69d77ca4bd23aded14467f2d737be6497`)
+
+## AI-generated (Meshy)
+
+Generated with [Meshy](https://www.meshy.ai) from a text prompt; no third-party author.
+
+- a cork pinboard in a wooden frame with paper notes pinned to it (meshy #1)  (`custom/48fb69bac1f5a8f3d8fad5483d4f3dc1d966ee0f`)
+- a chemistry fume hood (meshy #1)  (`custom/79a6f0294e639e4518fb06bd3588735f59650ecd`)
+- a laboratory centrifuge (meshy #1)  (`custom/848f2b6d8ad4087b1d9cdad1b60bd56228d5f3b0`)
+
+## Provenance pending
+
+Ingested before provenance was recorded; identification pending (manual — see shops/attribution/HELP.md).
+
+- `custom/049182127609e8712ab86df11e06180a626afe87` — White retractable projection screen with an aluminium housing and a grey project
+- `custom/06463870baa87e6e753b983a48dee9aeae3e2859` — Large dark wood-framed chalkboard with a black writing surface and a bottom ledg
+- `custom/072181548920bcf98e6042af011408c34c3e6780` — photography studio lighting equipment on a stand
+- `custom/0783b7834971d8733a3f48ef264e414857775112` — Blue-gray plastic and metal medical ultrasound cart on wheels with a large displ
+- `custom/07c9f10971507810789d358c15c1861a4e19a67f` — a hospital wheelchair with large rear wheels and footrests
+- `custom/0b1d04c0e678f3e9bea36300d36ab2144fac6a44` — White molded-plastic dining chair with chrome-plated steel legs.
+- `custom/0c7b1762cc4c5ab833714a8f99916a5af95a4bee` — an ornate antique astronomical clock
+- `custom/0dbd08c161cf956e034c61f411dd269e1d3f5799` — Large multi-tier beverage display rack with a metal frame, plastic shelves, blue
+- `custom/0f626c5d19edec027e75f5c1f303787f9009b733` — Life-size black female mannequin wearing a blue wave-print swimsuit with a beige
+- `custom/1028be7dddc5b7e1a0c4339582223f5d787400c3` — Walnut wood jewelry display counter with grey back panels and circular earring d
+- `custom/12fd8ace4b837d791d219ad6ee5d419693b56ecd` — Natural wood display board with miniature clothing on metal hangers.
+- `custom/1313330aef1a17f21bf3d10b639d44e0525c7cdc` — White wooden wall-mounted display shelf with cubbies and a red accent base.
+- `custom/1358f71d5b2ebce5fc9f60c6e2062d9f149458bc` — photography studio lighting equipment on a stand
+- `custom/13678e75f918187fd80281ce9461cc8fc24186b4` — Green chalkboard with a dark wooden frame.
+- `custom/1679800ce8268d1c3b112d997d445d369da50482` — photography studio lighting equipment on a stand
+- `custom/167a1ae682ea918048245e36d769daa33c0a1c7b` — Digital blood pressure monitor with blue cuff in white plastic housing.
+- `custom/186c1488f8102d36c3638b69170ea0bb52cede73` — Beige wood-toned freestanding triple-panel display cabinet with bottle shelves a
+- `custom/18ff73a8d9f5285559a31643ca206fbcba674160` — Grey aluminium two-gang wall plate with two circular electrical outlet holes.
+- `custom/192be4071c49f540d8b40c30b1bc0f565237c75b` — Salon backwash shampoo unit: a reclining chair joined to a ceramic neck-rest was
+- `custom/19cf67d02d5381d566e5d3d655c0767b18116d93` — a curved modern reception desk welcome counter
+- `custom/19f70dba87ed2135bc33b107c942016dd7c2ab71` — Rustic dark brown wooden wagon cart with an open top and wheels.
+- `custom/1c33edea34555fca72b68cda2d835766b947283d` — photography studio lighting equipment on a stand
+- `custom/1d3219dbf754424b33f76c91e97e575539824283` — an adjustable drafting table with a tilted top
+- `custom/207dc4d659ea793901093e8e4d404f5d8f81ce2c` — White mid-century display cabinet with open shelves full of colorfully wrapped c
+- `custom/20bacd78e55e25c00da6b2f1c765209bd13eabe2` — a carved ship figurehead of a cat's head
+- `custom/22d118de42281882eb6c5a91e23d4e3ff791b97a` — photography studio lighting equipment on a stand
+- `custom/23791b62e98e76788a4b41fa405eae9167cbbf73` — Rectangular plastic drawer organizer tray in grey with a light-blue interior and
+- `custom/24dc61b0455f3f8890cc1bfa6aa5fd56df5aac78` — photography studio lighting equipment on a stand
+- `custom/26450933189c4658009b2fce4fba8c7ebb7845cc` — Modern grey-painted wooden display bookcase with magazine slots filled with colo
+- `custom/26c6b052a92476ba5b5c8ac6cb214949cfbcfb72` — a photography studio backdrop screen on a stand
+- `custom/2958eda20ada213d90502d697a0030e24b74bdeb` — White wooden magazine display rack with a red base and colorful comic magazines.
+- `custom/2a6d9b68e93adec12269ffc7a4e6c3673360667e` — Grey metal street food cart with wooden trim and a string-light canopy.
+- `custom/2b98dff8bc4561e3c61f0e208150fff1287c3c53` — a vintage black and white television set
+- `custom/2e46da4c7fee7935328a2d1673d63e8443f12872` — a wooden weaving loom
+- `custom/31253ebc9cec4504c64a362da08719f831118fb3` — Wide white display cabinet with colorful comic-book drawer fronts, red base trim
+- `custom/31767ec663692f68958440dc330f1e9825220089` — Medieval knight figurine in resin with a cream fur-trimmed cloak and teal accent
+- `custom/35090f92b2289270db1972237c9ceb12798a7216` — photography studio lighting equipment on a stand
+- `custom/35dcbeee8955d2140b8bac66b73026190dafa6d4` — White retro-style wooden comic-book display cabinet with a red base and grey tri
+- `custom/3608fb256a82612b2f0c901e09288614b4cac5d4` — a photography studio softbox light on a stand
+- `custom/36f5975f31eb9e877e88469a834514854f36941d` — Black metal planogram merchandising board with color-story cards.
+- `custom/371ddbf457cc4892cf8e767711de8bcea8c4195a` — Blue powder-coated steel drill press on a metal stand.
+- `custom/3add6d78d7bb91dc7f29c1b18c1a6449972f1fdc` — Black velvet jewelry display bust with a gold chain necklace.
+- `custom/3ae587371564779c57537d23392c240602aa70e7` — a wooden artist easel holding a blank white canvas
+- `custom/3ce470b6d1359739cf0ce39f11a0eda62d746e45` — Small wooden toy car with a natural wood body, a red glossy canopy, and black wh
+- `custom/3d013e88f2977a1a98d3dd73cecf0d1cb3c3ad9f` — Orange plastic traffic cone with white reflective bands.
+- `custom/3dcb3733291c9c8d15c265d03e621b1b1190cd68` — Olive green denim jeans with a Diesel tag.
+- `custom/3edbbf100cef2a81903d1bf390ea345a0bc7b822` — an antique leather doctor's bag
+- `custom/424f59cce4d18e1f55cb57fdabecb0f8567717f2` — Vintage dessert cart with a grey curved canopy, gold metal frame and brown woode
+- `custom/44c769b3b671e22ecfb7bfc0d4f8d9459c12f6f1` — Colorful beaded curtain room divider with a wooden frame.
+- `custom/44d62d6f85d06fb26c5aa6ab379aee7f9d98d0d4` — a tall spray paint can
+- `custom/459328e003398ab525d2d64a976fccb920c6b600` — Industrial black metal freestanding clothing display rack with multiple hanging 
+- `custom/45c9b0bb41b8325ad12adfbd3c8337cddd69fc25` — Industrial metal clothing rack with a perforated grid front and four black jacke
+- `custom/475c4c6d50144e1659d7bbc18121378a897d505e` — a patient vital signs monitor on a rolling stand with a clinical display
+- `custom/48c2b02eef15dd0828a000cd5d1d9a85837d1e22` — an antique brass cash register
+- `custom/48c47b4444541e84a1b819860ce162c6b9513300` — Tall wooden pharmacy display rack with a branded Arko Pharma sign, stocked with 
+- `custom/48fb157f8e85e7a6a6bcdede8b0366b3d5678b45` — Tall white magazine rack with a red bottom base and multiple clear-front shelves
+- `custom/4d5c0810966a3a085ad0b1fa46e2a331a96ae9bf` — a rolling metal art supply tool cart with drawers
+- `custom/4e648aa3cb2a11c31d832e4e572b16c143537af7` — Freestanding white Lacoste display panel with a metal mannequin torso wearing a 
+- `custom/4eb97f51396ca110bc9328ab756643761d982da6` — Green plastic cartoon dinosaur toy with a wide white-teethed grin and chunky lim
+- `custom/4fa035b921ad4d203505487f3d315295e8206ee7` — a detailed model of a historic sailing ship
+- `custom/4fdb870ece44886130c5c23d23d41968361bbc3b` — Tall white freestanding magazine display cabinet with five open shelves showing 
+- `custom/503e6ded76d3541bb85e06c20765ae30a3269216` — White ceiling-mounted digital video projector on a black drop-pole mount.
+- `custom/5176090424b4e054146e6b8850a33c0d933d53c9` — Plastic cowboy action figure wearing a yellow plaid shirt, cow-print vest, blue 
+- `custom/5353f02fdc2f2e681d3a891841c87976e325f8ad` — a tall classical marble statue of a standing man
+- `custom/53ec24cbbfdeeef36447b4b3c575c6497827f38b` — Black velvet cushion with a purple beaded necklace draped over it.
+- `custom/5493f701627cd3a3e6942cf3912275a6e86fa6e4` — Blue sterile drape-covered surgical instrument table on a mobile stainless-steel
+- `custom/568078560c9b2bef56cca9c8a0a918497be77dd2` — photography studio lighting equipment on a stand
+- `custom/574d85991b53e5bb44fbc58914626d950c5a4d1d` — Black matte plastic projector with an exposed lens.
+- `custom/5757fcba99deb7b8625bf5cca7e1664e7afc7ac3` — Blue fabric-covered hospital patient transfer gurney with a metal frame.
+- `custom/58abc7f89b32c383c522aea9ce15d5fca0601ee2` — Light oak curved reception desk with an integrated tablet display.
+- `custom/58ad2b42c254545ddef252936c3890e988dc3697` — Rusty industrial factory boiler unit with two stacked round metal tanks on a ste
+- `custom/5996d434cc0291953b658a03d6ad967d477d7ded` — Floor-standing light oak wooden display rack with circular pizza tins on open sh
+- `custom/59a3f803acb6e00ec8e3637e862c879cf03c06be` — Salon barber styling chair with an upholstered seat, back and armrests on a chro
+- `custom/5c1edac8c0baf18250423ea7f5bc61ba38db887a` — Rusty green vintage cab-over flatbed truck.
+- `custom/5db6653f74cfbc0c026cefb35ca80f6c6fbed4f3` — Grey semi-truck box trailer / shipping-container body on landing-gear legs.
+- `custom/5e897e9bc8e952bf6caa331f173fa43aac2dcf3e` — Large white modern display cabinet with comic-book front panels and a red base.
+- `custom/5e8ac57b6545852dd7c6c399b080005add9ba613` — Tall white Nespresso capsule display cabinet with wooden slatted shelves and chr
+- `custom/5e8ecba1a838a04b1dc80af98afe2dfa85b8bb78` — a classical marble statue of neptune
+- `custom/5f92a4aa9e0b16a5aac1370d2a7b89085300b4bd` — White minimalist cube pedestal with a matte ceramic finish.
+- `custom/61cd86192945aa341da03d3033c8a9d1638f158c` — Long white display shelf with comic books and a red base.
+- `custom/6240c055b1a06d88b8af99f387969fb9f4147e18` — a cast iron letterpress printing press
+- `custom/63565116b963084056b60b2d3e9d850f8442d5d8` — a paint splattered canvas drop cloth spread on the floor
+- `custom/6416331e5ef33834ba9c78025efead4493b7b27a` — White-painted wooden magazine rack with a red base for displaying magazines.
+- `custom/64a7f627dc9e7a246ebfef4bc10fb15c27be636f` — Orange upholstered dental chair with a white metal frame and integrated overhead
+- `custom/65b641003dcd65f9e65ff7388e35f3be67df4977` — a set of paint tubes brushes and a palette
+- `custom/66013e2294539c16cf13aac86931622251fd5525` — Large light gray display cabinet with comic-book fronts and a red plinth.
+- `custom/66cdc7bab8ad57951b4cf15df04fb367eb88ea03` — Industrial laboratory gas delivery system on a stainless-steel cart with two red
+- `custom/6733b1985471c1dfd88eddafc89b1eaaae751208` — a vintage military pilot's uniform jacket on a stand
+- `custom/67ab42f94a6ca6fa3610fa5fda30aab29aeca878` — an L-shaped modern office reception desk with a counter return
+- `custom/67ef9bf4b8cf43d40be78e31950f8a49a5c36d25` — Blue-and-white metal-frame promotional display cart on wheels with multiple shel
+- `custom/68a9b21433c848640a3e9d58c7e6464e62e350a6` — White metal five-shelf magazine display rack with a red base.
+- `custom/690d4e41aed89665359176ede301f97f5b4dcbf6` — Large white wooden display shelf for comic books with a red base.
+- `custom/6a9a8519c436366eb369f4cf3448ea18636d1d87` — Freestanding black chalkboard on a brown wooden frame with a metal stand.
+- `custom/6c67d07168e6fa6c6259734db71233b9eedc6658` — a museum rope barrier stanchion post
+- `custom/6ccb1e05143f063c54d569463e6a730ddbf0c99f` — Beige-blue wave-print satin two-piece romper with a matching headwrap and platfo
+- `custom/71bda402b67456713f4f06f422bb8bb8ce1455da` — Industrial grey metal wire shelving unit with five tiers.
+- `custom/74bfa64b537b12de0771ee0cd79814f7e7446089` — Three-panel green chalkboard with an aluminium frame.
+- `custom/754051e7678f6ee20330f3ea1139aa5e3dbf85d4` — a classical marble bust of caesar on a base
+- `custom/75fae38e2c9825c70b0866978cd01f629de20920` — an ancient egyptian stone statue of a priest
+- `custom/77209bcbf628ab88f537f7b1983e42ba1cde49fb` — Grey corrugated metal roller shutter door with a rusty valance box, a shop or lo
+- `custom/781de2d18edc5455b09c46e5201ae31ab1ecdc2d` — Industrial chrome wire display rack with four shelves for snack bags.
+- `custom/7896c26afd9695a1e125809519d9590479377983` — Grey plastic multimedia projector with a black lens ring.
+- `custom/792794fb158d69d49575d9f88569a8201bf4abef` — Industrial-style coffee cart with brown wood veneer panels, black metal frame, a
+- `custom/794923e68107f3dca0e57a2de7c5703c7cf6df01` — Modern white wooden display cabinet with comic-book cubbies and a red base.
+- `custom/7989a71996f5674b12d7d35a5c1691cdb2034ddf` — Industrial steel-framed four-column bin storage rack with blue and brown plastic
+- `custom/7db820c55be6991b9b5541b094c4e5fef152f0aa` — Blue vinyl-covered hospital stretcher (gurney) on a metal wheeled frame.
+- `custom/82165101449972edaaf391df1d4e608201ad04d4` — Grey metal comic-book display cabinet with a red base.
+- `custom/824392f9d01a55020ede50d24ac38383c3bda76b` — Tall grey metal medical equipment stand on a blue wheeled base with an adjustabl
+- `custom/83377a1b03431c0aa321c3571ff69cdb3d22f390` — Large white lacquered magazine display cabinet with red drawer fronts on a pedes
+- `custom/839035b56a479597e781b09eaf1578ebe25cb9cf` — Small grey kei truck, a cab-over mini pickup with an open cab door.
+- `custom/8708b86952b58bb61fe661fffb1a0a670336d70e` — Large light-grey wooden display cabinet with a red base and multi-tier comic boo
+- `custom/8a17c15535dc39ed921f9d856ce139cc0a6b37d3` — Curved grey laminate reception desk with a dark countertop.
+- `custom/8a1de8d14772c760c6ee63c1e86fbcdb26ec7a31` — Large beige wooden multi-tier retail display stand with black shelves.
+- `custom/8e277d16c8842d77ce32dbb5bbbe2df36450f55e` — photography studio lighting equipment on a stand
+- `custom/8ef9db97a4cf049fd34230286e4621bc6225061c` — a bust of nefertiti, an ancient egyptian sculpture
+- `custom/90986f42ca2e5593b42616f5caa563827a111611` — Two-piece carved wooden bodice and skirt ensemble with organic latticework in wa
+- `custom/91fa23e0a20611ad9947849754009b617250ac0b` — White wooden display cabinet with comic-book shelves and a red base.
+- `custom/920037c5376d7f897f7b4b142bea7792e938400d` — a hospital headwall unit with medical gas outlets and a mounting rail
+- `custom/9454f43e4434d7a47fab37508830d2a252917ea0` — Minimalist black plastic lounge chair with armrests.
+- `custom/94f65b520adb3f928b9471b45478eaa4a7771799` — Blue glass decorative sphere with a smooth finish.
+- `custom/96aaadef0ac4e06d76a4d130abc55f166d7db7c7` — Industrial steel forklift with black frame, orange forks and grey cab.
+- `custom/9a9d74c2a2f6a119281c6f64a4ca89f524f58746` — Contemporary concrete-top kitchen island with an orange brick veneer base.
+- `custom/9f2a77c71313fa1f84c233717e70ca8371383174` — A tall black server rack and network equipment cabinet, a floor-standing data-ce
+- `custom/a0002583456154bd751c49638ad2f87da0a103a4` — an ancient chinese bronze ding censer vessel
+- `custom/a0550f2330edfb3e9eeb36dc3fb58f4827212a41` — photography studio lighting equipment on a stand
+- `custom/a1194a9ff3175fab7bc2cb450966b614783ec02b` — Chunky red plastic toy train locomotive with blue accents.
+- `custom/a13c3149240ba92774603cbedf618b83be161bd0` — a set of antique carving chisels
+- `custom/a88349a6169353b5fe2adf8036bd6d11149ef80a` — photography studio lighting equipment on a stand
+- `custom/a8b7110549688b39669638aea7c89faa8aefc0bf` — a taxidermy display of birds
+- `custom/a8da28bf374f984be15ba212d14ac11b071939d6` — an ancient ceremonial mask in a museum display
+- `custom/a909577f569942c61852328f58da1abb61917171` — Grey minimalist ceramic sculpture with a bulbous base and slender neck.
+- `custom/aa215a255edce2fdfbd47bdcf2bdebf18978e22c` — Retro wooden rocket sculpture with a grey body, red fins and a blue window on a 
+- `custom/ab63a413293446abf1aeac1ae1ec576aa19bc089` — a taxidermy model of a dodo bird
+- `custom/ac9be2e873be38bccad6a1c058a4280847f37647` — Industrial orange metal pallet jack with a black handle and grey forks.
+- `custom/add534935babce1c23ebee330694fa11ad6b9460` — a model of stephenson's rocket steam locomotive
+- `custom/aeaece8ee438daa2c90e5b9857c55a9046d19072` — Green metal floor-standing retail display rack for hair care bottles with promot
+- `custom/aec28f56f031931bc434b6f1689224d7000cb5ee` — Large stainless steel laboratory autoclave with an open-front chamber and two re
+- `custom/b00d129e2ea946c13afe616d7abf31597204ec6f` — White metal four-tier magazine rack with a red base for displaying magazines.
+- `custom/b18f98d6c5ba560a3669d3e7e6a8e1f14e0c5241` — a potter's wheel
+- `custom/b1b89b40c0321f59bf7ffdc09810cc76abb6cb78` — a wooden paint box case with an artist palette and paint tubes
+- `custom/b2a6fafe3b64a51d66403351df493dabc5ba84b8` — photography studio lighting equipment on a stand
+- `custom/b55edfd5bdee2294c84c33c5691ba288809d6862` — photography studio lighting equipment on a stand
+- `custom/b619a8e18d7975dc466d0895380e6b186924add2` — Tall black metal retail display rack with orange Veritas signage and plastic-poc
+- `custom/b9cf02688b1f10f7cb6ae84c15153638d8db9f9e` — a human skull specimen
+- `custom/bb2e2e781ef3bb36d8875815cbc58324a204be42` — photography studio lighting equipment on a stand
+- `custom/bbbedccda8504eb1f4bb7a0b6190de9effcf4f26` — a lion skull specimen
+- `custom/bbe6683f1fe0b9e00665cae0ab0ca8f750918ac1` — an artist stool with canvases leaning against it
+- `custom/bc1152a33b3faf4479b4b4a6c024de0bcf1f4bd0` — a modern sculpture of a figure with a cabbage head
+- `custom/bd8b4750199cb23d6dba316fc69acd40348f81cc` — Large white laminate comic-book display shelf with a red base trim and blue bin 
+- `custom/be407c90aeca66ea5b3ad6d955d8cf0188fa4e9f` — photography studio lighting equipment on a stand
+- `custom/bf97f510664b8d6f7031c4cadba428fb8d2211a7` — photography studio lighting equipment on a stand
+- `custom/c07ce1eb88401269c124d2db012ed5712087d197` — Salon hairdressing chair with an upholstered seat and back on a swivel base
+- `custom/c0c637ce615ff066db0bf0f000fca690a1c7f6ea` — Tall black metal cabinet with curved front and copper hooks.
+- `custom/c15875b2fa17d39cf85efc946180dd49427a7244` — Orange industrial forklift with black steel mast and forks.
+- `custom/c169ca1ddead54f66ed5a2278f8dcd232d58ba20` — Large black ribbed plastic water storage tank with a screw-cap lid.
+- `custom/c1a7df9d9f83868ba9b2299b23658fecbda0b1c9` — Brown plush teddy bear with beige muzzle and paw pads.
+- `custom/c2e7919c5875db913e7a4973a0998ead3bde40f3` — Blue fabric rolling laundry cart with a steel frame.
+- `custom/c53de778cc431cbeca6cbb144593814c3f5f48ca` — Industrial white-top display table with a black metal frame showcasing shoes and
+- `custom/c7966f1817cabdecbb6961d40d0ae3586d666bb6` — Blue-padded surgical operating table with a stainless-steel frame and caster whe
+- `custom/c7ecabcc673d55473c76e794be0d4c2ff8cc583f` — photography studio lighting equipment on a stand
+- `custom/c8ea2c65f6afd95c62dd1529d5b3028e336990b9` — Modern white display cabinet with comic-book compartments on a red plinth and a 
+- `custom/c9cbd96abf664f10c79d47f05f0da85c9e438329` — Long gray concrete-look plastic trough planter.
+- `custom/ca5d9b4c77231bd1757743237d7fe72bdb86680f` — Industrial-style gray metal-framed side table with a lower shelf.
+- `custom/ca90cc08f591beaa7d24de2d6444d504b654ed49` — Cozy stack of folded wool blankets in assorted colors.
+- `custom/cd21f3766b760d9991bcee0c9afaacc64d4102b5` — a blank stretched canvas on a wooden stretcher frame
+- `custom/cd7e4e9c3523656c1d2a02072908607d07b2926e` — Graphic-print white blazer with orange piping on a wooden dress-form mannequin.
+- `custom/cde3dd1aaf401e4ae06acdf33608b8e35d63f53a` — Brown ceramic hemispherical tabletop fountain with rock accents and a water feat
+- `custom/cffdedd8d354e346e510f227b4a6bc5b65dc3dcb` — a long modern reception desk front counter with a solid panel front
+- `custom/d0b407b0d9f123f5b1b105f5980c910d3da4cabf` — Light gray metal desktop binocular surgical microscope on a stand.
+- `custom/d287ecfa013409a1a9803d87f25e77954a50b107` — Red lacquered Brutalist-style metal bar cart with glassware display and wheels.
+- `custom/d295f3ed29959a4b8336630adbb8362dff267487` — Portable medical ultrasound machine on a wheeled cart with a blue-gray plastic b
+- `custom/d2a76f62a6bed24b778749a95cbe59eba255e568` — Tall blue metal display rack with grey fabric rolls.
+- `custom/d3946ca9c317ffdace99a98825fa0addf438861d` — an antique wooden bicycle
+- `custom/d39ba4cd970d300db3ab2d1077fce7f7f290548f` — a marble portrait bust of a woman on a pedestal
+- `custom/d5884fb54a16d8f18a19a40989fcca074f5fcb84` — Neon illuminated wall sign with glowing tube lettering on a dark backing
+- `custom/d79cf88b2009bca2cc0b6295e664d560290f4526` — Industrial-style silver metal grocery display shelf with multiple fixed shelves.
+- `custom/d7cf7f12dfbb1c8504329b991b774999e5fe6cc6` — Industrial grey metal freestanding clothing rack with multiple hanging rails and
+- `custom/d9735b9a1a3a021e133543fbc298ce0578a326d4` — Industrial black metal rolling storage cabinet with dark wood drawers and a mosa
+- `custom/d9e196d59e4026b42d503aba272a0c4b1a4d98f4` — a japanese samurai armour suit on a display stand
+- `custom/da6b77cb4d3722d5c4133cda6f8911bb3d0b87e9` — Abstract black brushstroke triptych wall art on canvas.
+- `custom/dac1727f6ae47e2f417f07f3e02eb8508cea8ac0` — a folded canvas drop cloth tarp
+- `custom/db834a3c3281660e2fc3168697a4324d44be2be5` — a suit of medieval armour for a knight and horse
+- `custom/ddbbb94ac0fdd21f15cd09e47568836e8ad110b4` — Light-gray display cabinet with multiple shelves filled with colorful comic book
+- `custom/dec1d5a87920cce3073622b19b6d2ad7737befdc` — Small black plastic jewelry display cube with white interior, featuring a silver
+- `custom/defceb36046a9ac8bfb0e0cbf1e99a248fcea613` — Small grey metal rectangular block.
+- `custom/df9fc6e68ff291495a9fcf53945c3cda10e14e16` — Black velvet necklace display bust.
+- `custom/e28ea4d51a80f6072e5de0c11184cc77fe8556cb` — Large white freestanding display cabinet with multiple magazine shelves and a re
+- `custom/e5f46396d6c1651b074011aa52c1d193223744c9` — Plastic Spider-Man action figure in a red-and-blue suit with black webbing, in a
+- `custom/e649259bd3abe2c2352d2645dbfa7e5500fd0632` — Modern white display cabinet with glass-front shelves and a red plinth on a carv
+- `custom/e66e06f505e8b8356ac1782afacf74acaf616e6f` — Small wooden pull-along duck toy with a natural wood finish.
+- `custom/e6b832f2c09637e351d79da487e66fc5d3144e95` — Black metal freestanding retail display rack with a red Borges-branded header an
+- `custom/e6e171912392d15999e34590299eaab0f78c9de9` — Grey metal portable medical cart on a blue wheeled base with a vertical cabinet 
+- `custom/e750dc69c392d8205805e7a0653c276f5ee5dd49` — Green emergency exit sign with a brushed aluminium frame.
+- `custom/e8d469ba7670cc45e8a5edc467887c882ee84161` — photography studio lighting equipment on a stand
+- `custom/e990fcf9aa4bdf6ad4cc544993c746720cca1001` — Rustic wooden sailing ship model with a multicoloured hull and intricate rigging
+- `custom/e9a321942fa2f70368e6514a67575ca3dbf7c7aa` — a spray paint can
+- `custom/ea406f15208abb0fcae3ccc5da2ac3f629ea3011` — a darkroom photographic enlarger
+- `custom/eb9d3e7bc84027186dadc23ce1dcd332429eed11` — Natural wooden shipping and storage crate with a rustic finish.
+- `custom/ebe6d0a7f2bacdb4ed39b6b43617fbb34ee7933e` — Orange industrial gas cylinder canister with a grey collar.
+- `custom/ec6cf00e8195adcd90a175cded8250c6e97f477d` — Dark brown wooden bird sculpture on wheels in an industrial, angular style.
+- `custom/ed63a6c63388ea06487deddf24b5526c3a859ccb` — Grey ceiling-mounted projection screen with an aluminum top bar.
+- `custom/eedaa74ba03140b24a6629be7ce4be699bd96307` — Curved light-wood reception counter with a white laminate top and integrated POS
+- `custom/ef8aa03360e7bf40b6ff244e88042eb8045f634e` — Mobile stainless-steel barbecue grill cart with a red-and-white striped canopy.
+- `custom/f0619aea851a42cdd022bd9f8709289985893f5e` — photography studio lighting equipment on a stand
+- `custom/f226189cd46f33713817a3b05c69066fa38bbbe0` — Olive green parka jacket with a faux fur hood over a charcoal sweater, tan cargo
+- `custom/f2b09d35275927c6a126f84d47e90d2c2f659f4a` — a bronze sculpture of a horse
+- `custom/f373c9e23143f0bd35db7f4e4c6fe8de6fa2a017` — Small black metal minimalist standing figurine sculpture.
+- `custom/f65f7c3d523fdd211abeb578d48a7f7d7a199ea5` — a bare wooden artist easel with no canvas
+- `custom/fa1ed2452840e6ccdbd1d6245c1873894686df04` — a wooden artist easel holding a painted canvas in progress
+- `custom/fa208cc78e4d2023e2b904364b15563451d2d75f` — Modern silver metal room divider with vertical slats on casters.
+- `custom/faba13a524f465b7ede045ca7b86baa3a6b0aaef` — a mounted dinosaur skeleton fossil
+- `custom/fb96a41edb886b44e49d64935ea5ab6ed0fa6946` — Industrial black metal and wood multi-tier retail display shelf.
+- `custom/fc94b36e13815b1caa983910e447666b00b2bbaa` — White metal-framed five-shelf magazine display rack with a red base.
+- `custom/fc9df30e9f7e0ce89d9bf02b3d59b72f8913ade9` — Large light oak wall-mounted eyewear display frame with multiple black hanging d
+- `custom/fe325cdf23f8a3bf9c0f8306269d96cf0a6d8c44` — White freestanding magazine rack with multiple shelves and a red base.
+- `custom/fe9cc6a736b7c06aebc01971e4dbe52389522284` — a mounted dinosaur skeleton fossil on a plinth
+- `custom/fff9d40bcc0780163ad5eebfc5d708fc824f4baa` — Minimalist blue glass sphere decorative ornament.

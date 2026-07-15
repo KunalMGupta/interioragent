@@ -1,3 +1,13 @@
+---
+id: example:coffee_shop
+kind: example
+family: service-spine-counter
+category: "café / coffee shop"
+pattern: "Compact service spine + 2-top field"
+---
+> **Digest (from the pattern index):** **Compact service spine + 2-top field** — SLOT ECONOMY for a small/cozy brief (3 floor slots, modest hero widths ⇒ the shell auto-sizes café-scale); massed PASTRIES at viewing height instead of a nonexistent display-case mesh; teaches the off-center-origin floating-mesh trap (swap, don't fight) + sub-0.02 `add_lighting` density for small rooms
+
+
 # Coffee shop / café — worked example
 
 Status: **built & VLM-clean** ([coffee_shop_v1.py](coffee_shop_v1.py), seed=7;

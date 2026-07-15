@@ -9,7 +9,7 @@ from IDSDL.datasets.retrievers import SceneProgAssetRetriever
 from IDSDL.groups import *
 from IDSDL.groups_extra import (
     StackGroup, PyramidGroup, PileGroup, SymmetryGroup, FacingGroup, RingsGroup,
-    MirrorStationGroup, WorkstationGroup,
+    MirrorStationGroup, WorkstationGroup, KitchenIslandGroup,
 )
 
 
@@ -51,7 +51,20 @@ class SceneProgRoom:
         obj.scale_only_width(w0 * f); obj.scale_only_height(h0 * f); obj.scale_only_depth(d0 * f)
         obj.mount_bottom = spec["bottom"]
 
-    def __init__(self, name, seed=None):
+    def __init__(self, name, seed=None, acquire=None):
+        """acquire — how hard to try when the DATASET cannot serve an asset query:
+
+            "low"  (default) make do with the dataset's best hit, however wrong. Reproducible,
+                             free, instant — and the right default: an asset already in the
+                             library beats one fetched off the internet every time.
+            "mid"            a MEASURED gap (top-1 similarity below ~0.55, where the best hit
+                             stops being the thing you asked for) may be filled by searching
+                             Sketchfab.
+            "high"           ...and if the web has nothing usable either, GENERATE it with Meshy.
+                             Spends credits, so never the default.
+
+        Every level tries the dataset first; the dial only ever engages on a query the dataset
+        demonstrably cannot serve. See IDSDL/shop/acquire.py."""
         self.name = name
         self.objects = []
         self.walls = []
@@ -63,7 +76,7 @@ class SceneProgRoom:
         # a wine cellar / bar / cinema reads warm and moody at ~200 W, blown out at 500 W.
         self.light_budget = 500.0
         self.exec = SceneProgExec()
-        self.object_retriever = SceneProgAssetRetriever(seed=seed)
+        self.object_retriever = SceneProgAssetRetriever(seed=seed, acquire=acquire)
         self.vlm_feedback = ""
         self.HEIGHT = 4
 
@@ -265,6 +278,9 @@ class SceneProgRoom:
 
     def WorkstationGroup(self):
         return WorkstationGroup(self)
+
+    def KitchenIslandGroup(self, cell=0.06):
+        return KitchenIslandGroup(self, cell=cell)
 
     def RoomGroup(self, modulate_scale: float = 1.0, randomness: float = 0.0,
                   auto_render: bool = True,

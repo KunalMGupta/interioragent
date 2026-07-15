@@ -1,3 +1,13 @@
+---
+id: example:bathroom
+kind: example
+family: set-piece-hero
+category: "spa master bath"
+pattern: "Set-assets + width-only scaling + overlap handling for bundled sets"
+---
+> **Digest (from the pattern index):** Set-assets + width-only scaling + overlap handling for bundled sets
+
+
 # Bathroom (spa master bath) — worked example
 
 Status: built as `scenes/work/bath_spa.py`. [`bathroom_v1.py`](bathroom_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).
@@ -8,7 +18,7 @@ part was that bathroom **fixtures are "set assets" with unreliable scale metadat
 `../workflow/asset_selection.md` ("Set assets") and `../workflow/coarse_to_fine.md`.
 
 ## Prompt / plan
-"a pretty / spa-style master bathroom." Planner (ALWAYS run it first — `idsdl__plan`) returned: white
+"a pretty / spa-style master bathroom." Planner (ALWAYS run it first — `interioragent__plan`) returned: white
 marble **grounded with warm wood + brass**, freestanding oval tub under a window as the hero with a
 **statement brass chandelier**, walk-in glass shower, **warm-wood double vanity** with brass mirror,
 ferns/eucalyptus + candles + plush towels. Skipping the planner gives a generic 3-piece bath.

@@ -1,3 +1,13 @@
+---
+id: example:hair_salon
+kind: example
+family: service-spine-counter
+category: "hair salon"
+pattern: "Motif-group build — `MirrorStationGroup` styling row;"
+---
+> **Digest (from the pattern index):** **Motif-group build** — `MirrorStationGroup` styling row; canonical coarse-to-fine
+
+
 # Hair salon — worked example (the canonical coarse-to-fine build)
 
 Status: built as `scenes/hair_salon.py`. [`hair_salon_v1.py`](hair_salon_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).

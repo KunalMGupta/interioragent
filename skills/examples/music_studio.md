@@ -1,3 +1,13 @@
+---
+id: example:music_studio
+kind: example
+family: zoned-multi-zone
+category: "recording studio"
+pattern: "Two zones on the centerline"
+---
+> **Digest (from the pattern index):** **Two zones on the centerline** — a control-zone hero unit (mixer + flanking `face()`-angled monitors + sweet-spot chair, one rug) faces a live zone (drums + mic stands) down the room axis; guitar `GridGroup` line on a side wall; acoustic panels massed via `place_on_wall_freeform`; teaches gap-category hero pinning (mixer-on-stand over the picker's DJ table), the desirable SET (guitar+amp), stock-the-rack, and "red accent via textiles when the wall texture won't cooperate"
+
+
 # Music recording studio — worked example (control zone + live zone, guided 9-gate flow)
 
 Status: **built & VLM-clean** (`scenes/work/music_studio.py`, seed=42, converged in 2 full renders +

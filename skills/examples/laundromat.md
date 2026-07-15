@@ -1,7 +1,17 @@
+---
+id: example:laundromat
+kind: example
+family: service-spine-counter
+category: "small laundromat"
+pattern: "One heavy service wall — a mixed-type `GridGroup` row (washers + rolling cart + dryers) flush on the back wall;"
+---
+> **Digest (from the pattern index):** **One heavy service wall** — a mixed-type `GridGroup` row (washers + rolling cart + dryers) flush on the back wall; folding counter + waiting nook on the side walls, centre aisle clear; appliance clearance comes FREE from `CategoryClearanceConstraint`; teaches "a genuinely SPARSE room may shrink below 1.0" (two-step final-phase convergence 0.85→0.75) + art-over-a-LOW-run
+
+
 # Small laundromat — worked example
 
 Status: **built & VLM-clean** ("Efficient Compact Laundromat Block",
-`scenes/work/laundromat_v1.py`, seed=42). Final compile: `no rescale / no rotation /
+`skills/examples/laundromat_v1.py`, seed=42). Final compile: `no rescale / no rotation /
 no wall overlap` at `modulate_scale=0.75`. Built through the guided 9-gate flow
 (flow_0712_142841_c8f4), three phase-gated builds + one convergence rebuild.
 
@@ -72,7 +82,7 @@ economy for the "small" brief (coffee_shop lesson): 4 floor slots only.
 - None. Auto overlap/bounds + door clearance + the appliance category clearance sufficed.
 
 ## v2 — the same aesthetic at real coin-op scale (user iteration)
-`scenes/work/laundromat_v2.py` ("needs a lot more machines"): 9 machines on TWO
+`skills/examples/laundromat_v2.py` ("needs a lot more machines"): 9 machines on TWO
 walls — a 5-washer bank (+ cart) on the back wall, a 4-dryer bank on the right
 wall, waiting nook moved to the front wall (clock above the bench — floor vs
 wall-hung occupy independently). Converged lint-clean at `modulate_scale=0.9`,

@@ -1,6 +1,16 @@
+---
+id: example:laboratory
+kind: example
+family: repeated-unit-grid
+category: "research / teaching wet lab"
+pattern: "Repeated-unit grid + clinical perimeter — and the sharpest statement yet of \"the grid is not the category, the PRODUCT is\""
+---
+> **Digest (from the pattern index):** **Repeated-unit grid + clinical perimeter — and the sharpest statement yet of "the grid is not the category, the PRODUCT is"**: classroom, computer_room and laboratory are the SAME layout (a unit tiled across the floor), so what makes this one a lab is the microscope + reagent bottles massed on every bench at working height. Opens with a 36-query stress test that finds **twelve identity props returning 0.000 — an EMPTY candidate list, not a bad pick** (fume hood, microscope, centrifuge, beakers, test tubes…), and answers it three ways: (a) **the science was already in the dataset as `custom/` meshes nobody could retrieve** — the operating-room ingest's leftover microscope/autoclave/gas cart score 0.000 by NL query, so grep the custom pool by hand before declaring a category unbuildable; (b) the glassware exists as *"decorative glass DECANTERS"* (silhouette, not caption); (c) the fume hood has NO honest substitute (the top "stainless cabinet" is a **barbecue grill**) so the scene was framed as the **sub-category the library can carry** rather than faking it. Its big gotcha: **an ingested mesh whose origin is 118% of its height off-centre** sank the microscope *through* the bench and read as floor-standing while the whole VLM loop stayed clean — because **an ingest batch's UNUSED meshes never got its repair pass** (operating_room v2 fixed only the 6 glbs it shipped; 14 are still broken). Check a borrowed mesh's glb bounds before you build. Also: a `0.5` shrink vote that was really an over-sparse GridGroup (`sparsity` 0.3 → 0.12 moved it to 0.88 with no `modulate_scale`)
+
+
 # Laboratory (research / teaching wet lab) — worked example
 
-Status: **built & VLM-clean** (`scenes/work/laboratory_v1.py`, seed=27, `laboratory_v1.blend`).
+Status: **built & VLM-clean** (`skills/examples/laboratory_v1.py`, seed=27, `laboratory_v1.blend`).
 Built coarse-to-fine from the shell. Final build: `no rotation` / `no wall overlap`, zero lints;
 the residual `rescale room by 0.9` was declined (see below).
 
@@ -32,7 +42,7 @@ the tie-break is the product, not more of the same fixture"). Budget your effort
 bench grid took one iteration, the props took the whole scene.
 
 ## Asset reality: the dataset has the FURNITURE and almost none of the SCIENCE
-A 36-query retrieval stress test (`tmp/lab_stress.py`) — the asset_selection.md kickoff, and the
+A 36-query retrieval stress test (a one-off stress script, not kept) — the asset_selection.md kickoff, and the
 single highest-value hour of this build. **Twelve of the category's identity props return NOTHING
 AT ALL** (empty candidate list, sim `0.000`, not merely a bad pick):
 
@@ -92,7 +102,7 @@ scale it read as **standing on the floor next to the bench**. The reagent bottle
 - **Diagnosed exactly in one offline probe**, not by guessing: build the single unit and print the
   anchor's AABB **top** against the item's AABB **bottom** (computer_room's method). Then read the
   glb bounds — 5 seconds, and the 118% offset is unmissable.
-- **Fixed at the SOURCE** (`tmp/fix_lab_glbs.py`), in Blender, per operating_room's prescription:
+- **Fixed at the SOURCE** (a one-off Blender repair script, not kept), in Blender, per operating_room's prescription:
   `origin_set(ORIGIN_GEOMETRY, BOUNDS)` + zero the location, which **preserves the material slots**
   a trimesh round-trip would strip (→ flat white). Written back under the **same filename**, so the
   asset id, its embedding and every pin stay valid — no re-ingest, no re-pin.

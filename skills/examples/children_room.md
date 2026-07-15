@@ -1,3 +1,13 @@
+---
+id: example:children_room
+kind: example
+family: hero-anchor-room
+category: "kids bedroom"
+pattern: "Three small zones;"
+---
+> **Digest (from the pattern index):** Three small zones; `place_inside` tile-fit
+
+
 # Children's room — worked example
 
 Status: **built & VLM-clean** (`scenes/work/children_room.py`, seed=7). Final compile returns

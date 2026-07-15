@@ -1,6 +1,16 @@
+---
+id: example:waiting_room
+kind: example
+family: zoned-multi-zone
+category: "clinic / office waiting room"
+pattern: "Two facing seat banks + a reception anchor"
+---
+> **Digest (from the pattern index):** **Two facing seat banks + a reception anchor** — the lobby's reception bones (a `WorkstationGroup` with an INVERTED desk, `place_on_back` so staff have floor to stand on) with the lounge swapped for a symmetric double seat run pinned flush to both long walls, a magazine table between them, palms flanking reception. Teaches: **"rows of linked chairs" has no mesh — PACK them** (the only multi-seat banks are moulded cafeteria rows, and every "waiting bench" query returns a DOMESTIC sofa with throw pillows — categorically wrong, prison_cell); `GridGroup(sparsity=0.05)` runs **no overlap solve**, so single chairs stay abutted and read as one linked bank (greenhouse v2's packing trick, applied to seating), and the two runs on the two long walls buy the room shape for free. Its sharpest lesson: **a back-centre print behind a reception desk is ALWAYS crossed by the monitor** — art centres at ~1.5 m, a counter + monitor tops out at ~1.6 m, the wall-object clearance pass only slides FLOOR objects (never an on-top item), and there is no `bottom=` lift on the wall-HUNG path ⇒ **the fix is ASPECT, not size**: a 1.92-aspect PANORAMIC lets the monitor interrupt only a central strip (widening the portrait print instead would have made it 2.16 m TALL — wall scaling is uniform). Also: **the empty-frame trap is not just picture frames** — 6 of the 8 top wall-CLOCK hits are featureless white DISCS (a dinner plate on the wall); the plan's GLASS table rendered as a solid BLACK MONOLITH (loop-clean — form factor is an eye catch, caught in the cheap phase-1 loop); and a room whose walls carry rigid GridGroup rows must **fill the floor and stop SHORT of the shrink vote**
+
+
 # Waiting room (clinic) — worked example
 
-Status: **built & converged** (`scenes/waiting_room_v1.py`, seed=11; 2× phase-1, 1× phase-2, 3× full).
+Status: **built & converged** (`skills/examples/waiting_room_v1.py`, seed=11; 2× phase-1, 1× phase-2, 3× full).
 Final compile: `no rotation`, `no wall overlap`, no `[Lint]`/WARNING lines; room size converged at
 `modulate_scale=0.95` (vote decayed 0.8 → 0.9 → 0.95 ≈ neutral). Built through the guided 9-gate
 flow (flow_0713_025644_6bc4). Supersedes the thin pre-workflow `scenes/waiting_room.py`.

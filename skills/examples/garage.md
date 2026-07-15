@@ -1,3 +1,13 @@
+---
+id: example:garage
+kind: example
+family: zoned-multi-zone
+category: "garage / car workshop"
+pattern: "Cluster composition, not scattered props"
+---
+> **Digest (from the pattern index):** **Cluster composition, not scattered props** — a garage is a CAR + a work station + a storage run, each composed as ONE cohesive cluster placed as a unit (the `living_room`/`classroom` rule); scattering bench/chest/stool across three separate wall slots reads sparse and disconnected. The car hero sizes the room.
+
+
 # Garage — worked example (car-centred workshop, composed in clusters)
 
 Status: **built & VLM-clean** (`scenes/work/garage_workshop.py`, seed=9). Final compile returns

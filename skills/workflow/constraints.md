@@ -1,7 +1,17 @@
+---
+id: workflow:constraints
+kind: reference
+role: "The 3-constraint-kind model and authoring rules"
+---
+
 # Constraints — the full model
 
 Three mechanisms. They are not interchangeable. The DSL applies some for you;
 others you must add; others only produce text you must act on.
+
+> Companion: [`constraint_playbook.md`](constraint_playbook.md) — the other axis: given an
+> ASSET or SITUATION, which constraint (and which numbers) to impose. DRAFT pending Kunal's
+> review; its §5 is the open discussion agenda.
 
 ## 1. Auto gradient constraints — the DSL handles these
 

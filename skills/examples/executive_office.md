@@ -1,3 +1,13 @@
+---
+id: example:executive_office
+kind: example
+family: zoned-multi-zone
+category: "executive office"
+pattern: "Single room, zoned — a storage backbone splits work vs."
+---
+> **Digest (from the pattern index):** **Single room, zoned** — a storage backbone splits work vs. lounge zones
+
+
 # Executive office — worked example (single room, "storage-backbone + work/lounge zones")
 
 Status: **built as `scenes/executive_office.py`** (seed=42), planner-driven, iterated on VLM

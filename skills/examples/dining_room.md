@@ -1,3 +1,15 @@
+---
+id: example:dining_room
+kind: example
+family: table-hub
+category: "family dining room"
+pattern: "Table hub, domesticated"
+read_for:
+  - "READ FOR ANY \"warm\"/\"cosy\"/mood brief: once phase 3 hangs a fixture, the brightness dial is `scene.light_budget` (fixed 500 W floods a room), NOT the sky — and `IDSDL_SKY` must be exported in the SHELL, it is a no-op inside the program under workbench too"
+---
+> **Digest (from the pattern index):** **Table hub, domesticated** — meeting_room's rectilinear chair ring with the presentation wall swapped for a SERVICE wall (buffet + gallery above). Identity comes from SETTING THE TABLE (plates/glasses/centerpiece). **READ FOR ANY "warm"/"cosy"/mood brief: once phase 3 hangs a fixture, the brightness dial is `scene.light_budget` (fixed 500 W floods a room), NOT the sky — and `IDSDL_SKY` must be exported in the SHELL, it is a no-op inside the program under workbench too**
+
+
 # Family dining room — worked example
 
 Scene: `scenes/work/dining_room.py` (seed=6), planner-driven **"Warmth-Centered Family Dining
@@ -62,7 +74,7 @@ what kept these separable.)
 
 ### 2. `IDSDL_SKY` must be exported in the SHELL — setting it in the program is a no-op under workbench TOO
 wine_cellar concluded "MCP `run_scene` ignores `IDSDL_SKY`, so build mood scenes from the shell."
-That is incomplete and cost a full build here: `renderer/utils.py` binds `INTERIOR_SKY_STRENGTH` in
+That is incomplete and cost a full build here: `IDSDL/renderer/utils.py` binds `INTERIOR_SKY_STRENGTH` in
 a **class body** (line ~694) at import time, and `workbench.py` imports `IDSDL.service` at its own
 line 30 — *before* `runpy` executes your program. So a program-level `os.environ["IDSDL_SKY"]` is
 already too late under **workbench as well as MCP**; the render you get back is still at 3.0 and

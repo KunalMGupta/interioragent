@@ -1,3 +1,13 @@
+---
+id: example:bookstore
+kind: example
+family: retail-spine-loop
+category: "indie bookstore"
+pattern: "Retail spine + perimeter loop, book edition"
+---
+> **Digest (from the pattern index):** **Retail spine + perimeter loop, book edition** — stocked honey bookcase runs on both long walls (library's twin runs) + a centre spine of **double-sided face-out book displays** framing the aisle (retail rail pattern) + a hero new-releases table massed with book stacks; pastel pin-for-palette reading nook; checkout `facing="back"` sees the door. Teaches "the pre-stocked fixture IS the product" at full strength + a ~56 m² lighting-density point (0.015, not 0.04) + decaying-rescale-vote-equals-converged
+
+
 # Bookstore — worked example ("Curved Spine Bookstore", guided 9-gate flow)
 
 A warm indie bookstore: honey-timber stocked bookcase runs on both long walls, a **central

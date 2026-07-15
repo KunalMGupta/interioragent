@@ -1,3 +1,13 @@
+---
+id: example:retail_store
+kind: example
+family: retail-spine-loop
+category: "apparel boutique"
+pattern: "Central spine + perimeter loop — twin double-sided rails frame a display table;"
+---
+> **Digest (from the pattern index):** **Central spine + perimeter loop** — twin double-sided rails frame a display table; branded service wall; front-window mannequins. Opens with a retrieval **stress test**; lighting-density-vs-floor-area + storefront-void lessons
+
+
 # Retail store — worked example (apparel boutique, "central rail spine + branded service wall")
 
 A modern apparel/clothing boutique. Its defining moves: a **central merchandising spine** —
@@ -81,7 +91,7 @@ rug, plant, the POS rotate), phase 3 the brand sign, the storefront pane and the
 - **Checkout counter = a reception/service desk.** The dataset has no purpose-built cash-wrap, but
   the `CountersRetriever` returns curved reception desks + bar counters; the curved wood-front
   reception desk reads perfectly as a boutique cash-wrap (put the POS + bags on top).
-- **`run_scene` mtime-fallback trap.** `mcp__idsdl__run_scene` reports whichever `report.json` is
+- **`run_scene` mtime-fallback trap.** `mcp__interioragent__run_scene` reports whichever `report.json` is
   newest by mtime across **all** `tmp/*` dirs, so if your build **errors before writing its report**
   (or another run finished more recently) it surfaces a *different scene's* renders — I got a full
   **garage** back for a retail program. Tell by the printed **asset list**; when it doesn't match

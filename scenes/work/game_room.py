@@ -144,12 +144,8 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.08) as room:
     room.place_on_wall_front_right(scene.AddAsset("a wall-mounted dartboard cabinet with open doors", asset_id=_DARTBOARD))
 
     # ---- clearances ----
-    # Billiards: room to draw a cue on every side -> this is what sizes the room.
-    room.add_clearance(pool_table, distance=1.3, dir="all")
-    # Foosball: standing room for players around the table.
-    room.add_clearance(foosball, distance=0.5, dir="all")
-    # Poker: a clear approach around the table (chairs pull out).
-    room.add_clearance(poker_table, distance=0.5, dir="all")
+    # Pool (1.3 all, sizes the room), foosball + poker (0.5 all) now come from the AUTO layer
+    # (default_constraints.py, frozen 2026-07-14) — the descriptions keyword-match, no manual call.
 
     # ---- lighting: moody, layered ----
     room.add_lighting("warm recessed ambient ceiling downlights", density=0.02)

@@ -60,6 +60,41 @@ example in `skills/examples/hair_salon.md`.
 > desktop **sets** (the dataset has no standalone keyboard/mouse; they come bundled in an iMac-style
 > set), desk lamps, pen cups, desk plants, books, frames. Worked in `skills/examples/dental_office.md`.
 
+> **Third worked precedent — `KitchenIslandGroup`** (island/peninsula attached to a fitted U/L/
+> straight kitchen set), and the one to copy when a motif depends on the anchor's REAL SHAPE, not
+> its AABB. The unrepresentable relationship: "attach the island at the frontal tip of a U's
+> longer wing, across its mouth" / "float the island in the concave middle of an L" — every
+> existing verb is AABB-relative, and the mouth/pocket of a U/L is *inside* the AABB. What it
+> adds: a **mesh-footprint analysis stage** before layout — sample the anchor's surfaces, raster
+> the base-height band into an occupancy grid, classify U/L/straight from border coverage, then
+> compute the pose from measured wing tips / inner faces. Hard-won rules (all hit for real):
+> 1. **Sample SURFACES, not vertices.** Vertices + centroids left big flat cabinet panels empty
+>    at raster resolution and a U degraded to noise (misread as an L). Area-weighted triangle
+>    sampling with a FIXED seed (deterministic builds) fixed it. Cap the grid ~48 cells across —
+>    classification wants shape, not detail.
+> 2. **Choose the base run by (most arms, longest span), not max coverage** — a U's own
+>    full-length wing TIES its base run on coverage and the tiebreak decides correctly.
+> 3. **Analyse in the base-height band** (y <= ~1.0 m) so bundled wall cabinets/hoods don't
+>    pollute the floor footprint.
+> 4. **Guard the composition, not just the math**: min_entry shrinks the island rather than seal
+>    the U's mouth; stools that don't fit the (possibly shrunken) island are DROPPED with a print;
+>    every analysis prints its ASCII raster + measurements so the choice is auditable in the log.
+> 5. **Expose the analysis on the group** (`self.analysis`: shape/wing/mouth/entry/pocket) — the
+>    numeric tests assert on it, and scene authors can audit it.
+> 6. **Things inside the anchor's AABB need `ignore_overlap`** (the island is *supposed* to be in
+>    the mouth), and the composed block is placed with ONE room corner op + `is_static = True` —
+>    the group inherits the whole kitchen.md alignment/camera rulebook as a unit.
+> 7. **A composed GridGroup anchor works** (the raster recurses children) **but only from
+>    equal-depth modules** — a fridge composed into a cabinetry run rastered the back border
+>    ragged AND pushed the run width past the interior-camera bound (W > 2 x run). Camera bounds
+>    scale with whatever you compose; check them before composing.
+> Slots: `place_island(island, mode="auto"|"tip"|"pocket"|"front", wing=, min_entry=, min_aisle=)`
+> + `place_stools([...])`. The "island" can itself be a compiled sub-group (counter + its
+> `add_lighting` pendant) — lights are `is_light` children, skipped by AABBs, so the entry-gap
+> math still sees only the counter while the pendant rides along. Worked in
+> `skills/examples/kitchen.md` (U peninsula: `kitchen_set_v3.py`; L pocket: `kitchen_l_v1.py`);
+> numeric tests 52–53 in `tests.py`, figure `extra_kitchen_island` in `tools/docs_figures.py`.
+
 ## Golden rules (do not break these)
 
 1. **Never edit core files' logic.** `IDSDL/groups.py`, `IDSDL/object.py`, `IDSDL/constraints.py`
@@ -70,7 +105,7 @@ example in `skills/examples/hair_salon.md`.
    with the `with scene.XGroup() as g:` idiom. Nothing else in scene.py changes.
 3. **Reuse, don't reinvent.** Build on existing primitives and inherit `compile()`. Do not write a
    new compile/optimization engine.
-4. **Always verify twice**: a `tests.py` case with numeric assertions **and** a `docs_figures.py`
+4. **Always verify twice**: a `tests.py` case with numeric assertions **and** a `tools/docs_figures.py`
    render you actually inspect. A group is not "done" until both pass.
 
 ## What you can reuse (existing primitives)
@@ -147,19 +182,20 @@ Add a `test_NN()` that builds the group, `scene.bind(group)`, then **asserts geo
 relative checks), and register it in the `TESTS` dict. Example assertions: stacked levels abut;
 mirrored pair symmetric about anchor; pile has zero pairwise AABB overlap; ring radii ordered.
 
-### 4. Render & visually verify with `docs_figures.py`
+### 4. Render & visually verify with `tools/docs_figures.py`
 Add a `extra_<name>()` figure function and a `FIGURES` entry, render top-down + perspective, and
 **open the PNGs to confirm** the layout looks right (not just that it ran).
 
-### 5. Document it in `docs/motif-groups.md`
-Add a section: short description, the `with scene.XGroup() as g:` snippet, and the two images.
+### 5. Document it where the group will be FOUND
+The living documentation is the skills tree, not `docs/` (`docs/motif-groups.md` no longer
+exists): add the group as a worked-precedent blockquote at the top of THIS file, and teach its
+use in the worked example (`skills/examples/<scene>.md`) of the scene that motivated it.
 
 ### Verification commands (conda env `interioragent`)
 ```bash
 mkdir -p results
 OPENAI_API_KEY=<key> conda run -n interioragent python tests.py <NN>
-OPENAI_API_KEY=<key> conda run -n interioragent python docs_figures.py extra_<name>
-python build_preview.py   # refresh the standalone docs preview
+OPENAI_API_KEY=<key> conda run -n interioragent python tools/docs_figures.py extra_<name>
 ```
 Then Read the rendered `docs/assets/scenes/extra_<name>_*.png` and confirm correctness.
 
@@ -195,7 +231,8 @@ Procedure:
 - [ ] New class only in `IDSDL/groups_extra.py`; core logic untouched.
 - [ ] One-line factory added to `scene.py`; `with scene.XGroup() as g:` works.
 - [ ] `tests.py` case with numeric assertions, registered in `TESTS`, passes.
-- [ ] `docs_figures.py` figure rendered and visually inspected (top-down + perspective).
-- [ ] `docs/motif-groups.md` section added; `build_preview.py` regenerated.
+- [ ] `tools/docs_figures.py` figure rendered and visually inspected (top-down + perspective).
+- [ ] Documented as a worked-precedent blockquote in this file + taught in the motivating
+      scene's `skills/examples/<scene>.md`.
 - [ ] (External repo) cloned under `external/` and git-ignored; runs out-of-process; output
       normalized to IDSDL conventions; a weight-free mock path exists for testing.

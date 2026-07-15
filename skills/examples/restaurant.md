@@ -1,3 +1,13 @@
+---
+id: example:restaurant
+kind: example
+family: zoned-multi-zone
+category: "bistro dining room"
+pattern: "Zoned single room — bar wall + banquette wall + a field of 2-top clusters;"
+---
+> **Digest (from the pattern index):** **Zoned single room** — bar wall + banquette wall + a field of 2-top clusters; opens with a retrieval STRESS TEST; cafe-SET retrieval trap
+
+
 # Restaurant / bistro dining room — worked example
 
 Status: **built & essentially VLM-clean** (`scenes/work/restaurant.py`, seed=37). Final compile:
@@ -19,7 +29,7 @@ heights + a key chandelier). Palette: cognac, olive, taupe, charcoal; warm wood 
 
 ## Step 0 — the retrieval STRESS TEST (do this for a new category; the user asked for it here)
 Restaurant is furniture-rich, so instead of ingesting we **proved coverage first**. Wrote a throwaway
-script (`scratchpad/stress_restaurant.py`): a ~50-item wishlist → `scene.prefetch_assets(list)` (one
+script (a one-off stress script, not kept): a ~50-item wishlist → `scene.prefetch_assets(list)` (one
 concurrent warm-up) → `AddAsset` each → print the chosen `obj.retrieval_model`, its candidate
 `similarity`, and the chosen `desc`; summarize by source and flag any `< 0.30`. Result: **47/47
 resolved, none < 0.30** → no ingest needed. This is the fast, quantitative version of the asset-first

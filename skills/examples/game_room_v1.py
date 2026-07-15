@@ -181,12 +181,9 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.08) as room:
     room.place_on_front_wall_left(scene.AddAsset("a dark wood display cabinet with glass doors and trophies", asset_id=TROPHY), facing="back")
 
     # ---- clearances (PHASE 1: they are what shape the floor solve) ----
-    # Billiards: room to draw a cue on every side -> this is what sizes the room.
-    room.add_clearance(pool_table, distance=1.3, dir="all")
-    # Foosball: standing room for players around the table.
-    room.add_clearance(foosball, distance=0.5, dir="all")
-    # Poker: a clear approach around the table (chairs pull out).
-    room.add_clearance(poker_table, distance=0.5, dir="all")
+    # Pool (1.3 all — this is what SIZES the room), foosball and poker (0.5 all) all get their
+    # surround clearance AUTOMATICALLY now: those descriptions keyword-match the auto layer
+    # (default_constraints.py, frozen 2026-07-14). No manual add_clearance needed.
 
     if PHASE >= 3:
         # ---- wall layer. Every asset below is CREATED INSIDE this block, so nothing is orphaned

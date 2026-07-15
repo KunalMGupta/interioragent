@@ -85,9 +85,10 @@ with scene.RelativeGroup() as seating:
             scene.AddAsset("a stack of decorative books"),
             scene.AddAsset("a white ceramic vase with branches"),
         ])
-        seating.place_rug("a flat beige wool area rug", size=0.75, asset_id=RUG)
-        # size=1.0 read as wall-to-wall carpet (cluster bbox ~ whole floor); 0.75
-        # lets the dark walnut show around the seating zone
+        seating.place_rug("a flat beige wool area rug", size=0.9, asset_id=RUG)
+        # size=1.0 read as wall-to-wall carpet (cluster bbox ~ whole floor); 0.9 (rework
+        # 2026-07-14, up from 0.75) pulls the sectional + nook onto one rug as a single cohesive
+        # conversation zone (Kunal: "more cohesive to appear cozy") with a margin of walnut showing
     if PHASE >= 3:
         seating.add_lighting("a flat round LED flush mount ceiling light", density=0)
 
@@ -98,9 +99,12 @@ bookcase = scene.AddAsset("a tall wood bookcase filled with books",
                           asset_id=BOOKCASE)
 bookcase.scale(bookcase.get_width() * 2.0 / bookcase.get_height())  # ~2 m tall, uniform
 
-with scene.RoomGroup(modulate_scale=1.1, randomness=0.15) as room:
-    # RoomProportions voted enlarge in EVERY phase (1.2/1.25/1.1/1.1, never flipped)
-    # -> real signal, applied the final-phase 1.1 (act-on-size-last rule)
+with scene.RoomGroup(modulate_scale=0.85, randomness=0.15) as room:
+    # Rework 2026-07-14 (Kunal reviewed the 1.1 build: "cavernous, not cozy"). RoomProportions
+    # had voted enlarge every phase (1.2/1.25/1.1/1.1) — but that vote optimizes for UNCLUTTERED,
+    # and "cozy" is the opposite brief: the walls press in so the single seating cluster fills the
+    # room. DELIBERATE human override of the enlarge vote (it votes enlarge again on rebuild —
+    # refuse it; the brief wins). See skills/examples/residential_variations.md Lesson 4.
     room.place_walls(floor_texture="dark walnut wood plank floor",
                      ceiling_texture="soft white plaster",
                      wall_texture="cool light gray paint")

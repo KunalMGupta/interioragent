@@ -1,3 +1,13 @@
+---
+id: example:meeting_room
+kind: example
+family: table-hub
+category: "conference / boardroom"
+pattern: "Table hub + presentation wall — a rectilinear chair ring around a stretched table;"
+---
+> **Digest (from the pattern index):** **Table hub + presentation wall** — a rectilinear chair ring around a stretched table; four walls each get a job (present / service / glass / art+door). Stress test; reversed-front-sideboard facing flip; boardroom lighting = one pendant + daylight (panels starfield)
+
+
 # Meeting / conference room — worked example
 
 Status: **built & essentially VLM-clean** (`scenes/work/meeting_room.py`, seed=17, 3 render passes).

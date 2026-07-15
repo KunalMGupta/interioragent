@@ -1,3 +1,13 @@
+---
+id: example:florist_shop
+kind: example
+family: retail-spine-loop
+category: "flower shop"
+pattern: "Mass ONE abundant prop — bouquets on six repeated `bloom_table`s carry the identity;"
+---
+> **Digest (from the pattern index):** **Mass ONE abundant prop** — bouquets on six repeated `bloom_table`s carry the identity; opens with a retrieval **stress test**; storefront window + side door; asset-mesh traps (black étagère / baked-in books)
+
+
 # Florist shop — worked example
 
 A charming **flower shop / florist boutique**, built from the planner target "Sun-Kissed Florist".

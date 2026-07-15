@@ -1,3 +1,13 @@
+---
+id: example:library
+kind: example
+family: rows-runs-corridors
+category: "reading hall"
+pattern: "Symmetric corridor — twin shelf rows on the long walls + a centre reading-table column;"
+---
+> **Digest (from the pattern index):** **Symmetric corridor** — twin shelf rows on the long walls + a centre reading-table column; retrieval stress-test kickoff; `add_lighting` size↔count coupling
+
+
 # Library — worked example ("Grand Public Library Reading Room")
 
 Status: **built as `scenes/work/library.py`** (seed=36). [`library_v1.py`](library_v1.py) is that

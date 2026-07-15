@@ -1,4 +1,9 @@
-"""Guided scene-generation flow — the 9-gate recipe as a server-side state machine.
+"""Guided scene-generation flow — the worked-example recipe as a server-side state machine.
+
+Two modes. INFERENCE (default): 8 gates ending at the judged, converged .blend —
+skills/ is read-only, the run leaves no trace in the knowledge base. TEACH
+(flow_start(prompt, teach=True), or IDSDL_TEACH=1): a 9th WRITE BACK gate
+distills the scene into skills/ to grow the library.
 
 Any agent connected to the MCP server can build a scene the way the 26 worked
 examples were built, without having read the repo: ``flow_start(prompt)`` returns
@@ -33,7 +38,7 @@ _BLOCKING = re.compile(r"\[Lint\]|WARNING", re.IGNORECASE)
 STEPS = [
     {
         "key": "plan",
-        "title": "1/9 PLAN — get the design target",
+        "title": "PLAN — get the design target",
         "card": """Produce the design plan for the prompt.
   Command : (from the repo root) PYTHONPATH=. python -m planner_core "<prompt>" --out tmp/<run>/plan
   (or the MCP `plan` tool)
@@ -44,7 +49,7 @@ EVIDENCE: {"plan_dir": "<dir containing skill.txt (+ plan.png)>"}""",
     },
     {
         "key": "retrieve",
-        "title": "2/9 RETRIEVE — reason over the knowledge catalog",
+        "title": "RETRIEVE — reason over the knowledge catalog",
         "card": """Retrieve procedurally-similar recipes/lessons (NOT by category name).
   Command : (from the repo root) PYTHONPATH=. python -m retriever_core "<prompt>" --plan <plan_dir>/skill.txt --out tmp/<run>/ctx
   (or the MCP `retrieve_context` tool)
@@ -54,7 +59,7 @@ EVIDENCE: {"bundle": "<path to bundle.md>"}""",
     },
     {
         "key": "audit",
-        "title": "3/9 AUDIT ASSETS — eyeball before placements",
+        "title": "AUDIT ASSETS — eyeball before placements",
         "card": """Resolve your shopping list BEFORE writing placements and eyeball every mesh
 you pin (caption != mesh; this is the #1 late-caught failure class).
   Commands: workbench inspect "<query>"  (candidates + previews)
@@ -68,7 +73,7 @@ EVIDENCE: {"pins": {"<ROLE>": "<dataset/id>", ...},
     },
     {
         "key": "author",
-        "title": "4/9 AUTHOR — write the PHASE-GATED program",
+        "title": "AUTHOR — write the PHASE-GATED program",
         "card": """Write the scene program following the matched recipe's skeleton, gated on
 IDSDL/phases.py (see skills/examples/coffee_shop_v1.py for the canonical form):
   PHASE 1: floor anchors, composed stations, doors, the RoomGroup shell
@@ -83,7 +88,7 @@ EVIDENCE: {"program": "<path to program .py>"}  (gate re-lints it)""",
     },
     {
         "key": "build1",
-        "title": "5/9 BUILD PHASE 1 — verify the floor layout (~1 min)",
+        "title": "BUILD PHASE 1 — verify the floor layout (~1 min)",
         "card": """Build ONLY the anchors and check the layout before anything expensive:
   Command : workbench run <program>.py --phase 1
   (or the MCP `run_scene` tool with phase=1)
@@ -94,7 +99,7 @@ Gate: fresh report with phase=1 and NO [Lint]/WARNING lines (or override).""",
     },
     {
         "key": "build2",
-        "title": "6/9 BUILD PHASE 2 — dress the surfaces",
+        "title": "BUILD PHASE 2 — dress the surfaces",
         "card": """Add the place_on_top / place_inside layer on the verified layout:
   Command : workbench run <program>.py --phase 2
 Check the strip: product at viewing height, stocked shelves, nothing floating,
@@ -104,7 +109,7 @@ Gate: fresh report with phase=2 and NO [Lint]/WARNING lines (or override).""",
     },
     {
         "key": "build3",
-        "title": "7/9 BUILD PHASE 3 — walls, lighting, mood + converge",
+        "title": "BUILD PHASE 3 — walls, lighting, mood + converge",
         "card": """Full build; then apply the vlm_feedback playbook (render is the arbiter, ONE
 decisive change per iteration, converge don't chase):
   Command : workbench run <program>.py
@@ -115,7 +120,7 @@ Gate: fresh report with phase=3 and NO [Lint]/WARNING lines (or override).""",
     },
     {
         "key": "judge",
-        "title": "8/9 JUDGE — against the plan, then the vibe layer",
+        "title": "JUDGE — against the plan, then the vibe layer",
         "card": """Compare the strip to plan.png: does it instantly read as the category? Are the
 plan's identity elements present? Then add the VIBE layer (stocked shelves, menu/
 signage, one warm accent seat, warm envelope, greenery — see
@@ -128,17 +133,32 @@ EVIDENCE: {"score": <0-10 your honest design-match score>,
     },
     {
         "key": "writeback",
-        "title": "9/9 WRITE BACK — grow the knowledge base",
+        "title": "WRITE BACK — grow the knowledge base",
         "card": """Distill what you learned so the next scene benefits:
   - skills/examples/<name>.md   (recipe: layout idea, gotchas, feedback log)
+    START IT WITH FRONTMATTER (id/kind/family/category/pattern) — the catalog
+    reads the frontmatter, see any sibling example for the shape
   - skills/examples/<name>_v1.py (the converged program, beside it)
-  - add a row to skills/examples/README.md KEEPING THE TABLE FORMAT (parsed!)
-  - append concrete feedback->action entries to skills/workflow/vlm_feedback.md
+  - add a one-line row to skills/examples/README.md (the human index)
+  - append feedback->action entries to skills/workflow/vlm_feedback.md,
+    each with a unique `{#vlm-<scene>-<topic>}` anchor after the bold prefix
 EVIDENCE: {"example_md": "<path>", "program_copy": "<path>"}""",
     },
 ]
 
 _STEP_INDEX = {s["key"]: i for i, s in enumerate(STEPS)}
+
+
+def _steps(state):
+    """The step list for this flow's mode. INFERENCE (default) stops at the
+    converged, judged build — skills/ is read-only, nothing is written back.
+    TEACH mode appends the WRITE BACK gate that grows the knowledge base."""
+    return STEPS if state.get("teach", True) else STEPS[:-1]
+
+
+def _title(state, i):
+    steps = _steps(state)
+    return f"{i + 1}/{len(steps)} {steps[i]['title']}"
 
 
 # ---------------------------------------------------------------------------
@@ -166,12 +186,19 @@ def _save(state):
 
 
 def _card(state):
+    steps = _steps(state)
     i = state["current"]
-    if i >= len(STEPS):
-        return (f"FLOW COMPLETE — all 9 gates passed for: {state['prompt']!r}\n"
-                f"Provenance: {_flow_path(state['flow_id'])}")
-    step = STEPS[i]
-    lines = [f"flow {state['flow_id']} — step {step['title']}",
+    if i >= len(steps):
+        run = (state.get("context") or {}).get("run_build3", "")
+        where = f"\nConverged build (scene.blend + strip): {run}" if run else ""
+        tail = ("" if state.get("teach", True) else
+                "\n(Inference mode: the knowledge write-back gate was skipped — skills/ "
+                "stays untouched.\n If this scene is worth adding to the library, re-run "
+                "with flow_start(prompt, teach=true).)")
+        return (f"FLOW COMPLETE — all {len(steps)} gates passed for: {state['prompt']!r}{where}\n"
+                f"Provenance: {_flow_path(state['flow_id'])}{tail}")
+    step = steps[i]
+    lines = [f"flow {state['flow_id']} — step {_title(state, i)}",
              f"prompt: {state['prompt']!r}", ""]
     # step-scoped context gathered from earlier evidence
     ctx = state.get("context", {})
@@ -292,11 +319,16 @@ def _validate(step_key, evidence, state):
         if not py or not os.path.isfile(py):
             errs.append(f"program_copy does not exist: {py!r}")
         readme = os.path.join(REPO_ROOT, "skills", "examples", "README.md")
-        if md and os.path.isfile(md) and os.path.isfile(readme):
-            stem = os.path.splitext(os.path.basename(md))[0]
-            if stem not in open(readme).read():
-                errs.append(f"add a '{stem}' row to skills/examples/README.md "
-                            f"(keep the table format — the retriever parses it)")
+        if md and os.path.isfile(md):
+            if not open(md).read().startswith("---\n"):
+                errs.append(f"{md} has no frontmatter — start it with "
+                            "'---\\nid: example:<name>\\nkind: example\\n...' "
+                            "(the catalog reads the frontmatter; copy a sibling's shape)")
+            if os.path.isfile(readme):
+                stem = os.path.splitext(os.path.basename(md))[0]
+                if stem not in open(readme).read():
+                    errs.append(f"add a '{stem}' row to skills/examples/README.md "
+                                f"(the human index)")
 
     return errs
 
@@ -313,10 +345,15 @@ def _absorb_context(state, step_key, evidence):
 # public API (wrapped by the MCP tools)
 # ---------------------------------------------------------------------------
 
-def flow_start(prompt):
+def flow_start(prompt, teach=False):
+    """teach=False (INFERENCE, the default) runs the 8 gates that end at the
+    judged .blend and never touches skills/. teach=True (or IDSDL_TEACH=1 in
+    the environment) adds the 9th WRITE BACK gate that grows the knowledge
+    base — use it when a scene is being built TO teach the library."""
+    teach = bool(teach) or os.environ.get("IDSDL_TEACH", "") == "1"
     flow_id = f"flow_{time.strftime('%m%d_%H%M%S')}_{uuid.uuid4().hex[:4]}"
     state = {"flow_id": flow_id, "prompt": prompt, "created": time.time(),
-             "current": 0, "step_started": time.time(),
+             "teach": teach, "current": 0, "step_started": time.time(),
              "history": [], "context": {}}
     _save(state)
     return _card(state)
@@ -324,7 +361,7 @@ def flow_start(prompt):
 
 def flow_status(flow_id):
     state = _load(flow_id)
-    done = [f"  [x] {STEPS[h['step_index']]['title']}"
+    done = [f"  [x] {_title(state, h['step_index'])}"
             + (f"  (OVERRIDDEN: {h['override']})" if h.get("override") else "")
             for h in state["history"]]
     return ("\n".join(done) + ("\n" if done else "")) + "\n" + _card(state)
@@ -332,9 +369,9 @@ def flow_status(flow_id):
 
 def flow_advance(flow_id, evidence):
     state = _load(flow_id)
-    if state["current"] >= len(STEPS):
+    if state["current"] >= len(_steps(state)):
         return _card(state)
-    step = STEPS[state["current"]]
+    step = _steps(state)[state["current"]]
     if isinstance(evidence, str):
         try:
             evidence = json.loads(evidence)
@@ -358,11 +395,11 @@ def flow_advance(flow_id, evidence):
 
 def flow_override(flow_id, reason):
     state = _load(flow_id)
-    if state["current"] >= len(STEPS):
+    if state["current"] >= len(_steps(state)):
         return _card(state)
     if not (reason or "").strip():
         return "an override needs a real reason — it is recorded in provenance."
-    step = STEPS[state["current"]]
+    step = _steps(state)[state["current"]]
     state["history"].append({"step_index": state["current"], "step": step["key"],
                              "evidence": None, "override": reason,
                              "ts": time.time()})
@@ -374,8 +411,10 @@ def flow_override(flow_id, reason):
 
 def howto():
     """Orientation card for a fresh agent connecting to the server."""
-    steps = "\n".join(f"  {s['title']}" for s in STEPS)
-    return f"""IDSDL — text -> 3D interior scene, as a guided 9-gate flow.
+    inference = STEPS[:-1]
+    steps = "\n".join(f"  {n + 1}/{len(inference)} {s['title']}"
+                      for n, s in enumerate(inference))
+    return f"""InteriorAgent — text -> 3D interior scene, as a guided flow.
 
 This server wraps a Python DSL (IDSDL) that compiles declarative scene programs
 into solved, rendered Blender rooms. The best scenes come from a specific
@@ -383,8 +422,14 @@ recipe distilled from ~26 worked examples: plan first, retrieve tacit knowledge,
 eyeball assets BEFORE placements, then build in verified phases — never write
 the whole scene and hope.
 
-START: flow_start("<your scene prompt>") and follow the cards. The nine gates:
+START: flow_start("<your scene prompt>") and follow the cards. The gates:
 {steps}
+
+TWO MODES. The default is INFERENCE: the flow ends at the judged .blend and the
+knowledge library (skills/) is READ-ONLY — do not add or edit files there.
+TEACH mode — flow_start(prompt, teach=true), or IDSDL_TEACH=1 — appends a final
+WRITE BACK gate ({len(STEPS)}/{len(STEPS)}) that distills the scene into skills/
+to grow the library. Only use it when that is the explicit goal of the run.
 
 Each gate validates your evidence mechanically (files, lint, fresh phase-N
 reports, no unresolved warnings) before revealing the next card. Deviate

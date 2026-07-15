@@ -1,3 +1,13 @@
+---
+id: example:bar
+kind: example
+family: service-spine-counter
+category: "cocktail bar"
+pattern: "Focused cluster — a straight bar-line + back-bar;"
+---
+> **Digest (from the pattern index):** Focused cluster — a straight bar-line + back-bar; compact-group lighting
+
+
 # Bar / cocktail lounge — worked example
 
 Status: **built & essentially VLM-clean** ("Moody Luxe Bar & Lounge", `scenes/work/bar_lounge.py`,
