@@ -9,13 +9,19 @@ all rotary phones/desk clocks) — the desk carries an open laptop plus the CLAS
 ROTARY PHONE as the vintage cue instead. A cork pinboard also does not exist (0.47, all
 classroom chalk/whiteboards) — dropped rather than forced; framed prints carry the walls.
 
-Layout:
-- BACK third : the desk WorkstationGroup at `place_on_back(..., facing="back")` — NOT a
-               wall-flush placement, so there is real floor behind the desk for the chair
-               (lobby.md's reception rule), with the window centred above/behind it (phase 3).
+Layout (the desk and the daybed live in OPPOSITE regions so the daybed keeps circulation on
+every side — an earlier build put the desk at back-CENTRE and the chair crowded the daybed at
+the shared back-left corner; the two were in the same region and there was no floor around the
+bed. The desk moved to the back-RIGHT third, the shelf off the right wall, and now the whole
+left/centre of the room is open around the daybed):
+- BACK-RIGHT third : the desk WorkstationGroup at `place_on_back_right(..., facing="back")` —
+               NOT a wall-flush placement, so there is real floor behind the desk for the chair
+               (lobby.md's reception rule), with the window in the RIGHT slot above/behind it.
 - LEFT wall  : the daybed/chaise, centre slot (it is LOW, so the wall-centre camera sees
-               over it — the tall-at-centre rule only bites above ~1.4 m).
-- RIGHT wall : the low bookshelf in the LEFT slot (off-centre out of habit; camera-safe).
+               over it — the tall-at-centre rule only bites above ~1.4 m). Nothing shares its
+               region now; the desk is diagonally across the room.
+- BACK wall  : the low bookshelf in the LEFT slot (wall-flush, clear of the back-right desk).
+- RIGHT wall : left open (framed art only) — this is the daybed's circulation side.
 - FRONT      : door right; tall plant in the front-left corner.
 
 Phase-gated: phase 1 = all floor mass + door; phase 2 = desktop items, rug, plants, shelf-top
@@ -76,13 +82,14 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.1) as room:
                      wall_texture="warm cream painted plaster wall")
 
     # Phase 1 — all floor mass + door.
-    # Desk NEAR the window wall but on a floor third (not wall-flush): the chair needs floor
+    # Desk in the BACK-RIGHT third on a floor third (not wall-flush): the chair needs floor
     # behind the desk. facing="back" puts the operator (+Z) side to the back wall -> the writer
-    # sits under the window facing the room.
-    room.place_on_back(station, facing="back")
+    # sits under the window facing the room. Back-right (not back-centre) keeps it clear of the
+    # left-wall daybed so the bed has circulation on every side.
+    room.place_on_back_right(station, facing="back")
     room.place_on_left_wall_center(scene.AddAsset("a modern beige chaise lounge daybed with cushions",
                                                   asset_id=DAYBED), facing="right")
-    room.place_on_right_wall_left(shelf)
+    room.place_on_back_wall_left(shelf)
     room.place_door("front_wall", position="right")
 
     if PHASE >= 2:
@@ -90,8 +97,8 @@ with scene.RoomGroup(modulate_scale=0.9, randomness=0.1) as room:
         room.place_on_front_left_corner(scene.AddAsset("a tall leafy potted plant in a woven basket"))
 
     if PHASE >= 3:
-        # the window the desk sits under — light curtain, standard pane (modest void)
-        room.place_window_standard("back_wall", position="center",
+        # the window the desk sits under — RIGHT slot, above/behind the back-right desk
+        room.place_window_standard("back_wall", position="right",
                                    curtain="sheer white linen curtains")
         # framed prints instead of the nonexistent pinboard; one over the daybed (low run ->
         # headroom is free, laundromat's art-over-a-low-run), one on the right wall

@@ -28,6 +28,14 @@ DEFAULT_CLEARANCES = [
     # display fixtures people browse
     (("display case", "display cabinet", "vitrine", "showcase", "glass case",
       "pastry display", "deli case", "jewelry case"), 0.75, "front"),
+    # surround-clearance furniture: staff/players circulate on every side. Promoted
+    # from the constraint playbook §2 (frozen 2026-07-14, Kunal). Clean keyword
+    # signatures, and the space is wanted wherever the object appears.
+    (("operating table", "operating room table", "surgical table",
+      "examination table", "exam table", "treatment table"), 1.2, "all"),
+    (("pool table", "billiards table", "billiard table", "snooker table"), 1.3, "all"),
+    (("foosball", "poker table", "card table", "air hockey", "air-hockey",
+      "ping pong table", "ping-pong table", "table tennis"), 0.5, "all"),
     # storage with doors/drawers: swing + access
     (("wardrobe", "armoire", "closet cabinet", "cabinet", "dresser", "chest of drawers",
       "sideboard", "credenza", "bookshelf", "bookcase", "shelving", "shelf unit",

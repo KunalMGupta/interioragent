@@ -329,7 +329,7 @@ is deterministic (no solve), so keep its `randomness` modest. Good defaults: sea
       room.add_visibility(sofa, tv)                        # keep the sofa→tv sightline clear
   ```
   Methods (each registers a hook; returns self):
-  - `add_clearance(obj, distance=0.5, dir="front"|"sides"|"all", omit_objs=None)` → `ClearanceConstraint`
+  - `add_clearance(obj, distance=0.5, dir="front"|"sides"|"all"|"front_back"|"front_sides", omit_objs=None)` → `ClearanceConstraint` (`front_back` = front+behind, e.g. a treadmill mount/dismount; `front_sides` = front+left+right, e.g. a reception desk queue+walk-around)
   - `add_access(obj, target, min_dist=0.1, max_dist=0.15, dir="front"|"sides")` → `AccessConstraint`
   - `add_visibility(source, target)` → `VisibilityConstraint`
   - low-level escape hatch: `add_constraint_hook(lambda g: g.SomeConstraint(...))`

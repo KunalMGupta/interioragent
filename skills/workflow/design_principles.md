@@ -103,6 +103,28 @@ room.place_on_left(booth_1, facing="right")   # WRONG — floats a bench's back 
 Same family as bakery's window-bar ("a front SLOT drifts") and kindergarten's "a nook is a corner, not
 an island" — stated here as the general seating rule.
 
+## Two furniture groups belong in DIFFERENT regions of the room (Kunal, 2026-07-14)
+When a room holds more than one furniture group — a desk workstation AND a daybed, a seating
+cluster AND a dining nook — place each in a **distinct region** of the `RoomGroup`, not two
+that share a corner. Two groups aimed at the same region crowd each other and there is **no
+circulation** around either; the VLM loop is blind to it (`no rotation` / `no wall overlap`
+both pass — the pieces are legal, just cramped), and a human sees the choked room instantly.
+
+The trap in `st_writer_studio`: the desk sat at `place_on_back` (back-CENTRE) and the daybed at
+`place_on_left_wall_center` — both reached into the shared back-left corner, so the desk chair
+crowded the bed and the bed had floor on only two sides. The fix was purely spatial — send the
+groups to opposite regions:
+```python
+room.place_on_back_right(station, facing="back")     # desk -> back-RIGHT third
+room.place_on_left_wall_center(daybed, facing="right")  # bed  -> LEFT wall, a region away
+room.place_on_back_wall_left(shelf)                  # shelf off the right wall so it, too, clears
+```
+Prefer the **corner / third** verbs (`place_on_back_right`, `place_on_front_left`, `…_corner`)
+to spread groups diagonally; reserve wall-CENTRE for a single group or a wall-flush run. A room
+that leaves open floor *between* its zones reads calm; two zones fighting for one region reads
+broken even when every constraint is satisfied. Worked example:
+[../examples/residential_variations.md](../examples/residential_variations.md).
+
 ## Related
 - Grouping mechanics, `place_on_*`, `face`, and the `place_on_top` behavior these rely on:
   [../dsl_reference.md](../dsl_reference.md).

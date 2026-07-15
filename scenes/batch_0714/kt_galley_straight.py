@@ -60,6 +60,9 @@ scene.prefetch_assets([
     "a light wood classic dining chair",
     "a tall leafy potted plant in a woven basket",
     "a framed botanical print in a light wood frame",
+    # rework 2026-07-14 (Kunal: too sparse / uninteresting): CAMERA-SAFE fill only — a full 4-seat
+    # nook on a rug, a pendant, and a wall-art pair (a console blinds the camera; see kitchen_l).
+    "a flat woven jute area rug in warm cream tones",
 ])
 
 # --- the SET: scaled BY HEIGHT (2.2 m — see the camera-bound rationale in the docstring) --------
@@ -90,13 +93,22 @@ with scene.KitchenIslandGroup() as kz:
 # WALL_FURNITURE_OPS) and the exploration floor drifts unpinned heroes off their wall.
 kz.is_static = True
 
-# --- the DINING zone: table + 2 chairs at the front (the open-plan second zone) -----------------
+# --- the DINING zone: table + 4 chairs at the front-left (the open-plan second zone) ------------
+# Rework 2026-07-14: a FULL four-seat nook (was two) grounded on a jute rug (phase 2) with a brass
+# pendant over it (phase 3, density=0 -> exactly one) — the two-chair table read thin in the open
+# plan. These are CAMERA-SAFE fills (a rug claims no slot, a pendant is an AABB-skipped light). A
+# first attempt ALSO put a serving console on the front wall; kitchen_l proved that blinds the
+# back camera (a console is FLOOR MASS in a set-piece kitchen — kitchen.md's bound), so it's out.
 with scene.AroundGroup(sparsity=0.05, jitter=0.15) as dining:
     dining.set_anchor(scene.AddAsset("a light oak rectangular dining table", asset_id=TABLE,
-                                     width=1.2))
-    chairs = 2 * scene.AddAsset("a light wood classic dining chair", asset_id=CHAIR)
-    # one chair per long side, uniform straight facing — never per-chair face()
-    dining.place_rectilinear(longer_side1=chairs[:1], longer_side2=chairs[1:])
+                                     width=1.4))
+    chairs = 4 * scene.AddAsset("a light wood classic dining chair", asset_id=CHAIR)
+    # one chair per long side... now two per long side, uniform straight facing — never per-chair
+    dining.place_rectilinear(longer_side1=chairs[:2], longer_side2=chairs[2:])
+    if PHASE >= 2:
+        dining.place_rug("a flat woven jute area rug in warm cream tones", size=0.9)
+    if PHASE >= 3:
+        dining.add_lighting("a warm brass dome pendant light", density=0.0)
 
 plant = scene.AddAsset("a tall leafy potted plant in a woven basket")
 
@@ -108,16 +120,21 @@ with scene.RoomGroup(modulate_scale=1.0, randomness=0.0) as room:
     # THE ALIGNMENT: one corner op moves the whole block flush to both walls. facing MANDATORY.
     room.place_on_back_right_corner(kz, facing="front")
 
-    room.place_on_front(dining, facing="back")
+    room.place_on_front_left(dining, facing="back")
     room.place_on_back_left_corner(plant, facing="front")   # fills the bare wall beside the run
     room.place_door("front_wall", position="right")
 
-    # PHASE 2: deliberately EMPTY — nothing on the set, nothing on the island (kitchen.md rule 2).
+    # PHASE 2: nothing on the SET or the island (kitchen.md rule 2) — but the nook RUG is dressed
+    # here; that rule guards the fitted set, not the whole room.
 
     if PHASE >= 3:
         # window OPPOSITE the set's corner: back-right corner -> LEFT wall
         room.place_window_standard("left_wall", position="center",
                                    curtain="white linen roman shade")
+        # wall art breaks up the bare white walls WITHOUT adding floor mass (camera-safe interest):
+        # a botanical PAIR on the front wall (centre + left) instead of one lone print
+        room.place_on_wall_front_center(
+            scene.AddAsset("a framed botanical print in a light wood frame"))
         room.place_on_wall_front_left(
             scene.AddAsset("a framed botanical print in a light wood frame"))
         # flush room lighting: density 0.015 with the fixture ENLARGED so count stays low —

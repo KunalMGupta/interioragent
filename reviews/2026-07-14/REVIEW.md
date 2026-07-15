@@ -16,7 +16,7 @@ acts on it, and folds the durable findings into `skills/examples/`.
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 2. Compact powder room  <!-- scene:ba_powder_compact -->
 
@@ -29,7 +29,7 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 3. Spa master bathroom (flagship)  <!-- scene:bathroom_spa -->
 
@@ -42,7 +42,7 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 4. Bedroom (flagship)  <!-- scene:bedroom -->
 
@@ -55,7 +55,7 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 5. Cozy guest bedroom  <!-- scene:br_guest_cozy -->
 
@@ -68,7 +68,7 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 6. Teen bedroom with study corner  <!-- scene:br_teen_study -->
 
@@ -81,7 +81,7 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 7. Dining room (flagship)  <!-- scene:dining_room -->
 
@@ -94,7 +94,7 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 8. Sunny breakfast nook  <!-- scene:dr_breakfast_nook -->
 
@@ -107,7 +107,7 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 9. Farmhouse dining room  <!-- scene:dr_farmhouse -->
 
@@ -120,20 +120,20 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 10. L-kitchen with pocket island (NEW today)  <!-- scene:kitchen_l_pocket -->
 
 - **Category:** kitchen
 - **Program:** `skills/examples/kitchen_l_v1.py`
-- **Build verdict:** converged clean 2026-07-14 (build 5; camera bound documented)
+- **Build verdict:** REWORKED 2026-07-14 (Kunal: too sparse + plant behind dining). Converged, all four views clean (back-view luma 219). Filled CAMERA-SAFE only — dining rug + pendant + a botanical wall-art pair, plant moved to the front-left corner. NB: a first attempt added a serving CONSOLE and it blinded the back camera (luma 0.2) — a console is floor mass and a set-piece kitchen can't take a new floor slot; reverted (lesson in residential_variations.md L2). Residual rescale 0.9 vote held per the camera bound.
 - **Brief:** Warm-grey L set, island floating in the concave middle (KitchenIslandGroup pocket mode), 2 stools, corner fridge, dining nook.
 
 ![strip](kitchen_l_pocket/strip.png)
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Rework** (Kunal, 2026-07-14). Too sparse. And the floor plant is placed just *behind* the dining area, which looks odd. Needs more content / visual interest, and the plant repositioned. Same sparseness problem as `kt_galley_straight`.
 
 ## 11. Modular-run kitchen (recipe B)  <!-- scene:kitchen_modular -->
 
@@ -146,7 +146,7 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 12. U-kitchen with attached peninsula (NEW today)  <!-- scene:kitchen_u_peninsula -->
 
@@ -159,33 +159,33 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 13. Straight-set galley kitchen (front island)  <!-- scene:kt_galley_straight -->
 
 - **Category:** kitchen
 - **Program:** `scenes/batch_0714/kt_galley_straight.py`
-- **Build verdict:** CONVERGED: no rotation / no wall overlap, no lints; rescale 0.88 held per the interior-camera bound. KitchenIslandGroup 'front' mode verified in production (island parallel to the run, stools seated).
+- **Build verdict:** REWORKED 2026-07-14 (Kunal: too sparse / uninteresting). Converged, all four views clean. Filled CAMERA-SAFE — dining nook 2→4 seats on a jute rug + pendant + a botanical wall-art pair (a console was tried and dropped; it blinds the camera — see kitchen_l / residential_variations.md L2). KitchenIslandGroup 'front' mode still verified. Residual rescale 0.8 vote held per the camera bound.
 - **Brief:** Straight 8/11 fitted set (fridge included) at 2.2 m, bare-top island + riding pendant parallel in front (KitchenIslandGroup front mode), 2 stools, 2-top dining, corner-pinned.
 
 ![strip](kt_galley_straight/strip.png)
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Rework** (Kunal, 2026-07-14). Too sparse and honestly a bit uninteresting. Needs more content / visual interest. Same problem as `kitchen_l_pocket`.
 
 ## 14. Cozy living room (flagship)  <!-- scene:living_room_cozy -->
 
 - **Category:** living room
 - **Program:** `scenes/work/living_room_cozy.py`
-- **Build verdict:** converged clean (see skills/examples/living_room_cozy.md)
+- **Build verdict:** REWORKED 2026-07-14 (Kunal: cavernous, not cozy). Rebuilt at `modulate_scale` 1.1→0.85 with the seating rug 0.75→0.9 so the sectional + nook read as one cohesive conversation zone. Converged (no wall overlap). The VLM voted 'rescale 1.35' (enlarge) — DELIBERATELY REFUSED: the enlarge vote optimizes for uncluttered, and cozy is the opposite brief (residential_variations.md L4).
 - **Brief:** Warm cozy living room: sofa cluster + coffee table, TV wall, layered lamps, rug.
 
 ![strip](living_room_cozy/strip.png)
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Rework** (Kunal, 2026-07-14). Agreed — reads cavernous, not cozy. Needs to be more cohesive to appear cozy: tighten the seating into one grouping and/or shrink the room so the furniture isn't marooned around an empty floor.
 
 ## 15. Japandi minimalist living room  <!-- scene:lr_japandi -->
 
@@ -198,7 +198,7 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 16. Mid-century entertaining lounge  <!-- scene:lr_midcentury -->
 
@@ -211,7 +211,7 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 17. Home office / study  <!-- scene:st_home_office -->
 
@@ -224,7 +224,7 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 18. Library-style study  <!-- scene:st_library_study -->
 
@@ -237,17 +237,17 @@ _(no feedback yet)_
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Approved** — looks good, no changes. (Kunal, 2026-07-14)
 
 ## 19. Writer's studio  <!-- scene:st_writer_studio -->
 
 - **Category:** study room
 - **Program:** `scenes/batch_0714/st_writer_studio.py`
-- **Build verdict:** CONVERGED. Build 1 fully clean; build 2 (fixture shrink only) flip-flopped a 'rotate daybed to face desk' vote + rescale 0.9 — identical program, opposite verdicts = VLM noise class; declined on the render (wall daybed correctly faces the room). Ceiling-disc fixture fixed at 0.4.
+- **Build verdict:** CONVERGED after the 2026-07-14 region-separation fix (desk → back-right third, shelf → back wall, window → back-right, so the left-wall daybed keeps circulation): no rotation, no wall overlap. VLM advised 'rescale room by 0.65' (reads a touch empty now the two groups sit apart) — NOT applied; tightening would trade back against the circulation the fix restored. (Prior build history: build-1 clean; build-2 fixture shrink flip-flopped a 'rotate daybed' vote = VLM noise; ceiling disc fixed at 0.4.)
 - **Brief:** Flat-desk WorkstationGroup near the window, beige daybed, low stocked bookshelf, plants, framed prints, sheer curtains; laptop + rotary phone carry the vintage cue (no typewriter mesh exists).
 
 ![strip](st_writer_studio/strip.png)
 
 #### Feedback (Kunal — write anything below this line)
 
-_(no feedback yet)_
+**Fixed** (Kunal flagged, 2026-07-14). The desk + chair sat too close to the daybed — no circulation around the bed. Root cause: the desk WorkstationGroup and the daybed occupied the SAME region of the RoomGroup (desk at back-centre, daybed at left-wall-centre → they crowded the shared back-left corner). Fix: desk moved to the back-RIGHT third (window with it), bookshelf moved off the right wall to the back wall, so the daybed now has open floor on every side. Rebuilt — see updated strip.

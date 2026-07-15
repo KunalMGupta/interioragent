@@ -58,6 +58,9 @@ scene.prefetch_assets([
     "a framed botanical print in a light wood frame",
     "a light oak rectangular dining table",
     "a light wood classic dining chair",
+    # rework 2026-07-14 (Kunal: too sparse + lonely plant behind the dining): CAMERA-SAFE fill
+    # only — a dining rug + pendant + a wall-art pair; the plant moves to the front-left corner.
+    "a flat woven jute area rug in warm cream tones",
 ])
 
 # --- the SET: scaled BY HEIGHT — and the HEIGHT is the CAMERA lever, sized 2.1 m ----------------
@@ -96,12 +99,26 @@ kz.is_static = True   # corner ops are never re-pinned; pin the block flush (kit
 fridge = scene.AddAsset("a tall stainless steel side-by-side refrigerator", asset_id=FRIDGE)
 
 # --- the DINING nook: front-left, the second open-plan zone -------------------------------------
+# Rework 2026-07-14: a jute rug grounds the nook (phase 2) and a brass pendant hangs over it
+# (phase 3, density=0 -> exactly one) — the open-plan floor read too bare with only a bare table.
 with scene.AroundGroup(sparsity=0.05, jitter=0.15) as dining:
     table = scene.AddAsset("a light oak rectangular dining table", asset_id=TABLE, width=1.3)
     dining.set_anchor(table)
     chairs = 4 * scene.AddAsset("a light wood classic dining chair", asset_id=CHAIR)
     dining.place_rectilinear(longer_side1=chairs[:2], longer_side2=chairs[2:])
+    if PHASE >= 2:
+        dining.place_rug("a flat woven jute area rug in warm cream tones", size=0.9)
+    if PHASE >= 3:
+        dining.add_lighting("a warm brass dome pendant light", density=0.0)
 
+# --- the corner plant (greenery, moved to the front-LEFT corner) --------------------------------
+# Rework 2026-07-14 (Kunal: too sparse + this plant floated oddly BEHIND the dining). FIRST attempt
+# added a serving-console vignette on the front wall to fill the floor — it BLINDED the back-wall-
+# centre camera (the back view rendered solid black): a console is FLOOR MASS, and adding a floor
+# slot to a set-piece kitchen re-triggers the camera bound the whole scene is built around
+# (kitchen.md). Lesson: a camera-bound kitchen is furnished with NON-FLOOR elements only — the nook
+# rug, the pendant, and wall art (below) — never a new floor piece. The plant just moves to the
+# front-left CORNER (corners are camera-safe by construction) so it reads intentional, not stranded.
 plant = scene.AddAsset("a tall leafy potted plant in a woven basket")
 
 # modulate_scale=0.95 — ONE decisive application against the 0.82 -> 0.7 vote train (signal:
@@ -123,13 +140,17 @@ with scene.RoomGroup(modulate_scale=0.95, randomness=0.0) as room:
 
     room.place_on_back_left_corner(fridge, facing="front")   # the cold zone, camera-safe corner
     room.place_on_front_left(dining, facing="back")
-    room.place_on_left(plant, facing="front")                # greenery under the window wall
+    room.place_on_front_left_corner(plant, facing="front")   # greenery, a camera-safe corner
     room.place_door("front_wall", position="right")
 
     if PHASE >= 3:
         room.place_window_standard("left_wall", position="center",
                                    curtain="white linen roman shade")
+        # wall art breaks up the bare sage walls WITHOUT adding floor mass (camera-safe interest):
+        # a botanical PAIR on the front wall (centre + left, over the nook) instead of one lone print
         room.place_on_wall_front_center(
+            scene.AddAsset("a framed botanical print in a light wood frame"))
+        room.place_on_wall_front_left(
             scene.AddAsset("a framed botanical print in a light wood frame"))
         # Builds 2-3 lint: 38 then 11 fixtures — a STARFIELD. Same call as v3 (0.4 scale, 0.01),
         # but the picker (seed 7) chose a TINY disc and max_lights = area/footprint exploded.
