@@ -256,7 +256,79 @@ def ingest_paths(glbs, category=None, manifest=None, manifest_path=None, workers
         _add_to_category(category, [mid for mid, _ in added])
     R._NPZ_CACHE.clear(); R._JSON_CACHE.clear()   # so a same-process reload sees new assets
     print(f"[ingest] added {len(added)} asset(s); library now has {len(models)} custom asset(s).")
+
+    # The bundled library redistributes third-party works — CC-BY makes attribution a licence
+    # CONDITION, not a courtesy. Every ingest must therefore carry provenance (source, author,
+    # url, license) and keep ATTRIBUTIONS.md current. The shop pipeline supplies provenance via
+    # its manifest; a raw-zip ingest that can't should say where the meshes came from anyway.
+    no_prov = [mid for mid, entry in added if not entry.get("provenance")]
+    if no_prov:
+        print(f"[ingest] WARNING: {len(no_prov)} asset(s) ingested WITHOUT provenance "
+              f"(author/license unknown): {', '.join(no_prov[:5])}{'…' if len(no_prov) > 5 else ''}\n"
+              "          Pass --manifest with a per-file {'provenance': {source, author, url, "
+              "license}} block, or recover it later with tools/attribution_recover.py.")
+    try:
+        write_attributions()
+    except Exception as e:                       # the doc must never break an ingest
+        print(f"[ingest] could not regenerate ATTRIBUTIONS.md: {e}")
     return added
+
+
+def write_attributions(out_path=None):
+    """Regenerate ATTRIBUTIONS.md (repo root) from custom.json provenance blocks.
+
+    Grouped by license; Meshy generations are their own section (AI-generated, no third-party
+    author); entries with no provenance are listed as pending so the gap stays visible until
+    tools/attribution_recover.py (or a human) settles them."""
+    meta = _load_meta()
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    out_path = out_path or os.path.join(root, "ATTRIBUTIONS.md")
+
+    by_license, generated, pending = {}, [], []
+    for mid, entry in sorted(meta.items()):
+        prov = entry.get("provenance") or {}
+        if prov.get("source") == "meshy":
+            generated.append((mid, entry, prov))
+        elif prov.get("author") or prov.get("url"):
+            by_license.setdefault(prov.get("license") or "Unspecified", []).append((mid, entry, prov))
+        else:
+            pending.append((mid, entry))
+
+    lines = [
+        "# Asset attributions",
+        "",
+        "The custom asset library (`IDSDL/datasets/custom/`) bundles 3D models ingested from",
+        "external sources. This file is GENERATED from the library's provenance records — do not",
+        "edit by hand; rerun `python -c \"from IDSDL.ingest import write_attributions; "
+        "write_attributions()\"` (every ingest also refreshes it).",
+        "",
+    ]
+    for lic in sorted(by_license):
+        lines += [f"## {lic}", ""]
+        for mid, entry, prov in by_license[lic]:
+            name = prov.get("name") or entry.get("description", "")[:60]
+            author = prov.get("author", "unknown author")
+            url = prov.get("url", "")
+            lines.append(f"- **{name}** by {author} — {url}  (`{mid}`)")
+        lines.append("")
+    if generated:
+        lines += ["## AI-generated (Meshy)", "",
+                  "Generated with [Meshy](https://www.meshy.ai) from a text prompt; no third-party author.", ""]
+        for mid, entry, prov in generated:
+            lines.append(f"- {prov.get('name') or entry.get('description', '')[:60]}  (`{mid}`)")
+        lines.append("")
+    if pending:
+        lines += ["## Provenance pending", "",
+                  "Ingested before provenance was recorded; identification in progress "
+                  "(tools/attribution_recover.py).", ""]
+        for mid, entry in pending:
+            lines.append(f"- `{mid}` — {entry.get('description', '')[:80]}")
+        lines.append("")
+    with open(out_path, "w") as f:
+        f.write("\n".join(lines))
+    n = sum(len(v) for v in by_license.values())
+    print(f"[ingest] ATTRIBUTIONS.md: {n} attributed, {len(generated)} generated, {len(pending)} pending")
+    return out_path
 
 
 def ingest_zip(zip_path, category=None, manifest_path=None, workers=4):
@@ -271,6 +343,7 @@ def ingest_zip(zip_path, category=None, manifest_path=None, workers=4):
 
 
 def _add_to_category(category, ids):
+    category = os.path.basename(category)  # pool name, never a path
     path = os.path.join(os.path.dirname(R.__file__), "assets",
                         category if category.endswith(".json") else category + ".json")
     pool = []
