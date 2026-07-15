@@ -336,9 +336,11 @@ launcher by absolute path — it anchors itself to the repo, so no working direc
 ```
 
 Startup takes ~10–20 s (the embeddings warm once); a missing dataset or key is reported on
-stderr with the fix. Note the long tools (`run_scene`, `shop_run`, `plan`) run synchronously
-for minutes — raise your client's tool timeout, or use the `generate_scene_start/status/result`
-job tools for the full pipeline.
+stderr with the fix. The long tools (`run_scene`, `shop_run`, `plan`, `ingest_glbs`) take
+minutes but run off the event loop, so the server stays responsive throughout — pings are
+answered and status/browse tools work mid-build (heavy tools themselves run one at a time).
+Give your client a generous per-tool timeout for those calls, or use the
+`generate_scene_start/status/result` job tools for the full pipeline.
 
 Tools (`mcp__idsdl__*`): **retrieve / inspect** (route+resolve a query → candidate contact sheet
 inline), **browse** (montage of dataset matches), **reselect / show / pin** (session-memory picks
