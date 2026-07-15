@@ -5,6 +5,8 @@ matplotlib
 trimesh
 tqdm
 pillow
+requests
+langchain-openai
 sceneprogllm
 sceneprogexec
 

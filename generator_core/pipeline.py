@@ -158,7 +158,7 @@ class SceneGenerator:
 
     def _plan(self, prompt: str, out: Path) -> dict:
         from planner_core import InteriorPlanner
-        planner = InteriorPlanner(retrieval_top_k=self.plan_top_k)
+        planner = InteriorPlanner(retrieval_top_k=self.plan_top_k, model_name=self.model_name)
         result = planner(prompt)
         plan_png = out / "plan.png"
         result.save(str(plan_png))

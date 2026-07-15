@@ -7,6 +7,7 @@ Usage:
     python tests.py all        # run all tests
 """
 
+import os
 import sys
 import traceback
 import numpy as np
@@ -15,6 +16,9 @@ from IDSDL.scene import SceneProgRoom
 from IDSDL.groups import BasicRoomGroup
 
 SEED = 42
+
+# Every test exports to results/<name>.blend; Blender errors out if the dir is absent.
+os.makedirs("results", exist_ok=True)
 
 
 # ---------------------------------------------------------------------------

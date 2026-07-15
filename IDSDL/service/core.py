@@ -283,6 +283,7 @@ def pool_add(category, ids, create=False):
     requires it not already exist. Returns ``{category, pool_path, n_total}``."""
     import IDSDL.datasets.retrievers as R
     from IDSDL.ingest import _add_to_category
+    category = os.path.basename(category)  # pool name, never a path
     path = os.path.join(os.path.dirname(R.__file__), "assets",
                         category if category.endswith(".json") else category + ".json")
     if create and os.path.exists(path):

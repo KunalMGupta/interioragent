@@ -91,10 +91,16 @@ class InteriorPlanner:
         skills_path: str | Path = _BASE / "assets" / "skills.json",
         cache_path: str | Path = _BASE / "assets" / "rag_cache.npz",
         retrieval_top_k: int = 3,
+        model_name: str | None = None,
     ):
         self._top_k = retrieval_top_k
         self._rag = SkillsRAG(skills_path=skills_path, cache_path=cache_path)
-        self._skill_composer = LLM(system_desc=_SKILL_COMPOSER_SYSTEM, response_format="text")
+        # model_name steers the skill-composer (text) LLM only; the dreamer is an image
+        # model and picks its own backend from response_format="image".
+        composer_kwargs = dict(system_desc=_SKILL_COMPOSER_SYSTEM, response_format="text")
+        if model_name:
+            composer_kwargs["model_name"] = model_name
+        self._skill_composer = LLM(**composer_kwargs)
         self._dreamer = LLM(response_format="image", response_params={"background": "opaque"})
         self._state: DesignResult | None = None
         self._last_prompt: str | None = None

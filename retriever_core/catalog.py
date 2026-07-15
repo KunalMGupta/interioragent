@@ -53,7 +53,15 @@ def _first_paragraph(text: str) -> str:
 
 
 def _resolve_program(name: str) -> str | None:
-    candidates = [f"scenes/work/{name}.py"]
+    # The polished, phase-gated program is skills/examples/<name>_v<N>.py — highest N wins
+    # (see skills/examples/README.md: "the .py is the thing you copy"). The scenes/ paths are
+    # the older working drafts, kept as fallbacks for names that never got a _v program.
+    def _ver(p):
+        m = re.search(r"_v(\d+)\.py$", p.name)
+        return int(m.group(1)) if m else 0
+    versioned = sorted(ROOT.glob(f"skills/examples/{name}_v*.py"), key=_ver, reverse=True)
+    candidates = [str(p.relative_to(ROOT)) for p in versioned]
+    candidates += [f"scenes/work/{name}.py"]
     candidates += PROGRAM_ALIASES.get(name, [])
     candidates += [f"scenes/{name}.py"]
     for rel in candidates:

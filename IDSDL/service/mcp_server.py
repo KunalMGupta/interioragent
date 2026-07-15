@@ -550,8 +550,17 @@ def main():
     if not os.environ.get("OPENAI_API_KEY"):
         print("[idsdl-mcp] FATAL: OPENAI_API_KEY not set; retrieval/LLM calls will fail.",
               file=sys.stderr)
-    with _quiet():
-        info = core.warm()
+    try:
+        with _quiet():
+            info = core.warm()
+    except FileNotFoundError as e:
+        # The most common fresh-clone failure: datasets.zip was never installed. Say so
+        # plainly on stderr — the MCP client only shows "server failed" otherwise.
+        print(f"[idsdl-mcp] FATAL: {e}", file=sys.stderr)
+        print("[idsdl-mcp] The asset datasets are not installed. Download datasets.zip and "
+              "extract it into IDSDL/datasets/ (see README: Installation), then reconnect.",
+              file=sys.stderr)
+        sys.exit(1)
     print(f"[idsdl-mcp] warm: {info['models']} models loaded; serving stdio.", file=sys.stderr)
     mcp.run()
 

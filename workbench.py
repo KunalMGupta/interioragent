@@ -540,12 +540,6 @@ def cmd_candidates(category, topk=10, out=None):
     return 0
 
 
-SCRATCH_BROWSE = os.path.join(
-    os.environ.get("WORKBENCH_OUT",
-                   "/tmp/claude-0/-work/747d828f-5d53-4053-8866-536f23c7a768/scratchpad"),
-    "browse")
-
-
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="workbench")
     sub = ap.add_subparsers(dest="cmd", required=True)
