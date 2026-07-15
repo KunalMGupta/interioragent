@@ -1,7 +1,7 @@
 # Hospital patient room — worked example
 
 Status: **built & VLM-clean** ("Bed-Centered Healing Inpatient Room",
-`scenes/work/hospital_room_v1.py`, seed=42). Final compile: `no rotation / no wall
+`skills/examples/hospital_room_v1.py`, seed=42). Final compile: `no rotation / no wall
 overlap`, room vote decayed 0.8→0.85→0.94→0.95 (declined ≈ converged) at
 `modulate_scale=0.85`. Built through the guided flow (flow_0712_170142_dbf1),
 entirely via the MCP tools (post-`reload_credentials`).

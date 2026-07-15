@@ -1,6 +1,6 @@
 # Home laundry room — worked example ("Integrated Laundry Command Center")
 
-Status: **built & VLM-clean** (`scenes/work/laundry_room_v1.py`, seed=17; converged copy
+Status: **built & VLM-clean** (`skills/examples/laundry_room_v1.py`, seed=17; converged copy
 beside this file as `laundry_room_v1.py`). Final full build: `no rotation` / `no wall
 overlap` / zero lints at `modulate_scale=0.85`, `light_budget=180`. Built through the
 guided 9-gate flow (flow_0713_025459_0aa9): two phase-1 builds, three phase-2, three full.

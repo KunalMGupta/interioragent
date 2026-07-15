@@ -1,7 +1,7 @@
 # Operating room / surgical suite — worked example
 
 Status: **built & VLM-clean, v2 on an INGESTED surgical kit** ("Sterile Core with Service
-Walls", `scenes/work/operating_room_v1.py`, seed=34). Built through the guided flow
+Walls", `skills/examples/operating_room_v1.py`, seed=34). Built through the guided flow
 (flow_0712_220706_c003), entirely via the MCP tools (post-`reload_credentials`).
 
 **Read the "Ingesting the surgical kit" section below before ingesting ANY user-supplied

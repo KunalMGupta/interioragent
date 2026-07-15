@@ -1,6 +1,6 @@
 # Waiting room (clinic) — worked example
 
-Status: **built & converged** (`scenes/waiting_room_v1.py`, seed=11; 2× phase-1, 1× phase-2, 3× full).
+Status: **built & converged** (`skills/examples/waiting_room_v1.py`, seed=11; 2× phase-1, 1× phase-2, 3× full).
 Final compile: `no rotation`, `no wall overlap`, no `[Lint]`/WARNING lines; room size converged at
 `modulate_scale=0.95` (vote decayed 0.8 → 0.9 → 0.95 ≈ neutral). Built through the guided 9-gate
 flow (flow_0713_025644_6bc4). Supersedes the thin pre-workflow `scenes/waiting_room.py`.

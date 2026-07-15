@@ -1,7 +1,7 @@
 # Wine cellar — worked example ("Chandelier-Centered Vaulted Wine Cellar")
 
 Built end-to-end through the 9-gate flow from the planner target
-(`tmp/plan_A_wine_cellar__stone_brick_vault/plan.png`). Program: `scenes/work/wine_cellar_v1.py`
+(`tmp/plan_A_wine_cellar__stone_brick_vault/plan.png`). Program: `skills/examples/wine_cellar_v1.py`
 (seed=21), copied here as `wine_cellar_v1.py`. Layout is the **library corridor** skeleton, so read
 that one first — this file exists for the thing the library never had to solve: **a deliberately DIM
 room**. It is the reference for any moody brief (cellar, bar, cinema, speakeasy, nightclub).

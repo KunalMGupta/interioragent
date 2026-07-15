@@ -1,7 +1,7 @@
 # Fast food / burger joint — worked example
 
 Status: **built & VLM-clean** ("Backlit Menus, Fixed Booths, Bold Red-Yellow Identity",
-`scenes/work/fast_food_v1.py`, seed=47). Converged full build: `no rescale` / `no rotation` /
+`skills/examples/fast_food_v1.py`, seed=47). Converged full build: `no rescale` / `no rotation` /
 `no wall overlap`, no `[Lint]` lines, at `modulate_scale=0.85`. Built through the guided 9-gate
 flow (flow_0713_025725_afb6): one phase-1 layout iteration, one phase-2 pass, one full build,
 one vibe rebuild.

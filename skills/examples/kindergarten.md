@@ -1,6 +1,6 @@
 # Kindergarten — worked example
 
-Status: **built & VLM-clean** (`scenes/kindergarten_v1.py`, seed=11). Final compile returns
+Status: **built & VLM-clean** (`skills/examples/kindergarten_v1.py`, seed=11). Final compile returns
 `no rescale` / `no wall overlap`, zero `[Lint]` lines, and the single rotation vote is the
 documented `place_desk_chair` false positive (declined by eye). Supersedes the thin
 pre-workflow `scenes/kindergarten.py` (which shipped `place_window_picture` → a black void,

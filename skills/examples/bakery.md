@@ -1,7 +1,7 @@
 # Bakery — worked example
 
 Status: **built & VLM-clean** ("Glassfront Bakery with Brick Anchor and Blue Mullion
-Rhythm", `scenes/work/bakery_v1.py`, seed=12). Final compile: `no rotation / no wall
+Rhythm", `skills/examples/bakery_v1.py`, seed=12). Final compile: `no rotation / no wall
 overlap / rescale room by 0.98` (noise, declined) at `modulate_scale=0.78`. Built
 through the guided 9-gate flow (flow_0712_171017_e837), four phase-1 layout iterations
 + one full-build convergence pass + one user iteration (v1.1 below).

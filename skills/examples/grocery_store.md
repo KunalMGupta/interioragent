@@ -1,6 +1,6 @@
 # Grocery store / supermarket — worked example ("Produce-First Warm-Industrial Grocery")
 
-Status: **built & VLM-clean** (`scenes/work/grocery_store_v1.py`, seed=23, built through the guided
+Status: **built & VLM-clean** (`skills/examples/grocery_store_v1.py`, seed=23, built through the guided
 9-gate flow `flow_0713_025612_66b3`: 4 phase-1 layout builds + 1 phase-2 + 3 full). Final compile:
 **`no rotation` / `no wall overlap` / no `[Lint]`/WARNING lines**, at `modulate_scale=0.9`
 (**7.35 × 6.80 m = 50 m²**), with a residual `rescale room by 0.8` **declined by arithmetic** (below).

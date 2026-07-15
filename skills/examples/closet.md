@@ -51,7 +51,7 @@ frames. Same story for closet systems — so *mass what exists* rather than ship
   the aisles. Aspect ratio is a layout property — check it before falling in love with a preview.
 
 ## THE LAYOUT: keep both long-wall CENTRES low (the camera rule, derived not discovered)
-`renderer/utils.py::render_interior_walls` puts each camera on the room centreline at
+`IDSDL/renderer/utils.py::render_interior_walls` puts each camera on the room centreline at
 `eye = 0.55 x ceiling_height`, `inset = 0.92` — i.e. **`0.04 x room_dimension` in from the wall
 OPPOSITE the one it is looking at**. In a 4.6 m wide closet that is **~0.18 m**. A 0.58 m deep
 wardrobe standing at a wall's CENTRE therefore *contains* the camera that looks at the other wall,

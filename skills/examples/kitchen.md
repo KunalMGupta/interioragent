@@ -225,7 +225,7 @@ counter replaced by a `KitchenIslandGroup` peninsula ATTACHED at the U's longer 
 ISLAND rules" above). v3 full build 2026-07-14: `no rotation / no wall overlap`, no lints, the
 `rescale 0.9 → 0.95` train DECAYED toward neutral (held per render-wins-early; 0.92 × 0.95 would
 also breach the 0.90 camera floor below). v2 remains the reference for everything non-island:
-built & converged as `scenes/work/kitchen_set_v2.py` + `kitchen_set_v2.py`, seed=3,
+built & converged as `skills/examples/kitchen_set_v2.py` + `kitchen_set_v2.py`, seed=3,
 `no rotation / no wall overlap`, no lints, `modulate_scale=0.92`, room 5.9 × 6.7 × 3.0 m.
 Set = `future/3c2bf09e` (10/11 comps, navy U).
 
@@ -274,7 +274,7 @@ The single most important thing on this page after "use the set".
 `RoomGroup` auto-sizes a shell that merely **fits** its furniture. A fitted set is a
 **2.85 × 3.00 × 2.40 m block** — so the auto-sized room has the set's wings touching both side
 walls and *zero* circulation. And the interior cameras sit **on the room centreline, at
-0.55 × ceiling ≈ 1.65 m, just inside each wall** (`renderer/utils.py: eye = fz + 0.55*H`,
+0.55 × ceiling ≈ 1.65 m, just inside each wall** (`IDSDL/renderer/utils.py: eye = fz + 0.55*H`,
 `inset = 0.92`) — so they end up **INSIDE the cabinetry**. Phase-1 v1: the front view came back
 **solid black** and the left view was a **wall of larder door**.
 
@@ -389,7 +389,7 @@ What its five builds taught (each is in the program's comments):
 > are building a kitchen, come here first; more generally, **`browse`/`catalog` for an existing
 > recipe for your category before trusting the reasoner's selection.**
 
-Status: **built & VLM-clean** ("Warm Marble Kitchen with Blue Panel Rhythm", `scenes/work/kitchen_v1.py`
+Status: **built & VLM-clean** ("Warm Marble Kitchen with Blue Panel Rhythm", `skills/examples/kitchen_v1.py`
 + `kitchen_v1.py` beside this file, seed=11). Final compile: `no rescale / no rotation / no wall
 overlap`, no `[Lint]`/WARNING lines, at `modulate_scale=0.85`. Built through the guided 9-gate flow
 (flow_0712_220546_f777): two phase-1 layout builds, one phase-2, two full builds. Room 4.38 × 5.77 × 3.0 m.

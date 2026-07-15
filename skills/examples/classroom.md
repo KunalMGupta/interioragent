@@ -1,6 +1,6 @@
 # Classroom — worked example
 
-Status: **built & converged** (`scenes/classroom_v1.py`, seed=21, 4 builds: 2× phase-1, 1× phase-2,
+Status: **built & converged** (`skills/examples/classroom_v1.py`, seed=21, 4 builds: 2× phase-1, 1× phase-2,
 2× full). Final compile: `no rotation`, `no wall overlap`, no `[Lint]`/WARNING lines; room size
 converged at `modulate_scale=0.85` (the post-apply vote flipped to 1.1 = oscillation across neutral,
 declined per converge-don't-chase). Built through the guided 9-gate flow (flow_0712_171017_8858).

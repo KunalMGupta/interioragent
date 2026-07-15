@@ -1,6 +1,6 @@
 # Laboratory (research / teaching wet lab) — worked example
 
-Status: **built & VLM-clean** (`scenes/work/laboratory_v1.py`, seed=27, `laboratory_v1.blend`).
+Status: **built & VLM-clean** (`skills/examples/laboratory_v1.py`, seed=27, `laboratory_v1.blend`).
 Built coarse-to-fine from the shell. Final build: `no rotation` / `no wall overlap`, zero lints;
 the residual `rescale room by 0.9` was declined (see below).
 
@@ -32,7 +32,7 @@ the tie-break is the product, not more of the same fixture"). Budget your effort
 bench grid took one iteration, the props took the whole scene.
 
 ## Asset reality: the dataset has the FURNITURE and almost none of the SCIENCE
-A 36-query retrieval stress test (`tmp/lab_stress.py`) — the asset_selection.md kickoff, and the
+A 36-query retrieval stress test (a one-off stress script, not kept) — the asset_selection.md kickoff, and the
 single highest-value hour of this build. **Twelve of the category's identity props return NOTHING
 AT ALL** (empty candidate list, sim `0.000`, not merely a bad pick):
 
@@ -92,7 +92,7 @@ scale it read as **standing on the floor next to the bench**. The reagent bottle
 - **Diagnosed exactly in one offline probe**, not by guessing: build the single unit and print the
   anchor's AABB **top** against the item's AABB **bottom** (computer_room's method). Then read the
   glb bounds — 5 seconds, and the 118% offset is unmissable.
-- **Fixed at the SOURCE** (`tmp/fix_lab_glbs.py`), in Blender, per operating_room's prescription:
+- **Fixed at the SOURCE** (a one-off Blender repair script, not kept), in Blender, per operating_room's prescription:
   `origin_set(ORIGIN_GEOMETRY, BOUNDS)` + zero the location, which **preserves the material slots**
   a trimesh round-trip would strip (→ flat white). Written back under the **same filename**, so the
   asset id, its embedding and every pin stay valid — no re-ingest, no re-pin.
