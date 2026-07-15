@@ -22,13 +22,31 @@ _CUSTOM_NPZ = os.path.join(_CUSTOM_DIR, "custom.npz")
 _CUSTOM_JSON = os.path.join(_CUSTOM_DIR, "custom.json")
 
 
+_MESH_ROOTS = {
+    "future": os.path.join(os.path.dirname(__file__), "futurehssd", "3D-FUTURE-models"),
+    "hssd": os.path.join(os.path.dirname(__file__), "futurehssd", "HSSD-models"),
+    "custom": os.path.join(_CUSTOM_DIR, "models"),
+}
+
+
+def _mesh_present(mid) -> bool:
+    """Does this id's mesh exist on disk? Mirrors model_to_path_scale exactly
+    (flat <root>/<key>.glb for all three kinds — validated 0 false positives
+    over the full 29k library)."""
+    kind, _, key = str(mid).partition("/")
+    root = _MESH_ROOTS.get(kind)
+    if root is None:
+        return True
+    return os.path.exists(os.path.join(root, key + ".glb"))
+
+
 def _load_embeddings(path):
     if path not in _NPZ_CACHE:
         if not os.path.exists(path):
             raise FileNotFoundError(
                 f"Asset dataset missing: {path}\n"
                 "Retrieval needs the embeddings/mesh datasets, which are distributed separately "
-                "from the git repo. Download datasets.zip and extract it into IDSDL/datasets/ "
+                "from the git repo. Download a datasets bundle and extract it at the repo root "
                 "(see README: Installation)."
             )
         data = np.load(path)
@@ -36,25 +54,26 @@ def _load_embeddings(path):
         if os.path.exists(_CUSTOM_NPZ):
             cd = np.load(_CUSTOM_NPZ, allow_pickle=False)
             if len(cd["all_models"]):
-                cemb, cmods = cd["all_embeddings"], cd["all_models"]
-                # The custom index (custom.json/.npz) is git-tracked but the .glb meshes arrive
-                # out-of-band, so on a fresh clone an id can resolve to a mesh that isn't on
-                # disk and fail deep inside trimesh at build time. Only surface assets whose
-                # mesh is actually present.
-                present = np.array([
-                    os.path.exists(os.path.join(_CUSTOM_DIR, "models", str(m).split("/", 1)[-1] + ".glb"))
-                    for m in cmods
-                ], dtype=bool)
-                if not present.all():
-                    print(f"[retrievers] hiding {int((~present).sum())} custom assets whose .glb "
-                          f"is not on disk (expected under {os.path.join(_CUSTOM_DIR, 'models')})")
-                cemb, cmods = cemb[present], cmods[present]
-                if len(cmods):
-                    emb = np.vstack([emb, cemb.astype(emb.dtype)])
-                    # don't cast models: custom ids ("custom/<sha1>") are wider than the base
-                    # <U45 dtype; np.concatenate widens automatically.
-                    mods = np.concatenate([mods, cmods])
-        _NPZ_CACHE[path] = (emb, mods)
+                emb = np.vstack([emb, cd["all_embeddings"].astype(emb.dtype)])
+                # don't cast models: custom ids ("custom/<sha1>") are wider than the base
+                # <U45 dtype; np.concatenate widens automatically.
+                mods = np.concatenate([mods, cd["all_models"]])
+        # THE LIBRARY IS WHAT'S ON DISK. The index (npz/json) can name assets whose mesh
+        # isn't installed — the tracked custom index on a fresh clone, or the full index
+        # against the curated MINI datasets bundle. Surfacing only ids with meshes makes a
+        # partial install degrade to a smaller library instead of a trimesh crash mid-build.
+        present = np.array([_mesh_present(m) for m in mods], dtype=bool)
+        n, n_all = int(present.sum()), len(mods)
+        if n == 0:
+            raise FileNotFoundError(
+                "The asset index is present but NO meshes were found under "
+                f"{os.path.dirname(_MESH_ROOTS['future'])} — the datasets bundle is not "
+                "extracted (or landed in the wrong place). See README: Installation."
+            )
+        if n < n_all:
+            print(f"[retrievers] library on disk: {n} of {n_all} indexed assets have meshes; "
+                  "retrieval is limited to them (minimal/partial install).")
+        _NPZ_CACHE[path] = (emb[present], mods[present])
     return _NPZ_CACHE[path]
 
 

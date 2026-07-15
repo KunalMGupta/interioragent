@@ -611,7 +611,9 @@ def main():
               "extract it into IDSDL/datasets/ (see README: Installation), then reconnect.",
               file=sys.stderr)
         sys.exit(1)
-    print(f"[interioragent-mcp] warm: {info['models']} models loaded; serving stdio.", file=sys.stderr)
+    mode = " (MINIMAL curated library)" if info.get("minimal") else ""
+    print(f"[interioragent-mcp] warm: {info['models']} models loaded{mode}; serving stdio.",
+          file=sys.stderr)
     mcp.run()
 
 

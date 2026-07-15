@@ -67,11 +67,18 @@ def get_trace_retriever():
     return _trace_retriever
 
 
+def minimal_library() -> bool:
+    """True when this install carries the curated demo subset (the mini datasets
+    bundle drops a marker; see tools/make_datasets_bundle.py --curated)."""
+    return os.path.exists(os.path.join(REPO_ROOT, "IDSDL", "datasets", "MINIMAL_LIBRARY.md"))
+
+
 def warm():
     """Eagerly load the heavy singletons (call at server startup so the first tool call is fast)."""
     get_base_retriever()
     get_router()
-    return {"models": int(len(get_base_retriever().all_models))}
+    return {"models": int(len(get_base_retriever().all_models)),
+            "minimal": minimal_library()}
 
 
 def reload_credentials(key=None):
@@ -399,7 +406,13 @@ def lint_program(program_path=None, source=None):
 # ---- reasoning-based trace retrieval (retriever_core) -----------------------
 def catalog_listing():
     """The organized knowledge-catalog listing (offline; no LLM call)."""
-    return get_trace_retriever().catalog.listing()
+    listing = get_trace_retriever().catalog.listing()
+    if minimal_library():
+        listing = ("NOTE: this is a MINIMAL (curated demo) asset library — retrieval is limited "
+                   "to the proven subset on disk. Expect more retrieval gaps than the lessons "
+                   "mention; substitute by silhouette rather than acquiring, unless shop keys "
+                   "are configured.\n\n") + listing
+    return listing
 
 
 def retrieve_context(prompt, plan=None, out=None, include_programs=True):

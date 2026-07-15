@@ -60,14 +60,19 @@ that fails without the previous one:
   sceneprogexec install sceneprogllm
   ```
 - **Asset datasets** — the 3D furniture datasets and retrieval index are **not** in git;
-  they ship as one bundle (`idsdl_datasets.zip`, ~75 GB: the FutureHSSD index + meshes +
-  preview images, the ingested custom-library meshes — see `ATTRIBUTIONS.md` — and the
-  regenerable embedding caches). Download it and extract **at the repo root**:
+  they ship as a bundle you extract **at the repo root** (everything lands in git-ignored
+  paths: `IDSDL/datasets/...`, `IDSDL/assets/`, `assets/`). Two sizes:
+  - **Quick demo (~14 GB)** — `idsdl_datasets_mini.zip`: the curated library of ~3k proven
+    assets (every asset a past build chose or a worked example pins), preview images, and
+    the wall-texture library. The pipeline runs unchanged — retrieval is simply limited to
+    what's on disk, and the tools announce the minimal install. Recommended first download.
+  - **Full library (~75 GB)** — `idsdl_datasets.zip`: all ~29k FutureHSSD assets + the
+    ingested custom library (see `ATTRIBUTIONS.md`). Extracting it over a mini install
+    upgrades in place.
   ```bash
-  unzip idsdl_datasets.zip -d .
+  unzip idsdl_datasets_mini.zip -d .     # or idsdl_datasets.zip for the full library
   ```
-  Everything lands in git-ignored paths (`IDSDL/datasets/...`, `IDSDL/assets/`, `assets/`).
-  Maintainers rebuild the bundle with `python tools/make_datasets_bundle.py`.
+  Maintainers rebuild the bundles with `python tools/make_datasets_bundle.py [--curated]`.
 - **OpenAI API key** — used for asset retrieval and the VLM constraints:
   ```bash
   export OPENAI_API_KEY="sk-..."
