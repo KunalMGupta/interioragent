@@ -432,7 +432,12 @@ Pick the single numbered candidate that best matches the query.
 
         path, scale = self.model_to_path_scale(model)
         if hasattr(self, "floor_plants"):
-            scale = np.random.uniform(0.6, 1)  # Random scale for floor plants
+            # Size variety for floor plants, derived from the model id rather than the
+            # global RNG — deterministic, so a seeded scene reproduces the same plant
+            # sizes run to run (the global stream broke reproducibility here).
+            import hashlib
+            h = int(hashlib.md5(str(model).encode()).hexdigest()[:8], 16)
+            scale = 0.6 + 0.4 * (h % 1000) / 999.0
         return {"path": path, "scale": scale, "model": model,
                 "candidates": candidates, "sheet": sheet, "reasoning": reasoning}
 

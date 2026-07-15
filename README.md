@@ -35,7 +35,7 @@ This repository contains four complementary components:
 git clone https://github.com/KunalMGupta/interioragent.git
 cd interioragent
 
-# 2. Environment
+# 2. Environment (Python >= 3.11 required; 3.12 is what we test)
 conda create -n interioragent python=3.12 -y
 conda activate interioragent
 
@@ -43,24 +43,31 @@ conda activate interioragent
 pip install -r requirements.txt
 ```
 
-A few external pieces are required:
+A few external pieces are required — in this order, because each is the first thing
+that fails without the previous one:
 
-- **SceneProgExec** — runs the Blender export/render pipeline. Follow the setup at
-  <https://github.com/KunalMGupta/SceneProgExec> (this also wires up Blender). Then make
-  `sceneprogllm` available inside Blender's bundled Python:
+- **Blender 4.5.x** — the build/render engine. Download it from
+  <https://www.blender.org/download/> (4.5.4 is what we test), extract anywhere, and export
+  both paths so the pipeline can find it (put them in your shell profile):
+  ```bash
+  export BLENDER_PATH=/path/to/blender-4.5.4-linux-x64/blender
+  export BLENDER_PYTHON=/path/to/blender-4.5.4-linux-x64/4.5/python/bin/python3.11
+  ```
+  `pip install sceneprogexec` (already in requirements.txt) only *detects* Blender via these
+  variables — it does not install it. Then make `sceneprogllm` available inside Blender's
+  bundled Python:
   ```bash
   sceneprogexec install sceneprogllm
   ```
-- **Asset datasets** — the large 3D furniture datasets are **not** included in this repo
-  and must be downloaded separately for asset retrieval to work.
-  1. Download `datasets.zip` from
-     [this OneDrive link](https://ucsdcloud-my.sharepoint.com/:u:/g/personal/k5gupta_ucsd_edu/IQA-MyG8SVWHQq4bWCD7amCmAWr9R9hyxe8e6udYgZNZ_TI?e=aX7HBn).
-  2. Extract it into `IDSDL/` so that the data lands at `IDSDL/datasets/assets/` and
-     `IDSDL/datasets/futurehssd/`:
-     ```bash
-     unzip datasets.zip -d IDSDL/
-     ```
-  These directories are git-ignored, so they will not be committed.
+- **Asset datasets** — the 3D furniture datasets and retrieval index are **not** in git;
+  they ship as one bundle (`idsdl_datasets.zip`, ~75 GB: the FutureHSSD index + meshes +
+  preview images, the ingested custom-library meshes — see `ATTRIBUTIONS.md` — and the
+  regenerable embedding caches). Download it and extract **at the repo root**:
+  ```bash
+  unzip idsdl_datasets.zip -d .
+  ```
+  Everything lands in git-ignored paths (`IDSDL/datasets/...`, `IDSDL/assets/`, `assets/`).
+  Maintainers rebuild the bundle with `python tools/make_datasets_bundle.py`.
 - **OpenAI API key** — used for asset retrieval and the VLM constraints:
   ```bash
   export OPENAI_API_KEY="sk-..."
@@ -76,6 +83,33 @@ A few external pieces are required:
   ```
   Without a Sketchfab token the pipeline still runs — it hands you the download links and picks
   the files up from `<batch>/inbox/`.
+
+There is a [`.env.example`](.env.example) to copy. Environment variables at a glance:
+
+| Variable | Required? | Purpose |
+|---|---|---|
+| `OPENAI_API_KEY` | **yes** | retrieval embeddings, planning, VLM captions/critics |
+| `BLENDER_PATH`, `BLENDER_PYTHON` | **yes** | where SceneProgExec finds Blender |
+| `SKETCHFAB_API_TOKEN` | shop only | downloading Sketchfab assets (search is public) |
+| `MESHY_API_KEY` | shop only | text-to-3D generation (`--source meshy`) |
+| `IDSDL_SKY` | optional | interior sky strength (default 3.0; ~1.2 for moody/pale rooms; shell-level only) |
+| `IDSDL_MINIMAL_RENDERS` | optional | `0` = full per-group renders (default minimal: strip only) |
+| `IDSDL_ACQUIRE` | optional | retriever gap-filling dial: `low` (default) / `mid` / `high` |
+| `IDSDL_SMART_PLACEMENT`, `IDSDL_LINTS`, `IDSDL_AUTO_CLEARANCES` | optional | escape hatches, on by default — see the docstrings in `IDSDL/` |
+| `IDSDL_ROOT`, `WORKBENCH_OUT`, `IDSDL_PYTHON` | optional | path/interpreter overrides for the service, workbench and MCP launcher |
+
+## Docker (optional)
+
+The [`Dockerfile`](Dockerfile) builds an environment image (conda env + Blender under
+`/opt`, so a repo mount can't shadow it). The repo itself — with datasets extracted — is
+volume-mounted:
+
+```bash
+docker build -t interioragent .
+docker run -it -v "$PWD":/work -w /work -e OPENAI_API_KEY interioragent bash
+```
+
+The conda + pip path above is the primary supported setup; the image is a convenience.
 
 ## Quick start
 
@@ -283,6 +317,28 @@ call the **reload_credentials** tool (pass the fresh key, or write `OPENAI_API_K
 `<repo>/.env` and call it bare)
 instead of restarting; LLM-backed tools also detect a stale key and point you there rather
 than dumping a 401 traceback.
+
+For **Claude Desktop** (or any client that doesn't launch from the repo root), point at the
+launcher by absolute path — it anchors itself to the repo, so no working directory matters:
+
+```json
+{
+  "mcpServers": {
+    "idsdl": {
+      "command": "/abs/path/to/interioragent/tools/idsdl_mcp.sh",
+      "env": {
+        "IDSDL_PYTHON": "/abs/path/to/conda/envs/interioragent/bin/python",
+        "OPENAI_API_KEY": "sk-..."
+      }
+    }
+  }
+}
+```
+
+Startup takes ~10–20 s (the embeddings warm once); a missing dataset or key is reported on
+stderr with the fix. Note the long tools (`run_scene`, `shop_run`, `plan`) run synchronously
+for minutes — raise your client's tool timeout, or use the `generate_scene_start/status/result`
+job tools for the full pipeline.
 
 Tools (`mcp__idsdl__*`): **retrieve / inspect** (route+resolve a query → candidate contact sheet
 inline), **browse** (montage of dataset matches), **reselect / show / pin** (session-memory picks

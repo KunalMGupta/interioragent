@@ -1179,7 +1179,6 @@ class RoomGroup(SceneProgObject):
         return self.get_operation(name) is not None
 
     def fill_facing_heuristic(self, placement, facing):
-        import random
         if facing is not None:
             return facing
         placement = placement.replace('place_on_', '')
@@ -1193,14 +1192,16 @@ class RoomGroup(SceneProgObject):
             return 'left'
         if placement in ['front_wall_left', 'front_wall_center', 'front_wall_right']:
             return 'back'
+        # Corner facings draw from the group's seeded RNG (not the global `random`
+        # module), so a seeded scene reproduces the same corner orientation every run.
         if placement == 'back_left_corner':
-            return random.choice(['front', 'right'])
+            return str(self.rng.choice(['front', 'right']))
         if placement == 'back_right_corner':
-            return random.choice(['front', 'left'])
+            return str(self.rng.choice(['front', 'left']))
         if placement == 'front_left_corner':
-            return random.choice(['back', 'right'])
+            return str(self.rng.choice(['back', 'right']))
         if placement == 'front_right_corner':
-            return random.choice(['back', 'left'])
+            return str(self.rng.choice(['back', 'left']))
 
     def compute_dims_of_point(self, point):
         assert isinstance(point, str), "Point must be a string"

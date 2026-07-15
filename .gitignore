@@ -89,3 +89,5 @@ reviews/
 # Internal session scratch / running TODO log ("delete when drained"). Not release content.
 NEXT_STEPS.md
 backups/
+# Regenerable embedding cache — ships in the datasets bundle, not git (IDSDL/wall.py rebuilds it if absent)
+IDSDL/assets/wall_textures_embeddings.npz
