@@ -1,10 +1,16 @@
+---
+id: workflow:design_principles
+kind: principles
+role: "Composition laws with owner attributions; always-on core doc; sections parsed as lesson:principle/* cards"
+---
+
 # Design principles (composition defaults)
 
 Reusable interior-composition rules to apply **by default** when laying out any scene — the
 "make the room feel finished and usable" defaults, distilled from build feedback. They go
 beyond what any single constraint enforces; apply them unless the brief says otherwise.
 
-## A seating arrangement always gets a small table within reach
+## A seating arrangement always gets a small table within reach {#principle-a-seating-arrangement-always-gets-a-small-ta}
 Any seat — reading chair, accent chair, armchair nook, sofa — needs a surface within reach
 (side/accent table, coffee table) for a drink, book, or remote. A lone chair reads unfinished
 and unusable.
@@ -18,12 +24,12 @@ with scene.RelativeGroup() as chair_group:
 bed_group.place_on_right_further(chair_group)  # place the whole nook as a unit
 ```
 
-## A seat's task light belongs WITH the seat
+## A seat's task light belongs WITH the seat {#principle-a-seat-s-task-light-belongs-with-the-seat}
 A reading floor lamp / a chair's task light goes **into the chair's group** (`place_on_back` /
 `place_on_left` of the chair), not stranded separately in a room corner. It then stays beside the
 seat when the group is placed or rotated. The reading nook is one coherent unit, not scattered parts.
 
-## Build a symmetric / repeated unit ONCE, then duplicate with `N * unit`
+## Build a symmetric / repeated unit ONCE, then duplicate with `N * unit` {#principle-build-a-symmetric-repeated-unit-once-then-du}
 For matching pieces — a pair of nightstands-with-lamps, a row of identical chairs, two flanking
 plants — build ONE fully-composed unit and **duplicate** it. NEVER construct the copies individually.
 ```python
@@ -44,7 +50,7 @@ the units separately sizes their on-top items *differently* (a mismatched pair) 
 work twice. `N * group` deep-copies the anchor + its already-placed children (`SceneProgObject.copy`),
 giving identical units for free. This applies to any repeated *composed* unit, not just nightstands.
 
-## A desk/counter SCREEN faces the wall the desk stands against (Kunal, 2026-07-13)
+## A desk/counter SCREEN faces the wall the desk stands against (Kunal, 2026-07-13) {#principle-a-desk-counter-screen-faces-the-wall-the-des}
 A reception desk, service counter, POS station or check-in desk is worked from the **wall side** —
 the operator stands between the desk and the wall it backs onto. So its **monitor faces that wall**,
 and the customer sees the screen's BACK. A screen turned broadside to the room (or out at the
@@ -67,7 +73,7 @@ with scene.RoomGroup() as room:
 Generalizes to anything with a working face on a wall-backed surface: a monitor, a till display, a
 staff terminal. Worked example: [../examples/fast_food.md](../examples/fast_food.md).
 
-## A table's HEIGHT must be fit explicitly — `width=` is a SINGLE-AXIS pin (Kunal, 2026-07-13)
+## A table's HEIGHT must be fit explicitly — `width=` is a SINGLE-AXIS pin (Kunal, 2026-07-13) {#principle-a-table-s-height-must-be-fit-explicitly-widt}
 `AddAsset(..., width=0.8)` stretches the **width only**. It does not touch the height, so a mesh that
 ships at bar height stays at bar height and **towers over its own seats** — the fast_food cafe table
 shipped **0.96 m** tall while its molded chairs are **0.68–0.71 m in TOTAL** (seat ≈ 0.43 m), i.e. the
@@ -88,7 +94,7 @@ table = _fit_height(scene.AddAsset("a cafe table", asset_id=TABLE), 0.75)   # NO
 ```
 The mirror of restaurant's bar-stool rule (a 1.25 m stool at a 0.67 m counter), hit from the table side.
 
-## Wall-backed seating goes on the WALL verbs, never a floor slot (Kunal, 2026-07-13)
+## Wall-backed seating goes on the WALL verbs, never a floor slot (Kunal, 2026-07-13) {#principle-wall-backed-seating-goes-on-the-wall-verbs-n}
 A booth, banquette, bench or sofa whose whole point is that it **backs a wall** must be placed with
 `place_on_<wall>_wall_<left|center|right>` — the wall-adjacent family, which pins it flush and re-snaps
 it after the solve. A floor slot (`place_on_left`, `place_on_front_left`) leaves a **visible gap behind
@@ -103,7 +109,7 @@ room.place_on_left(booth_1, facing="right")   # WRONG — floats a bench's back 
 Same family as bakery's window-bar ("a front SLOT drifts") and kindergarten's "a nook is a corner, not
 an island" — stated here as the general seating rule.
 
-## Two furniture groups belong in DIFFERENT regions of the room (Kunal, 2026-07-14)
+## Two furniture groups belong in DIFFERENT regions of the room (Kunal, 2026-07-14) {#principle-two-furniture-groups-belong-in-different-reg}
 When a room holds more than one furniture group — a desk workstation AND a daybed, a seating
 cluster AND a dining nook — place each in a **distinct region** of the `RoomGroup`, not two
 that share a corner. Two groups aimed at the same region crowd each other and there is **no
@@ -125,7 +131,7 @@ that leaves open floor *between* its zones reads calm; two zones fighting for on
 broken even when every constraint is satisfied. Worked example:
 [../examples/residential_variations.md](../examples/residential_variations.md).
 
-## Related
+## Related {#principle-related}
 - Grouping mechanics, `place_on_*`, `face`, and the `place_on_top` behavior these rely on:
   [../dsl_reference.md](../dsl_reference.md).
 - Per-category "baked-in defaults" (e.g. a rug under seating) live in the [../examples/](../examples/).

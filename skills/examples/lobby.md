@@ -1,3 +1,13 @@
+---
+id: example:lobby
+kind: example
+family: zoned-multi-zone
+category: "corporate lobby"
+pattern: "Reception anchor + waiting lounge — `AroundGroup.place_rectilinear` cluster;"
+---
+> **Digest (from the pattern index):** **Reception anchor + waiting lounge** — `AroundGroup.place_rectilinear` cluster; retrieval stress-test + reception-desk ingest; `add_lighting` count math
+
+
 # Lobby (corporate reception) — worked example
 
 Status: built as `scenes/lobby.py`. [`lobby_v1.py`](lobby_v1.py) is that program **phase-gated**
@@ -129,3 +139,7 @@ left unfilled** (no per-wall texture exists) — the "focal wall" is a large col
 [`lobby_v1.py`](lobby_v1.py) — phase 1 the reception workstation, lounge cluster, console, walls and door; phase 2 the desktop computer + accessories, coffee-table styling, rugs, console lamp and plants; phase 3 the focal and secondary art, wall TV, bare floor-to-ceiling glazing and flush ceiling lights.
 
 `workbench run skills/examples/lobby_v1.py --phase 1` builds the layout alone in ~1–2 min.
+
+## From the index (distilled cross-refs)
+
+- `add_lighting` count math

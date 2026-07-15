@@ -1,3 +1,13 @@
+---
+id: example:warehouse
+kind: example
+family: rows-runs-corridors
+category: "industrial storage"
+pattern: "Racking rows in room-thirds to carve forklift aisles"
+---
+> **Digest (from the pattern index):** Racking **rows in room-thirds** to carve forklift aisles
+
+
 # Warehouse / industrial storage — worked example
 
 Status: **built & VLM-clean** (`scenes/work/warehouse.py`, seed=31). Final compile: `no rescale`,

@@ -1,3 +1,9 @@
+---
+id: workflow:creative_asset_gaps
+kind: reference
+role: "Tiered ingest shopping list per scene category"
+---
+
 # Creative-space asset gaps — the ingest shopping list
 
 What the dataset actually has for **creativity scenes** (art studio, museum/gallery, ceramics,

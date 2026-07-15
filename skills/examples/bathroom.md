@@ -1,3 +1,13 @@
+---
+id: example:bathroom
+kind: example
+family: set-piece-hero
+category: "spa master bath"
+pattern: "Set-assets + width-only scaling + overlap handling for bundled sets"
+---
+> **Digest (from the pattern index):** Set-assets + width-only scaling + overlap handling for bundled sets
+
+
 # Bathroom (spa master bath) — worked example
 
 Status: built as `scenes/work/bath_spa.py`. [`bathroom_v1.py`](bathroom_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).

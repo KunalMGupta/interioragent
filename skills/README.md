@@ -15,12 +15,26 @@ examples). This is the everyday loop for producing rooms. Layout:
 | [workflow/](workflow/) | coarse_to_fine · constraints · vlm_feedback · rendering |
 | [examples/](examples/) | per-scene-type recipes (living_room, classroom, kitchen, …) |
 
-This knowledge base is also machine-retrievable: `retriever_core/` parses these files
-into a card catalog (recipes indexed by layout pattern, workflow guides, atomic
-lessons) and an LLM reasons over the whole catalog to select what's procedurally
-relevant for a new prompt — used by `main.py` and the MCP `retrieve_context` tool.
-Keep the markdown structures (README tables, decision-log bullets, `##` sections)
-intact when writing back so new lessons stay retrievable.
+This knowledge base is also machine-retrievable — as a KNOWLEDGE GRAPH:
+`retriever_core/` parses these files into cards (worked examples, workflow guides,
+atomic lessons) plus typed edges (`cites` mined from prose mentions, `applies_to`
+from a lesson's `[scene]` prefix, `wiki` from `[[slug]]` links, `read_for`
+situation triggers, program/build-log/variant artifacts). An LLM reasons over the
+whole catalog listing — examples grouped by layout FAMILY — to select what's
+procedurally relevant, and a selected example pulls its `[[slug]]`-linked lessons
+along automatically. Used by `main.py` and the MCP `retrieve_context` tool.
+
+The contracts that keep it parseable when writing back:
+  * every `examples/<name>.md` starts with frontmatter (`id`/`kind`/`family`/
+    `category`/`pattern`, optional `read_for`) — copy a sibling's shape;
+  * every decision-log entry in `workflow/vlm_feedback.md` carries a unique
+    `{#vlm-<scene>-<topic>}` anchor after its bold prefix (that anchor IS the
+    lesson's stable id — never renumber, never reuse);
+  * `##` sections in `asset_selection.md` / `design_principles.md` and the
+    numbered items in `dsl_gotchas.md` carry `{#...}` anchors the same way;
+  * `[[slug]]` links are encouraged — they resolve to anchors and become graph
+    edges; a `[[slug]]` with no anchor yet is fine (it marks a lesson worth
+    writing, and the catalog reports it).
 
 ### B. Codebase-extension playbooks (Claude Code SKILL.md format)
 

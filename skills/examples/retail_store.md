@@ -1,3 +1,13 @@
+---
+id: example:retail_store
+kind: example
+family: retail-spine-loop
+category: "apparel boutique"
+pattern: "Central spine + perimeter loop — twin double-sided rails frame a display table;"
+---
+> **Digest (from the pattern index):** **Central spine + perimeter loop** — twin double-sided rails frame a display table; branded service wall; front-window mannequins. Opens with a retrieval **stress test**; lighting-density-vs-floor-area + storefront-void lessons
+
+
 # Retail store — worked example (apparel boutique, "central rail spine + branded service wall")
 
 A modern apparel/clothing boutique. Its defining moves: a **central merchandising spine** —

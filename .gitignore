@@ -88,3 +88,4 @@ reviews/
 
 # Internal session scratch / running TODO log ("delete when drained"). Not release content.
 NEXT_STEPS.md
+backups/

@@ -1,3 +1,13 @@
+---
+id: example:living_room
+kind: example
+family: hero-anchor-room
+category: "living room (warm modern)"
+pattern: "Facing seating cluster around a coffee table"
+---
+> **Digest (from the pattern index):** **Facing seating cluster around a coffee table** — cream sofa + two wood-framed accent chairs on a wool rug, the window wall kept furniture-free as the light source, bookshelf mass opposite. The base residential-lounge pattern that `living_room_cozy` specialises into a hearth focal wall; cited across lessons for `add_visibility` (sofa↔TV sightline) and "a seat never travels alone".
+
+
 # Living room — example
 
 Status: **built & VLM-clean** (warm modern living room, [living_room_v1.py](living_room_v1.py), seed=42).
@@ -103,3 +113,8 @@ For `AroundGroup.place_arc` (chairs arced around a table) and a nested
 (side table + lamp) RelativeGroup placed as a single unit, see `tests.py`
 (tests 02/03/07) and `tools/docs_figures.py` — useful when you need sub-assemblies.
 (The old root `test.py` that demonstrated these was scratch and has been removed.)
+
+## From the index (distilled cross-refs)
+
+- The base residential-lounge pattern that `living_room_cozy` specialises into a hearth focal wall;
+- cited across lessons for `add_visibility` (sofa↔TV sightline) and "a seat never travels alone".

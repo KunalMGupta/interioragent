@@ -1,3 +1,13 @@
+---
+id: example:prison_cell
+kind: example
+family: subtractive
+category: "prison / jail cell"
+pattern: "The SUBTRACTIVE room — austerity IS the design"
+---
+> **Digest (from the pattern index):** **The SUBTRACTIVE room — austerity IS the design** (the one category the coffee_shop vibe layer would destroy): bunk on a long wall + open sanitaryware IN the sleeping room (the unambiguous cue) + one hard desk, bare concrete, nothing soft. Teaches **how to hang BARS over a window** (`place_on_wall_freeform` keeps a fence panel at its own width and claims no slot, and its `wall_height/2` mount coincides with the standard window's pane centre — so the black-void limit becomes an ASSET: darkness behind bars); forced out a core `IDSDL/window.py` fix (**`curtain=None` still drew the DEFAULT drape — no way to author a bare window**, silently draping 7 other scenes); "a phase-2 `place_on_top` gated OUTSIDE its `with` block never runs — the count still increments, the loop stays clean, the prop is just GONE"; the `bottom=` wall-mount false-positive in the float lint; and check a wall object's AABB bottom against nearby furniture tops before hanging it
+
+
 # Prison cell — worked example
 
 Status: **built & VLM-clean** ("Containment Core", `scenes/work/prison_cell.py`, seed=11).

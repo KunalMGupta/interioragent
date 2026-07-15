@@ -1,3 +1,13 @@
+---
+id: example:jewelry_shop
+kind: example
+family: retail-spine-loop
+category: "fine-jewelry boutique"
+pattern: "Show the PRODUCT, not the fixtures"
+---
+> **Digest (from the pattern index):** **Show the PRODUCT, not the fixtures** — a shop reads by its merchandise at viewing height: MASS jewelry props (gold stands / gems / cloches) on a central display table + cash-wrap + window pedestals; keep glass vitrines a thin backdrop. Teaches "empty fixtures don't name the shop" + "VLM loop verifies geometry, not category legibility (human gut-check retail)" + pool-routing reword + pin-for-palette
+
+
 # Jewelry shop — worked example (fine-jewelry boutique)
 
 > **v3 UPDATE (2026-07-10) — rebuilt on real fixtures; prefer this.** Once the `ShopFixtureRetriever`

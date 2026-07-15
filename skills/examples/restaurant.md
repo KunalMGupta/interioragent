@@ -1,3 +1,13 @@
+---
+id: example:restaurant
+kind: example
+family: zoned-multi-zone
+category: "bistro dining room"
+pattern: "Zoned single room — bar wall + banquette wall + a field of 2-top clusters;"
+---
+> **Digest (from the pattern index):** **Zoned single room** — bar wall + banquette wall + a field of 2-top clusters; opens with a retrieval STRESS TEST; cafe-SET retrieval trap
+
+
 # Restaurant / bistro dining room — worked example
 
 Status: **built & essentially VLM-clean** (`scenes/work/restaurant.py`, seed=37). Final compile:

@@ -1,3 +1,13 @@
+---
+id: example:bakery
+kind: example
+family: service-spine-counter
+category: "bakery / patisserie"
+pattern: "Service wall + glass-front perch — white counter + stocked mid-height wire rack as ONE station;"
+---
+> **Digest (from the pattern index):** **Service wall + glass-front perch** — white counter + stocked mid-height wire rack as ONE station; the counter top IS the pastry display (no display-case mesh — mass the product); window-bar console + stool row pinned to the storefront via `place_on_front_wall_center` (a front SLOT drifts); teaches the **~1.4 m camera-height ceiling for wall-center fixtures** (taller = a swallowed interior view + hallucinated rotation flags) + squat-mesh scaling (uniform to height, then `scale_only_*`) + "texture retrieval was right, the renderer pales it — check the match before rewording"
+
+
 # Bakery — worked example
 
 Status: **built & VLM-clean** ("Glassfront Bakery with Brick Anchor and Blue Mullion

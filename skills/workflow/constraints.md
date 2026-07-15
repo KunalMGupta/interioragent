@@ -1,3 +1,9 @@
+---
+id: workflow:constraints
+kind: reference
+role: "The 3-constraint-kind model and authoring rules"
+---
+
 # Constraints — the full model
 
 Three mechanisms. They are not interchangeable. The DSL applies some for you;

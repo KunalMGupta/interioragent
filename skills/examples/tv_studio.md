@@ -1,3 +1,13 @@
+---
+id: example:tv_studio
+kind: example
+family: hero-anchor-room
+category: "TV studio / news set"
+pattern: "Hero set-piece facing a CAMERA LANE"
+---
+> **Digest (from the pattern index):** **Hero set-piece facing a CAMERA LANE** — the anchor desk + a `GridGroup` seat row behind it sits in the back floor slot facing front; the camera on its tripod and the key/fill light stands are room-level floor objects with `facing="back"`, so the whole lane aims at the set (nesting them in a group bakes ±90° and turns a light's back to the anchors). Teaches **hunt a gap-category hero by SILHOUETTE, not caption** (no broadcast camera or softbox exists — an "antique camera with a tripod" and a "floor lamp with a tripod base" ARE the studio camera and the light stands), and the sharpest wall-hanging lesson yet: **freeform caps the whole run at 50% of the wall while the slots mount LOW enough to be occluded by your own furniture** (both paths tried; the slot path cascaded two wall-clearance warnings) ⇒ **a wall-hung backdrop cannot be made big — a full-height backdrop is a floor asset, not wall art**. Also: `modulate_scale` is a **no-op on `place_on_top` items** (the tournament height-fits them)
+
+
 # TV studio — worked example (news/talk-show set: hero set-piece facing a camera lane)
 
 Status: **built & VLM-clean** (`scenes/work/tv_studio.py`, seed=42, converged in 2 phase builds +

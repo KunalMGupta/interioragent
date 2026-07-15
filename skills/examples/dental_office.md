@@ -1,3 +1,13 @@
+---
+id: example:dental_office
+kind: example
+family: set-piece-hero
+category: "dental operatory"
+pattern: "Set-piece hero — hang the whole room on one ingested \"unit/set\" asset"
+---
+> **Digest (from the pattern index):** **Set-piece hero** — hang the whole room on one ingested "unit/set" asset
+
+
 # Dental office — worked example (single operatory, "set-piece hero asset")
 
 A compact single-room build whose defining lesson is **one ingested asset can be the entire

@@ -1,3 +1,13 @@
+---
+id: example:corridor
+kind: example
+family: rows-runs-corridors
+category: "corridor / hallway"
+pattern: "Pure passage — the empty center lane IS the scene"
+---
+> **Digest (from the pattern index):** **Pure passage — the empty center lane IS the scene** — both LONG walls loaded (gallery prints + console/mirror one side, a LOW dressed green cabinet run the other), short walls light, nothing in the center; teaches "the VLM shrink vote never goes quiet on a corridor — decline the residual" (0.75 cramped → 0.85 converged), scale-by-height for wardrobe-tall wall furniture, and "no b/w checkerboard texture exists — drop the accent"
+
+
 # Corridor — worked example ("Long Gallery Corridor with Reflective Floor")
 
 Built via the guided 9-gate flow from the planner target (`tmp/plan_a_corridor/plan.png`).

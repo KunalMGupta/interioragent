@@ -1,3 +1,15 @@
+---
+id: example:greenhouse
+kind: example
+family: rows-runs-corridors
+category: "greenhouse / conservatory"
+pattern: "Daylit glazed nave — twin bench runs lining floor-to-ceiling glass + a centre bench spine;"
+read_for:
+  - "READ FOR ANY WINDOW OR \"bright\"/\"sunlit\" BRIEF: the \"black window void\" and the \"black ceiling\" were ONE renderer bug (transparent film) and are now FIXED — glaze freely, the old void workarounds are obsolete; and brightness is a SKY setting, never `add_lighting` (fixed 500 W / N)"
+---
+> **Digest (from the pattern index):** **Daylit glazed nave** — twin bench runs lining floor-to-ceiling glass + a centre bench spine; identity by MASSING potted plants (no potting-bench/seed-tray/soil-bag mesh exists). **READ FOR ANY WINDOW OR "bright"/"sunlit" BRIEF: the "black window void" and the "black ceiling" were ONE renderer bug (transparent film) and are now FIXED — glaze freely, the old void workarounds are obsolete; and brightness is a SKY setting, never `add_lighting` (fixed 500 W / N)**
+
+
 # Greenhouse / glass conservatory — worked example
 
 Status: **built & VLM-clean** (`scenes/work/greenhouse.py`, seed=52). Final compile: `rescale room by

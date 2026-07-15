@@ -1,3 +1,9 @@
+---
+id: workflow:constraint_playbook
+kind: reference
+role: "Per-asset-category clearance tables — FROZEN 2026-07-14"
+---
+
 # Constraint playbook — WHICH constraints for WHICH assets (FROZEN)
 
 > **STATUS: FROZEN — reviewed with Kunal 2026-07-14. The §5 questions were decided and the

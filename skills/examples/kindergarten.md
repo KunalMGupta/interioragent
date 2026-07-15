@@ -1,3 +1,13 @@
+---
+id: example:kindergarten
+kind: example
+family: hero-anchor-room
+category: "kindergarten / preschool"
+pattern: "Hero ON THE FLOOR — the rug IS the anchor"
+---
+> **Digest (from the pattern index):** **Hero ON THE FLOOR — the rug IS the anchor** — the oval alphabet rug placed as an ordinary floor object, so `OverlapConstraint` reserves the clear circle-time carpet for FREE (no clearance needed; the empty middle of a kindergarten IS a zone); teaching wall front, a 3-item PRE-STOCKED storage run on the back wall, a bean-bag nook pinned flush under the window, three lion-chair activity tables ringing the rug. Everything ≤1.15 m, so kid scale doubles as the bakery camera rule ⇒ **rotation-clean from the first build**. Teaches "a cup of crayons does not exist" (0.43 → a white DESIGNER pen pot on every table; the clean VLM loop can't see semantics — casino's rule at full strength), "a nook is a corner, not an island" (a floor SLOT drifts mid-room; pin the composed group to the wall), and **"fill the floor, THEN shrink"** — a GROWING shrink vote (0.92→0.90→0.80) means sparse, not too-big: add the piece the plan already asked for, then apply 0.85 once
+
+
 # Kindergarten — worked example
 
 Status: **built & VLM-clean** (`skills/examples/kindergarten_v1.py`, seed=11). Final compile returns

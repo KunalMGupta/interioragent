@@ -1,3 +1,9 @@
+---
+id: workflow:rendering
+kind: workflow
+role: "Workbench render types and when to use each"
+---
+
 # Rendering & inspection
 
 How to see what you built. Everything lands in the per-run scratchpad

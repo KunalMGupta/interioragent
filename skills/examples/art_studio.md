@@ -1,3 +1,13 @@
+---
+id: example:art_studio
+kind: example
+family: zoned-multi-zone
+category: "art studio / painter's loft"
+pattern: "The TOOL-IN-USE room: the hero is a gap, and the picker's rank-1 is its TOY version."
+---
+> **Digest (from the pattern index):** **The TOOL-IN-USE room: the hero is a gap, and the picker's rank-1 is its TOY version.** Work zone ON the glass (two easels standing in floor-to-ceiling north light) + a paint-table hub + a storage backbone opposite + a leaning-canvas wall. Teaches: (a) *"a wooden artist easel with a canvas"* returns a **KIDS' easel holding a crayon drawing** at a perfectly good similarity — it would have shipped a **kindergarten**, and only `show(n, big=True)` reveals it; hunt the true A-frame by SILHOUETTE (tv_studio) and note its caption "table easel" is LITERAL (1.00 m native → height-fit 1.65 m). (b) **`place_on_top` shatters on a SKELETAL anchor** — an A-frame easel has no substantial horizontal region, so the tiler clamped the canvas to a crossbar sliver and rendered a **postage-stamp canvas**, loop-clean (the flat-rug/bean-bag class, generalised); there is **no vertical lift on an anchor-group placement** (`bottom=` is wall-adjacent only), so compose it GEOMETRICALLY — and **anchor the unit on the piece whose FACING carries the read** (anchoring the easel and hanging the canvas off its front bakes a face-the-anchor rotation → the canvas shows its blank BACK). (c) **canvases leaning on a wall are not a mesh** — a canvas IS a flat upright slab, so a packed `GridGroup` row of them standing as FLOOR objects, placed flush to the wall, is the whole effect. (d) **"fill the floor instead of shrinking" is NOT universal**: the greenhouse plant-bed is free because it is ONE object in ONE slot, whereas a composed ROW claims a row/column — every fill tried here grew the shell (5.60 → 6.86 m wide; a cart in the `right` floor slot collapsed the depth and jammed the back camera), so shrink instead, and stop SHORT of the vote because a painter must step BACK from a canvas
+
+
 # Art studio / painter's loft — worked example
 
 ## §0 v2 — REBUILT ON INGESTED EASELS. Read this before the rest.

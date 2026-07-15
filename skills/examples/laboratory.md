@@ -1,3 +1,13 @@
+---
+id: example:laboratory
+kind: example
+family: repeated-unit-grid
+category: "research / teaching wet lab"
+pattern: "Repeated-unit grid + clinical perimeter — and the sharpest statement yet of \"the grid is not the category, the PRODUCT is\""
+---
+> **Digest (from the pattern index):** **Repeated-unit grid + clinical perimeter — and the sharpest statement yet of "the grid is not the category, the PRODUCT is"**: classroom, computer_room and laboratory are the SAME layout (a unit tiled across the floor), so what makes this one a lab is the microscope + reagent bottles massed on every bench at working height. Opens with a 36-query stress test that finds **twelve identity props returning 0.000 — an EMPTY candidate list, not a bad pick** (fume hood, microscope, centrifuge, beakers, test tubes…), and answers it three ways: (a) **the science was already in the dataset as `custom/` meshes nobody could retrieve** — the operating-room ingest's leftover microscope/autoclave/gas cart score 0.000 by NL query, so grep the custom pool by hand before declaring a category unbuildable; (b) the glassware exists as *"decorative glass DECANTERS"* (silhouette, not caption); (c) the fume hood has NO honest substitute (the top "stainless cabinet" is a **barbecue grill**) so the scene was framed as the **sub-category the library can carry** rather than faking it. Its big gotcha: **an ingested mesh whose origin is 118% of its height off-centre** sank the microscope *through* the bench and read as floor-standing while the whole VLM loop stayed clean — because **an ingest batch's UNUSED meshes never got its repair pass** (operating_room v2 fixed only the 6 glbs it shipped; 14 are still broken). Check a borrowed mesh's glb bounds before you build. Also: a `0.5` shrink vote that was really an over-sparse GridGroup (`sparsity` 0.3 → 0.12 moved it to 0.88 with no `modulate_scale`)
+
+
 # Laboratory (research / teaching wet lab) — worked example
 
 Status: **built & VLM-clean** (`skills/examples/laboratory_v1.py`, seed=27, `laboratory_v1.blend`).

@@ -1,3 +1,13 @@
+---
+id: example:residential_variations
+kind: example
+family: meta-review-round
+category: "bedroom / living / dining / bath / kitchen / study"
+pattern: "The variation + REVIEW round (2026-07-14)"
+---
+> **Digest (from the pattern index):** **The variation + REVIEW round (2026-07-14)** — several variants off each of the six residential flagships, then a human review that minted five VLM-invisible rules: **(1) two furniture groups go in DIFFERENT regions** or circulation dies (writer studio desk-crowds-daybed, now in [../workflow/design_principles.md](../workflow/design_principles.md)); **(2) a sparse room you CANNOT shrink** (kitchen camera bound) is fixed by FURNISHING, not resizing; **(3) the console-vignette** (sideboard + art-above + composed plant) is the reusable "fill a bare open-plan wall + rescue a lonely prop" move; **(4) "cozy" is a deliberate human shrink AGAINST a never-flipping enlarge vote** — the vote optimizes uncluttered, the BRIEF decides whether you want clutter or space; **(5) retrieval hands back valid-but-WRONG meshes** (a garden bench for a wardrobe) the clean loop can't see — pin or use the acquire dial. Powder-room jewel-box at 0.6 converged on the autos (evidence for "no toilet clearance rule")
+
+
 # Residential variations — the 2026-07-14 category batch (bedroom / living / dining / bath / kitchen / study)
 
 Status: **built, VLM-clean, and human-reviewed** (Kunal, 2026-07-14). This is not a new *pattern* —

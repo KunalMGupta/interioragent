@@ -2,7 +2,7 @@
 Flower shop — "Sun-Kissed Florist" (planner target, tmp/plan_a_charming_flower_shop___florist/plan.png).
 
 A charming florist boutique. Warm-wood + cream + brass palette, blush/green blooms everywhere.
-Retrieval stress-tested first (scenes/notes/florist_shop.md): the dataset is RICH in vase-bouquet
+Retrieval stress-tested first (skills/examples/logs/florist_shop.md): the dataset is RICH in vase-bouquet
 arrangements (tulips/ranunculus/peonies/roses) but has NO galvanized-bucket-of-loose-stems mesh, so
 the florist read is built by MASSING vase-bouquets densely on tiered stands, plinths and a display
 table — that clustering reads as a flower shop's stock without the (missing) buckets.
@@ -34,7 +34,7 @@ from IDSDL.scene import SceneProgRoom
 
 scene = SceneProgRoom("FlowerShop", seed=48)
 
-# --- pinned assets (audited previews; retrieval stress test in scenes/notes/florist_shop.md) ---
+# --- pinned assets (audited previews; retrieval stress test in skills/examples/logs/florist_shop.md) ---
 # blooms: vase-bouquet arrangements (the dataset's strength — mass them for the florist read)
 _BLOOMS = [
     "hssd/69930e5f83e7d839142b15ca089f2a2ea90f6e1f",  # colorful tulips, green vase

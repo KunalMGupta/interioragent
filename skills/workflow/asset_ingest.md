@@ -1,3 +1,9 @@
+---
+id: workflow:asset_ingest
+kind: workflow
+role: "GLB ingest invariants (single mesh, real metres, front +Z)"
+---
+
 # Ingesting custom GLB assets — the single-mesh invariant (and how ingest breaks it)
 
 > **Getting the `.glb`s in the first place?** `python -m IDSDL.ingest` is the *low* level: it

@@ -1,3 +1,13 @@
+---
+id: example:game_room
+kind: example
+family: hero-anchor-room
+category: "rec lounge"
+pattern: "Hero-in-the-middle — the hero's clearance sizes the room;"
+---
+> **Digest (from the pattern index):** **Hero-in-the-middle** — the hero's clearance sizes the room; zones ring it
+
+
 # Worked example: a game room / rec lounge (`scenes/work/game_room.py`)
 
 Status: built as `scenes/work/game_room.py`. [`game_room_v1.py`](game_room_v1.py) is that program

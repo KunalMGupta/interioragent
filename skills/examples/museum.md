@@ -1,3 +1,13 @@
+---
+id: example:museum
+kind: example
+family: zoned-multi-zone
+category: "museum / grand exhibit hall"
+pattern: "The INGEST-FIRST room, at hall scale: identity is 100% the EXHIBITS, and the hero commands by standing ALONE."
+---
+> **Digest (from the pattern index):** **The INGEST-FIRST room, at hall scale: identity is 100% the EXHIBITS, and the hero commands by standing ALONE.** A 68-glb ingest (dino skeleton, belt-spanning rope stanchions, Rosetta Stone, knight-on-horse, Neptune…) is what makes the category buildable at all — the walls are just ivory plaster + a certified picture hang. Layout: hero in the CENTRE inside a stanchion cordon (`AroundGroup.place_rectilinear`, `sparsity=0.8` so the posts stand OFF the ribs — at 0.5 they read as scaffolding), plinth ranks and themed zones ringed around it in floor thirds, only LOW (0.5 m) benches wall-flush under the art. Teaches: size the hero to its CORDON, not the room (3.4 swept the tail through two zones; 3.0 converged); the tallest exhibit SETS the ceiling (`max_height=5.0` lets the knight's 4.10 m lance make a real hall — never shrink a showpiece to the 3 m default); a "wall" piece the scaler re-derives to >0.25 m deep is a PLINTH exhibit, not art (the mask warned as FLOATING furniture and was dropped); the `add_lighting` density ladder runs BACKWARDS (0.02 in a hall — 0.12 tiled a STARFIELD of track bars); ingested `scale` is a guessed width so retarget every exhibit BY HEIGHT; and hang CERTIFIED canvases only (4 dataset paintings are dud meshes that render empty/black — struck off in the companion probe). Companion `scenes/work/museum.py` (small gallery) holds the wall-art machinery story: two `place_on_wall_freeform` bugs fixed in groups.py + why sculptures stand mid-floor (a rank under an art run occludes every slot on the wall)
+
+
 # Museum — worked example
 
 Status: **built & converged** (`scenes/work/museum_grand.py`, seed=31; [museum_v1.py](museum_v1.py)

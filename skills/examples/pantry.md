@@ -1,3 +1,13 @@
+---
+id: example:pantry
+kind: example
+family: rows-runs-corridors
+category: "pantry / walk-in larder / dry store"
+pattern: "You CANNOT densely stock a tall rack with `place_inside` — adding goods makes it EMPTIER, and that inverts jewelry_shop's instinct."
+---
+> **Digest (from the pattern index):** **You CANNOT densely stock a tall rack with `place_inside` — adding goods makes it EMPTIER, and that inverts jewelry_shop's instinct.** Layout is free (library/corridor galley: twin shelf runs on the long walls, clear centre aisle, counter+fridge service end) — one phase-1 build. The whole scene is the SURFACE layer, and the solver fights it: `place_inside` resizes every item to a tile derived from the anchor + the goods list (`modulate_scale` is a no-op), and `judge_tile_size` shrinks that tile until **all n items would fit on ONE shelf board** — so a rack's product mass is roughly FIXED and a longer goods list just grinds it finer. Measured by calling `tools/planar_regions.solve_placement` DIRECTLY on the rack (do this — a minute, and it ends guessing a full build can't): **n=3 → 0.15 m items (reads); n=8 → 0.06 m; n=18 → specks; n=36 → invisible, emptier than 6.** ⇒ (a) a FEW substantial goods per rack (~6), never a long list; (b) **one oversized mesh poisons the whole rack** (the tile floors at the LARGEST footprint, so a 1.07 m box stack forced ~1 m tiles → one lonely prop per board) — bulk goes on the FLOOR, while keeping ONE basket (0.45 m) in the list HOLDS the floor generous so the jars beside it come out chunky; (c) **product reads on a LOW anchor** — the same jar sets `place_on_top` a 0.9 m counter land at a believable 0.2 m, first try. **The racks carry STRUCTURE; the counter + floor carry IDENTITY.** Note this lesson ALREADY existed in laundry_room and retrieval missed it (the signature matched on LAYOUT while the difficulty was in the SURFACE layer) — when a prompt's identity lives ON/IN the furniture, read the laundry_room + jewelry_shop product rules before gate 4 regardless of what the retriever picked. Also: **no pre-stocked domestic pantry shelf exists** (the only filled food fixtures are branded retail; I test-rendered the supermarket gondola as a run — a wall of dark chaotic panels — a 3-min probe scene beats a 10-min build for that call), and the VLM loop stayed CLEAN while the shelves were EMPTY (crop-zoom the render whenever a fixture is meant to be full)
+
+
 # Pantry — worked example ("Vertical-Integrated Pantry System")
 
 Built via the guided 9-gate flow from the planner target

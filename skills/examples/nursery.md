@@ -1,3 +1,15 @@
+---
+id: example:nursery
+kind: example
+family: hero-anchor-room
+category: "nursery / baby room"
+pattern: "Four walls, four jobs, an empty middle"
+read_for:
+  - "READ FOR ANY PALE OR PASTEL ROOM: an all-white room is an EXPOSURE trap — a big window + the default sky 3"
+---
+> **Digest (from the pattern index):** **Four walls, four jobs, an empty middle** — low sleep hero (crib + art above) / changing station (dresser + mirror) / caregiver nook on a rug under the window / low storage by the door; kid scale keeps everything under the 1.4 m cameras ⇒ rotation-clean by construction. **READ FOR ANY PALE OR PASTEL ROOM: an all-white room is an EXPOSURE trap** — a big window + the default sky 3.0 bouncing off white walls/floor/furniture blows the room to pure white and the loop says nothing; drop `IDSDL_SKY` (~1.2) and note it works from the SHELL but is IGNORED by MCP `run_scene` (A/B verified — corrects the dining_room note). Also: a pastel wall texture fails twice ("blush pink wall" → pink TILES; "pale pink plaster" → a peach that renders SALMON — pick one notch PALER); **bad PROPORTIONS can't be scaled away** (a "small side table" that is a 1.20×0.55 coffee table — swap the mesh, unlike a bad-*scale* asset); an unpinned "plush bunny" that is a **flat cardboard slab with a BLANK desc** (a blank desc column = a junk pick); and a **DSL gap** — baby mobiles EXIST but are unplaceable (too deep to wall-hang, and `add_lighting` is the only ceiling verb, which would make it emit)
+
+
 # Nursery — worked example
 
 Scene: `scenes/work/nursery.py` (seed=12), planner-driven **"Sunlit Pastel Nursery"**, built through

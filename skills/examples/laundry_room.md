@@ -1,3 +1,13 @@
+---
+id: example:laundry_room
+kind: example
+family: service-spine-counter
+category: "home laundry / utility room"
+pattern: "Fix the SHELL with SLOTS, not `modulate_scale` — the transferable version of the footprint rule."
+---
+> **Digest (from the pattern index):** **Fix the SHELL with SLOTS, not `modulate_scale` — the transferable version of the footprint rule.** One service wall (washer + dryer + folding counter + utility tub as ONE rigid `GridGroup` row, flush on the back wall) with an empty working aisle; shelf and airer face each other across it; ironing board on the front wall. The lesson is the auto-size model: `RoomGroup` sums 5 column-widths + 5 row-depths and **`compute_dims_of_point` SWAPS w/d by facing, so a SIDE-wall item pays its WIDTH in room DEPTH** while a back/front item pays only its depth — and every distinct slot claims its own row. v1 scattered sink/shelf/airer/board across FOUR rows and auto-sized a 4.5 x 3.9 m hall around 12 m² of furniture (`rescale room by 0.6`); putting the sink INTO the run (which the PLAN had already said: "a sink at the counter end"), making the two side-wall pieces share the wall-CENTRE row, and moving the board to the front wall took the vote to 0.8 **with no `modulate_scale` at all**. Also: **`place_inside` cannot carry a category read** — the tournament height-fits each prop to a fraction of the ANCHOR, so detergent on a 1.35 m shelf lands at 0.14 m and reads as specks (massing more does not help; `modulate_scale` is a no-op) ⇒ **put the product on the LOW surface** (the 0.9 m counter sizes the same bottles to a readable 0.3 m, in the money shot) — jewelry_shop's product rule, restated as being about the anchor, not the camera. Plus the BRIGHT-room mirror of wine_cellar: a window + `add_lighting`'s fixed 500 W in a small all-white room blew the tile floor clean out of the render ⇒ **`scene.light_budget = 180`** (a scene attribute, so it survives the warm MCP server, unlike `IDSDL_SKY`) — and the `rotate door by 90` flags that came with that blown render **vanished when the exposure was fixed** (overexposure is a garbage render, and a garbage render corrupts the constraints judged from it). Asset traps: **no detergent mesh exists** (0.49, all bathroom toiletries — substitute by silhouette), every **"clothes dryer" is a featureless white BOX** (a machine reads by its PORTHOLE — pair two front-loaders), and the top "wire shelving" hit is a **supermarket** basket rack
+
+
 # Home laundry room — worked example ("Integrated Laundry Command Center")
 
 Status: **built & VLM-clean** (`skills/examples/laundry_room_v1.py`, seed=17; converged copy

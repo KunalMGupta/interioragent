@@ -3,6 +3,20 @@
 Copy this when starting a new scene type. Fill it in as you build; the finished pair is the
 distilled, reusable recipe for this kind of room.
 
+> **Start the file with frontmatter — the catalog reads it, not the README table:**
+>
+> ```yaml
+> ---
+> id: example:<name>
+> kind: example
+> family: <one of the families in examples/README.md — pick the closest>
+> category: "<human category, e.g. walk-in closet / dressing room>"
+> pattern: "<one line: the layout pattern this teaches>"
+> read_for:            # optional — situation triggers ("READ FOR ANY ...")
+>   - "<trigger>"
+> ---
+> ```
+
 > **A worked example is a PAIR, and the program is a real `.py` — never a code block.**
 >
 > * `<name>.md` — this file: the lessons, the pattern, the traps. Prose.
@@ -23,7 +37,7 @@ Name both halves after the room, not the plan: `bakery.md` + `bakery_v1.py`. No 
 
 One line, kept current — this is what a reader checks first:
 
-`Status: **built & VLM-clean** (`scenes/work/<name>_v1.py`, seed=N, converged in N render passes).`
+`Status: **built & VLM-clean** (`skills/examples/<name>_v1.py`, seed=N, converged in N render passes).`
 `Final compile: no rescale / no rotation / no wall overlap.`
 
 If it is not converged, say so and say what is still wrong. A stale "VLM-clean" is worse than

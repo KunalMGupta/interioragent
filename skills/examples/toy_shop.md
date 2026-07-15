@@ -1,3 +1,13 @@
+---
+id: example:toy_shop
+kind: example
+family: retail-spine-loop
+category: "toy / comic / book shop"
+pattern: "PRE-STOCKED shop fixtures — (via `ShopFixtureRetriever`) carry the identity — don't crown empty/wrong shelves;"
+---
+> **Digest (from the pattern index):** **PRE-STOCKED shop fixtures** (via `ShopFixtureRetriever`) carry the identity — don't crown empty/wrong shelves; perimeter ring + play island + teepee/bean-bag nooks + checkout. Forced out a core `object.scale()` fix + **scale-by-height** for fixtures; teaches `place_on_top`-breaks-on-flat-surfaces and **caption≠mesh (eyeball the preview)**
+
+
 # Toy shop — worked example
 
 Status: **built as `scenes/toy_shop.py`** (seed=42). [`toy_shop_v1.py`](toy_shop_v1.py) is that

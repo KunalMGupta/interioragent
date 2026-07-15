@@ -1,3 +1,13 @@
+---
+id: example:casino
+kind: example
+family: zoned-multi-zone
+category: "gaming floor"
+pattern: "Large multi-zone — table hub + repeated slot rows + bar"
+---
+> **Digest (from the pattern index):** Large multi-zone — table hub + repeated slot rows + bar
+
+
 # Casino — worked example ("Red-Gold Opulent Gaming Floor")
 
 Status: built as `scenes/work/casino.py`. [`casino_v1.py`](casino_v1.py) is that program **phase-gated** (2026-07-13): `lint_program`-clean, **phase-1 build VERIFIED** in the 2026-07-13 verification round (layout signals clean; see [`_VERIFY_NOTES.md`](_VERIFY_NOTES.md) for the round record).

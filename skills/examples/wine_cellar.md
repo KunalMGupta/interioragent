@@ -1,3 +1,15 @@
+---
+id: example:wine_cellar
+kind: example
+family: rows-runs-corridors
+category: "wine cellar / tasting room"
+pattern: "READ FOR ANY DIM BRIEF (cellar, bar, cinema, speakeasy)."
+read_for:
+  - "READ FOR ANY DIM BRIEF (cellar, bar, cinema, speakeasy). Layout is the library corridor verbatim (twin stocked rack runs on the long walls + a central tasting table) — zero layout iterations"
+---
+> **Digest (from the pattern index):** **READ FOR ANY DIM BRIEF (cellar, bar, cinema, speakeasy).** Layout is the library corridor verbatim (twin stocked rack runs on the long walls + a central tasting table) — zero layout iterations. Its real subject is the **MOOD**, which was unbuildable: the interior renderer floods every room from a **strength-3.0 sky** that no fixture choice can beat (`os.environ["IDSDL_SKY"]="0.6"` BEFORE importing IDSDL), and `add_lighting`'s wattage was hardcoded ⇒ added **`scene.light_budget`** (default 500, unchanged elsewhere; a cellar is ~90 W). **Tune ONE dial at a time** — dropping the sky while raising the wattage cancels exactly. **TOOLING: MCP `run_scene` ignores the program's `IDSDL_SKY` (warm server, renderer already imported) — build moody scenes from the SHELL or your renders will never show the mood.** Also: the picker's top "wine rack" is an EMPTY lattice (mass the BOTTLES), a standalone decanter doesn't exist (it lives inside a tableware SET mesh), the on-top prop band is narrow (0.55 = magnum, 0.3 = specks, **0.4** reads), and a washed-out texture is often a LIGHTING symptom, not a wording bug
+
+
 # Wine cellar — worked example ("Chandelier-Centered Vaulted Wine Cellar")
 
 Built end-to-end through the 9-gate flow from the planner target

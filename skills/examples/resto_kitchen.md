@@ -1,3 +1,13 @@
+---
+id: example:resto_kitchen
+kind: example
+family: zoned-multi-zone
+category: "restaurant / commercial kitchen"
+pattern: "Recipe-B is CORRECT for a COMMERCIAL kitchen — and the camera-height rules, tripped twice in one scene."
+---
+> **Digest (from the pattern index):** **Recipe-B is CORRECT for a COMMERCIAL kitchen — and the camera-height rules, tripped twice in one scene.** The domestic fitted-set rule doesn't apply (no commercial "set" asset exists, and a real resto kitchen IS interchangeable stainless modules): cook line (range+oven+stove) as one rigid run flush on the back wall, prep-island worktable run in the centre with the cookware massed ON THE RUN in phase 2, wash counter + wire racks on the sides, the cold pair as ONE run in a wall END slot, the Bain-Marie pass at the front, windowless by design. Its lesson is the interior camera at ~1.4-1.5 m at each wall's CENTRE: the fridge at `right_wall_center` rendered that view SOLID BLACK (bakery's rule, caught at phase 1), and the hood canopy at `bottom=1.55` hung exactly at camera height and turned the whole back view into a grey slab — **a deep wall canopy must clear ~1.9 m**, not just the appliance below it. Plus museum's mask rule replayed (utensil rail re-derived 0.36 m deep → floating-furniture warning → dropped) and the shell vote handled by ONE decisive 0.9 (voted 0.8; aisles are legitimate circulation, fixed-size runs overflow a tighter shell) which decayed to 0.97 = converged. Closed the LAST uncovered dataset category, all-native HSSD, no ingest
+
+
 # Restaurant kitchen (commercial back-of-house) — worked example
 
 Status: **built & converged** (`scenes/work/resto_kitchen.py`, seed=17;

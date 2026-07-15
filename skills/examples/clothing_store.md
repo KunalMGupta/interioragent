@@ -1,3 +1,15 @@
+---
+id: example:clothing_store
+kind: example
+family: retail-spine-loop
+category: "apparel boutique (fashion)"
+pattern: "TRUE-SIZE SHOP FITTINGS"
+read_for:
+  - "READ FOR ANY SCENE BUILT ON INGESTED FIXTURES. Also: the persistent \"shrink the room\" vote was a symptom of toy-sized furniture, not a big box"
+---
+> **Digest (from the pattern index):** **TRUE-SIZE SHOP FITTINGS** — an ingested scan's retrieval `scale` is a GUESSED WIDTH that miniaturises big fixtures (a 5.27 × 2.25 m merchandising wall loads at 0.6 m; a 1.85 m mannequin at 1.06 m), and height-normalising them compounds it — measure the raw glb extents, pin the true width, and let the shell come out big (129 m²). **READ FOR ANY SCENE BUILT ON INGESTED FIXTURES.** Also: the persistent "shrink the room" vote was a symptom of toy-sized furniture, not a big box; keep both wall CENTRES clear of tall fixtures (they swallow that wall's interior camera); `bottom=` on wall-adjacent furniture always trips the floaters lint; a rack whose mesh has a smoked-glass backing HIDES its own garments
+
+
 # Clothing store — worked example ("true-size shop fittings; the fixture list IS the room")
 
 A warm-industrial apparel boutique. Same **retail spine + perimeter loop** bones as

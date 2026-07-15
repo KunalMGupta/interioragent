@@ -1,3 +1,13 @@
+---
+id: example:laundromat
+kind: example
+family: service-spine-counter
+category: "small laundromat"
+pattern: "One heavy service wall — a mixed-type `GridGroup` row (washers + rolling cart + dryers) flush on the back wall;"
+---
+> **Digest (from the pattern index):** **One heavy service wall** — a mixed-type `GridGroup` row (washers + rolling cart + dryers) flush on the back wall; folding counter + waiting nook on the side walls, centre aisle clear; appliance clearance comes FREE from `CategoryClearanceConstraint`; teaches "a genuinely SPARSE room may shrink below 1.0" (two-step final-phase convergence 0.85→0.75) + art-over-a-LOW-run
+
+
 # Small laundromat — worked example
 
 Status: **built & VLM-clean** ("Efficient Compact Laundromat Block",

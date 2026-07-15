@@ -1,3 +1,13 @@
+---
+id: example:hospital_room
+kind: example
+family: hero-anchor-room
+category: "inpatient room"
+pattern: "Hero bed + purpose-loaded walls"
+---
+> **Digest (from the pattern index):** **Hero bed + purpose-loaded walls** — bedroom's hero skeleton with meeting_room's wall jobs (headwall = equipment, window wall = visitor nook, entry wall = sink/storage); ingested medical meshes (headwall/monitor/wheelchair) carry the clinical read; teaches "uncurated hero: pin id + UNIFORM rescale" (half-scale bed → 2.1×) + floating-vanity mesh swap + `place_arc` chairs need explicit `face()`
+
+
 # Hospital patient room — worked example
 
 Status: **built & VLM-clean** ("Bed-Centered Healing Inpatient Room",

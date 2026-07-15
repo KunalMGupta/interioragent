@@ -1,3 +1,13 @@
+---
+id: example:classroom
+kind: example
+family: repeated-unit-grid
+category: "classroom"
+pattern: "Repeated-unit grid, bare-desk variant"
+---
+> **Digest (from the pattern index):** **Repeated-unit grid, bare-desk variant** — ONE `place_desk_chair` unit `6 *`-duplicated into a `GridGroup` facing the teaching wall (`face(grid, toward="front_wall")` — the OPPOSITE of a WorkstationGroup grid); teacher desk front-left faced at the class; identity via notebooks/globe/map at surface height; teaches "an accent color the texture library lacks: drop it, don't smuggle it into the wall string" + rescale-oscillation-equals-converged
+
+
 # Classroom — worked example
 
 Status: **built & converged** (`skills/examples/classroom_v1.py`, seed=21, 4 builds: 2× phase-1, 1× phase-2,

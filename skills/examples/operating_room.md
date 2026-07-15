@@ -1,3 +1,15 @@
+---
+id: example:operating_room
+kind: example
+family: hero-anchor-room
+category: "operating room / surgical suite"
+pattern: "Hero-in-the-middle, sterile — the operating table's 1.2 m sterile RING sizes the room (game_room's clearance rule);"
+read_for:
+  - "READ BEFORE INGESTING ANY USER-SUPPLIED GLB ZIP: a raw zip is not ingest-ready and breaks SILENTLY three ways — multi-mesh (loader keeps mesh[0] → renders DISASSEMBLED"
+---
+> **Digest (from the pattern index):** **Hero-in-the-middle, sterile** — the operating table's 1.2 m sterile RING sizes the room (game_room's clearance rule); service walls carry the casework + the gas-outlet headwall. **READ BEFORE INGESTING ANY USER-SUPPLIED GLB ZIP: a raw zip is not ingest-ready and breaks SILENTLY three ways** — multi-mesh (loader keeps mesh[0] → renders DISASSEMBLED; fix = Blender `join`, never a trimesh round-trip, which strips materials), wild units (a 420 m ENT unit), and off-center origins (→ float/sink lints; fix = `origin_set BOUNDS`, which changes the sha1 id → re-pin). Plus: an ingested asset's **caption AND scale are both VLM guesses** (a mayo stand captioned "drill press"; the anesthesia machine loaded 0.86 m, real ~1.5 m) so pin by id + `get_whd()` + height-fit, **filenames lie** (the "surgical tables" were instrument tables; yield was 6 usable of 20), and **"clean but unconvincing" means ASSETS, not placement** — v1 passed the whole VLM loop with bath towels as sterile trays. Also teaches the **inverted vibe layer** (a clinical room reads by being BARE) and the FLUSH-not-pendant dome
+
+
 # Operating room / surgical suite — worked example
 
 Status: **built & VLM-clean, v2 on an INGESTED surgical kit** ("Sterile Core with Service

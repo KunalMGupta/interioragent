@@ -16,7 +16,7 @@ are aggregated into `batch_review.html`.
 
 This is the loop for working ~5 categories in parallel: run a subset, open the HTML,
 note what works / what doesn't / asset gaps, edit the scene programs (and the notes in
-scenes/notes/<name>.md), re-run. Re-runs hit the seeded retrieval cache so they're fast.
+skills/examples/logs/<name>.md), re-run. Re-runs hit the seeded retrieval cache so they're fast.
 """
 import argparse
 import base64
@@ -32,7 +32,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SCENES_DIR = os.path.join(ROOT, "scenes")
-NOTES_DIR = os.path.join(SCENES_DIR, "notes")
+NOTES_DIR = os.path.join(ROOT, "skills", "examples", "logs")
 PYTHON = sys.executable
 RUN_DIR_RE = re.compile(r"run_dir\s*[:=]\s*(tmp/\S+)")
 
