@@ -1,108 +1,98 @@
-# InteriorAgent — IDSDL
+# InteriorAgent
 
-**An Interior-Design-aware Scene Description Language for composing structured 3D indoor scenes.**
+**An agentic harness for 3D interior design.** Give an AI agent a room to create — it plans
+the space, retrieves furniture by describing it in plain language, writes a short scene
+program, builds it, looks at the renders, and iterates until the design works. The output is
+a real Blender scene you can open, render, and edit.
 
-IDSDL lets you describe interiors at the level of *design intent* — "a sofa with a coffee
-table in front of it", "chairs around a dining table", "paintings spread across the back
-wall" — instead of hand-placing meshes by coordinate. You write a short Python program; IDSDL
-retrieves assets from natural-language descriptions, arranges them with spatial groups,
-resolves the layout with geometric and vision-language constraints, and exports a Blender
-`.blend` scene.
+📖 **Scene-language documentation & visual guide:** <https://interioragent.github.io/docs/>
 
-📖 **Full documentation & visual guide:** <https://interioragent.github.io/docs/>
+Everything the agent needs ships in this repo:
 
-This repository contains four complementary components:
+- **A live toolbox** — an [MCP server](#1-let-an-agent-drive-mcp) with warm, typed tools for
+  asset retrieval, shopping, planning, and building, driven interactively by any MCP client
+  (Claude Code, Claude Desktop, …).
+- **A design knowledge library** — [`skills/`](skills/README.md): 50+ worked example scenes
+  and hundreds of atomic build lessons, organized as a knowledge graph that a retriever
+  *reasons* over (no embeddings) to brief the agent before it designs.
+- **IDSDL, the scene engine** — a Python DSL where you compose interiors by *design intent*
+  ("a sofa with a coffee table in front of it", "chairs around a dining table"): natural-language
+  asset retrieval, relational groups, constraint solving, Blender export.
+- **A fully autonomous pipeline** — [`main.py`](#2-one-command-fully-automatic): one command
+  from text prompt to finished `.blend`, with a VLM critic loop and a design judge.
 
-- **IDSDL** — a structured language that builds explicit **3D scenes** (geometry you can open and render in Blender). *Documented below and on the docs site.*
-- **InteriorPlanner** (`planner_core/`) — a retrieval-augmented **design-image** generator that turns a text prompt into a photorealistic interior collage and supports conversational editing. *See [Interior Planner](#interior-planner-planner_core).*
-- **TraceRetriever** (`retriever_core/`) — reasoning-based (no embeddings) retrieval over the repo's tacit-knowledge library: worked example recipes, workflow guides and atomic build lessons, selected by **procedural similarity** to the requested room. *See [Text→scene generation](#textscene-generation-mainpy).*
-- **SceneGenerator** (`generator_core/` + `main.py`) — the end-to-end **text→3D-scene** pipeline: plan → retrieve traces → asset stress test → author the DSL program (pluggable authors) → build → VLM-critic loop → design-match judging. *See [Text→scene generation](#textscene-generation-mainpy).*
-
----
-
-## Why IDSDL
-
-- **Natural-language assets** — `scene.AddAsset("a modern 3-seat sofa")` retrieves a matching 3D model.
-- **Relational placement** — group abstractions (relative, around, grid, room) express layouts the way designers think.
-- **Hierarchical composition** — build a furniture cluster once, then place it as a single unit; groups nest and optimize level by level.
-- **Automatic refinement** — constraints resolve overlaps, keep objects in bounds, preserve clearances/sightlines, and sanity-check proportions with a VLM.
-- **Blender output** — every scene exports to `.blend` for rendering or further editing.
-
-## Installation
+## Getting started
 
 ```bash
-# 1. Clone
 git clone https://github.com/KunalMGupta/interioragent.git
 cd interioragent
-
-# 2. Environment (Python >= 3.11 required; 3.12 is what we test)
-conda create -n interioragent python=3.12 -y
-conda activate interioragent
-
-# 3. Python dependencies
+conda create -n interioragent python=3.12 -y && conda activate interioragent   # needs >= 3.11
 pip install -r requirements.txt
 ```
 
-A few external pieces are required — in this order, because each is the first thing
-that fails without the previous one:
+Then three external pieces, in this order (each is the first thing that fails without the
+previous one):
 
-- **Blender 4.5.x** — the build/render engine. Download it from
-  <https://www.blender.org/download/> (4.5.4 is what we test), extract anywhere, and export
-  both paths so the pipeline can find it (put them in your shell profile):
-  ```bash
-  export BLENDER_PATH=/path/to/blender-4.5.4-linux-x64/blender
-  export BLENDER_PYTHON=/path/to/blender-4.5.4-linux-x64/4.5/python/bin/python3.11
-  ```
-  `pip install sceneprogexec` (already in requirements.txt) only *detects* Blender via these
-  variables — it does not install it. Then make `sceneprogllm` available inside Blender's
-  bundled Python:
-  ```bash
-  sceneprogexec install sceneprogllm
-  ```
-- **Asset datasets** — the 3D furniture datasets and retrieval index are **not** in git;
-  they ship as a bundle you extract **at the repo root** (everything lands in git-ignored
-  paths: `IDSDL/datasets/...`, `IDSDL/assets/`, `assets/`).
+**1. Blender 4.5.x** — the build/render engine. [Download](https://www.blender.org/download/)
+(4.5.4 is what we test), extract anywhere, and export both paths (put them in your shell
+profile), then install the LLM helper into Blender's bundled Python:
 
-  > **Dataset terms — read first.** The bundles below repackage assets from
-  > [3D-FUTURE](https://tianchi.aliyun.com/dataset/98063) (Alibaba) and
-  > [HSSD](https://huggingface.co/datasets/hssd/hssd-models) (Hab-lab, CC BY-NC), provided
-  > purely as a convenience for research reproduction. Before downloading, please visit the
-  > official sources above and accept their respective terms of use — your use of the
-  > bundled assets is governed by those upstream licenses, not by this repository's license.
+```bash
+export BLENDER_PATH=/path/to/blender-4.5.4-linux-x64/blender
+export BLENDER_PYTHON=/path/to/blender-4.5.4-linux-x64/4.5/python/bin/python3.11
+sceneprogexec install sceneprogllm
+```
 
-  Two sizes:
-  - **Quick demo (~14 GB)** —
-    [`idsdl_datasets_mini.zip`](https://interioragent-datasets.s3.amazonaws.com/idsdl_datasets_mini.zip):
-    the curated library of ~3k proven assets (every asset a past build chose or a worked
-    example pins), preview images, and the wall-texture library. The pipeline runs
-    unchanged — retrieval is simply limited to what's on disk, and the tools announce the
-    minimal install. Recommended first download.
-  - **Full library (~75 GB)** —
-    [`idsdl_datasets.zip`](https://interioragent-datasets.s3.amazonaws.com/idsdl_datasets.zip):
-    all ~29k FutureHSSD assets + the ingested custom library (see `ATTRIBUTIONS.md`).
-    Extracting it over a mini install upgrades in place.
-  ```bash
-  wget https://interioragent-datasets.s3.amazonaws.com/idsdl_datasets_mini.zip
-  unzip idsdl_datasets_mini.zip -d .     # or idsdl_datasets.zip for the full library
-  ```
-  Maintainers rebuild the bundles with `python tools/make_datasets_bundle.py [--curated]`.
-- **OpenAI API key** — used for asset retrieval and the VLM constraints:
-  ```bash
-  export OPENAI_API_KEY="sk-..."
-  ```
-- **Optional — asset shop keys.** Only needed to bring in assets the library does not have
-  (`python -m IDSDL.shop`, or `SceneProgRoom(..., acquire="mid"|"high")` to let the retriever fill
-  a measured gap itself — see [skills/acquire-assets](skills/acquire-assets/SKILL.md)). Put them
-  in `<repo>/.env` (git-ignored) or the environment. Sketchfab *search* needs no key; only
-  downloading does.
-  ```bash
-  SKETCHFAB_API_TOKEN=...   # free: sketchfab.com -> Settings -> Password & API
-  MESHY_API_KEY=...         # only for --source meshy (text-to-3D generation; spends credits)
-  ```
-  Without a Sketchfab token the pipeline still runs — it hands you the download links and picks
-  the files up from `<batch>/inbox/`.
+**2. The asset library** — the 3D furniture datasets are not in git; they ship as a single
+bundle you extract at the repo root.
 
-There is a [`.env.example`](.env.example) to copy. Environment variables at a glance:
+> **Dataset terms — read first.** The bundles below repackage assets from
+> [3D-FUTURE](https://tianchi.aliyun.com/dataset/98063) (Alibaba) and
+> [HSSD](https://huggingface.co/datasets/hssd/hssd-models) (Hab-lab, CC BY-NC), provided
+> purely as a convenience for research reproduction. Before downloading, please visit the
+> official sources above and accept their respective terms of use — your use of the
+> bundled assets is governed by those upstream licenses, not by this repository's license.
+
+```bash
+wget https://interioragent-datasets.s3.amazonaws.com/idsdl_datasets_mini.zip
+unzip idsdl_datasets_mini.zip -d .
+```
+
+- **Quick demo (~14 GB, recommended first)** —
+  [`idsdl_datasets_mini.zip`](https://interioragent-datasets.s3.amazonaws.com/idsdl_datasets_mini.zip):
+  a curated library of ~3k proven assets (every asset a past build chose or a worked example
+  pins). The pipeline runs unchanged — retrieval is simply limited to what's on disk, and the
+  tools announce the minimal install.
+- **Full library (~75 GB)** —
+  [`idsdl_datasets.zip`](https://interioragent-datasets.s3.amazonaws.com/idsdl_datasets.zip):
+  all ~29k FutureHSSD assets + the ingested custom library (see `ATTRIBUTIONS.md`).
+  Extracting it over a mini install upgrades in place.
+
+**3. An OpenAI API key** — used for retrieval, planning, and the VLM critics:
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+That's it — you can now [run a scene](#3-write-scenes-yourself-the-idsdl-library) or connect
+an agent.
+
+<details>
+<summary><b>Optional setup</b> — asset-shop keys, all environment variables, Docker</summary>
+
+**Asset-shop keys.** Only needed to bring in assets the library does not have
+(`python -m IDSDL.shop`, or `SceneProgRoom(..., acquire="mid"|"high")` to let the retriever
+fill a measured gap itself — see [skills/acquire-assets](skills/acquire-assets/SKILL.md)).
+Put them in `<repo>/.env` (git-ignored, see [`.env.example`](.env.example)) or the environment.
+Sketchfab *search* needs no key; only downloading does — without a token the pipeline still
+runs, hands you the download links, and picks the files up from `<batch>/inbox/`.
+
+```bash
+SKETCHFAB_API_TOKEN=...   # free: sketchfab.com -> Settings -> Password & API
+MESHY_API_KEY=...         # only for --source meshy (text-to-3D generation; spends credits)
+```
+
+**Environment variables at a glance:**
 
 | Variable | Required? | Purpose |
 |---|---|---|
@@ -116,20 +106,138 @@ There is a [`.env.example`](.env.example) to copy. Environment variables at a gl
 | `IDSDL_SMART_PLACEMENT`, `IDSDL_LINTS`, `IDSDL_AUTO_CLEARANCES` | optional | escape hatches, on by default — see the docstrings in `IDSDL/` |
 | `IDSDL_ROOT`, `WORKBENCH_OUT`, `IDSDL_PYTHON` | optional | path/interpreter overrides for the service, workbench and MCP launcher |
 
-## Docker (optional)
-
-The [`Dockerfile`](Dockerfile) builds an environment image (conda env + Blender under
-`/opt`, so a repo mount can't shadow it). The repo itself — with datasets extracted — is
-volume-mounted:
+**Docker.** The [`Dockerfile`](Dockerfile) builds an environment image (conda env + Blender
+under `/opt`, so a repo mount can't shadow it); the repo — with datasets extracted — is
+volume-mounted. The conda + pip path above is the primary supported setup; the image is a
+convenience.
 
 ```bash
 docker build -t interioragent .
 docker run -it -v "$PWD":/work -w /work -e OPENAI_API_KEY interioragent bash
 ```
 
-The conda + pip path above is the primary supported setup; the image is a convenience.
+Maintainers rebuild the dataset bundles with `python tools/make_datasets_bundle.py [--curated]`.
 
-## Quick start
+</details>
+
+## Three ways to use it
+
+### 1. Let an agent drive (MCP)
+
+The heart of the harness: a stdio [MCP](https://modelcontextprotocol.io) server
+(`IDSDL/service/mcp_server.py`) exposing the asset and scene tooling as warm, typed tools
+returning structured data + inline images. An agent designs interactively — browse and pin
+assets, read the knowledge catalog, build phase by phase, look at renders, refine — without
+cold-reloading the ~687 MB embeddings on every call.
+
+**Claude Code:** just open this repo — [`.mcp.json`](.mcp.json) is discovered on session
+start and prompts to approve `interioragent`. Then ask the agent to design a room; the
+**howto** tool orients a fresh agent, and **flow_start** walks it through the full 9-gate
+recipe with mechanically validated evidence at each step.
+
+**Claude Desktop** (or any client that doesn't launch from the repo root) — point at the
+launcher by absolute path; it anchors itself to the repo:
+
+```json
+{
+  "mcpServers": {
+    "interioragent": {
+      "command": "/abs/path/to/interioragent/tools/interioragent_mcp.sh",
+      "env": {
+        "IDSDL_PYTHON": "/abs/path/to/conda/envs/interioragent/bin/python",
+        "OPENAI_API_KEY": "sk-..."
+      }
+    }
+  }
+}
+```
+
+Startup takes ~10–20 s (the embeddings warm once); a missing dataset or key is reported on
+stderr with the fix. Long tools (`run_scene`, `shop_run`, `plan`, `ingest_glbs`) take minutes
+but run off the event loop, so the server stays responsive throughout — give your client a
+generous per-tool timeout, or use the `generate_scene_start/status/result` job tools.
+
+<details>
+<summary><b>The full tool roster</b> — assets, knowledge, generation, guided flow</summary>
+
+**Asset tools:** **retrieve / inspect** (route+resolve a query → candidate contact sheet
+inline), **browse** (montage of dataset matches), **reselect / show / pin** (session-memory
+picks — instant, no re-retrieval; `pin` → the `AddAsset(asset_id=…)` snippet), **candidates /
+gallery / pool_add** (pool curation), **ingest_glbs** (custom-asset ingestion + auto re-warm),
+**shop_search / shop_run / shop_apply** (find an asset the library does NOT have on Sketchfab —
+or generate one with Meshy — normalize, verify and ingest it, re-warmed so it is retrievable in
+the same session; anything the pipeline will not judge alone lands on a `HELP.md` for you).
+
+**Knowledge + generation tools:** **catalog** (the tacit-knowledge index, offline),
+**retrieve_context** (reasoning-based trace retrieval → bundle.md for an agent to read before
+authoring — this is the agent-as-author path: plan → retrieve_context → write the program
+yourself with retrieve/pin → run_scene), **plan** (design brief + collage), **lint_program**
+(static API check of a scene program in milliseconds — `run_scene`/`workbench run` refuse to
+build on errors), **run_scene** (build+render a DSL program → VLM feedback + room views), and
+**generate_scene_start / _status / _result** (the full `main.py` pipeline as a background job —
+15–45 min, with live strip previews while it runs).
+
+**Guided-flow tools** — the 9-gate recipe as a server-side state machine
+(`IDSDL/service/flow.py`): **howto**, **flow_start / flow_status / flow_advance /
+flow_override**. Each gate's card says what to do and what evidence to bring back; evidence is
+validated mechanically (files exist, program lints clean, FRESH phase-N build report, no
+unresolved `[Lint]`/`WARNING` lines) before the next step is revealed, and overrides are
+recorded in the flow's provenance. State is file-backed under `tmp/flows/`, so a disconnected
+agent resumes exactly where it stopped.
+
+**Credentials:** the warm process snapshots `OPENAI_API_KEY` at launch. If the key rotates
+mid-session, call **reload_credentials** (pass the fresh key, or write it to `<repo>/.env` and
+call it bare) instead of restarting; LLM-backed tools detect a stale key and point you there
+rather than dumping a 401 traceback.
+
+**Verification is mechanical, not aspirational:**
+- *Deterministic lints* (`IDSDL/lints.py`): post-compile geometric checks (floor objects
+  floating/sunk, lighting starfield) recorded in build feedback, plus `lint_program` — static
+  AST validation against the real DSL surface that catches invented verbs/kwargs in
+  milliseconds instead of a failed multi-minute build.
+- *Phase-gated builds* (`IDSDL/phases.py`): a program gates statements with `if PHASE >= n:`
+  (1 anchors / 2 surfaces / 3 walls+mood); `workbench run --phase 1` builds just the floor
+  layout in ~1–2 min (vs ~9 full) so layout errors are caught before expensive dressing.
+  Non-gated programs are unaffected.
+
+</details>
+
+### 2. One command, fully automatic
+
+```bash
+python main.py "a cozy ramen bar with counter seating" --out results/ramen_bar
+```
+
+The pipeline (`generator_core/pipeline.py`) encodes the same workflow used to hand-build the
+library scenes: **plan** (design brief + reference collage) → **retrieve** (reason over the
+knowledge catalog for the right worked examples and lessons) → **asset stress test**
+(batch-resolve the shopping list, audit weak picks) → **author** the IDSDL program →
+**build + critic loop** (VLM feedback → concrete directives until converged) → **design
+judge** (scores the built room against the plan until it clears `--threshold`).
+
+Every run writes full provenance to `<out>/trace.json`, plus `program.py`, `scene.blend`,
+and `final_strip.png`.
+
+<details>
+<summary><b>Pipeline details</b> — pluggable authors, render policy</summary>
+
+- **Pluggable authors** — default is a single LLM (`--author llm`);
+  `--author command --command '<shell cmd>'` delegates authoring to ANY external coding agent
+  (Claude Code, Codex, aider, …) via a prepared workspace (`TASK.md` + `scene.py`) — nothing
+  is hardcoded to a specific agent.
+- **Inner/outer loops** — the critic encodes the `skills/workflow/vlm_feedback.md` playbook
+  and iterates up to `--max-inner`; the design judge (strip vs. collage + brief, 0–10) emits
+  gap directives until the score clears `--threshold` (default 8.0) or `--max-outer`.
+- **Render policy** — builds run minimal by default: the only render per compile is the room
+  VLM strip (the single critique channel). Set `IDSDL_MINIMAL_RENDERS=0` for full per-group
+  renders + the 8-view interior set (see `IDSDL/render_policy.py`).
+- Inspect the knowledge catalog offline: `python -m retriever_core --catalog`.
+
+</details>
+
+### 3. Write scenes yourself (the IDSDL library)
+
+IDSDL is the scene language underneath it all — you can use it directly as a Python library:
 
 ```python
 from IDSDL.scene import SceneProgRoom
@@ -151,266 +259,107 @@ scene.export("first_scene.blend")
 ```
 
 ```bash
-python first_scene.py     # writes first_scene.blend
+python first_scene.py     # writes first_scene.blend — open it in Blender
 ```
-
-Open the result in Blender to inspect it.
-
-## Core concepts
 
 | Concept | Entry point | What it does |
 |---|---|---|
-| **Object registration** | `scene.AddAsset(...)` | Retrieve, scale, rotate, copy, and query 3D assets. |
+| **Object registration** | `scene.AddAsset(...)` | Retrieve, scale, rotate, copy, and query 3D assets by description. |
 | **Groups** | `RelativeGroup`, `AroundGroup`, `GridGroup`, `RoomGroup` | Arrange objects relationally; groups nest into hierarchies. |
 | **Constraints** | gradient + VLM | Refine layouts: overlap, bounds, clearance, access, visibility, proportions. |
 
-See the [documentation](https://interioragent.github.io/docs/) for a full reference with
-top-down and perspective renders of every feature.
-
-## Repository layout
-
-Two layers: **`IDSDL/` is the scene DSL + build engine**, and **`generator_core` / `planner_core` /
-`retriever_core` are an orchestration tier *above* it** that drives the engine to turn a text prompt
-into a finished scene. Dependencies flow one way — `*_core → IDSDL`, never the reverse.
-
-```
-IDSDL/                # THE ENGINE — the scene DSL, solver, retrieval, renderer
-  scene.py          # SceneProgRoom — the top-level scene API
-  object.py         # SceneProgObject — base object, transforms, geometry queries
-  groups.py         # RelativeGroup / AroundGroup / GridGroup / RoomGroup / BasicRoomGroup
-  constraints.py    # gradient + VLM constraints and the layout solvers
-  default_constraints.py  # keyword-matched auto clearances (see skills/workflow/constraint_playbook.md)
-  wall.py           # walls, floor, ceiling
-  door.py, window.py# architectural openings
-  renderer/         # Blender rendering helpers
-  datasets/         # 3D-MESH retrievers over FutureHSSD/HSSD (large data fetched separately)
-  shop/             # asset ACQUISITION pipeline (Sketchfab/Meshy -> normalize -> ingest)
-  service/          # MCP server (mcp_server.py) + shared core.py; the integration hub
-  assets/           # bundled door / window / curtain / wall-texture assets
-
-generator_core/     # ORCHESTRATION — SceneGenerator: plan -> retrieve -> author -> build -> critic
-planner_core/       # InteriorPlanner (LLM design brief + collage) + SkillsRAG (skills retrieval)
-retriever_core/     # TraceRetriever — reasons over the markdown lesson catalog (no embeddings)
-
-assets/             # planner data: skills.json (rag_cache.npz built on first run)
-skills/             # the worked-example library (examples/*.md + *_v1.py) + workflow guides
-main.py             # text -> finished scene, fully automatic (drives generator_core)
-workbench.py        # build/inspect a single scene program; the day-to-day dev CLI
-batchgen.py         # batch scene-gen harness -> a self-contained review HTML
-tests.py            # IDSDL feature test suite
-tools/              # dev tooling (docs_figures.py builds+renders example figures, etc.)
-```
-
-## Running the tests
-
-The test suite doubles as a gallery of working examples (each test builds and exports a scene).
+Coordinates: the floor is the **XZ plane**, **Y is up**; rooms span `x ∈ [0, WIDTH]`,
+`z ∈ [0, DEPTH]` with the back wall at `z = 0`. The
+[documentation site](https://interioragent.github.io/docs/) has a full reference with renders
+of every feature, and the test suite doubles as a gallery of working examples:
 
 ```bash
 python tests.py            # list all tests
-python tests.py 6          # run one
-python tests.py 1 2 5      # run several
+python tests.py 6          # run one (needs OPENAI_API_KEY + datasets)
 python tests.py all        # run everything
 ```
 
-Tests need `OPENAI_API_KEY` set and the datasets installed.
+For day-to-day scene development, `workbench.py` builds/inspects a single program
+(`workbench run`, `workbench lint`, `--phase 1` for a fast layout-only build).
 
-## Interior Planner (`planner_core`)
+## The knowledge library
 
-`InteriorPlanner` is a separate, lighter-weight path that generates **interior-design images**
-(not 3D geometry) from a text prompt. It is retrieval-augmented: a library of design "skill
-cards" is embedded and searched, the most relevant cards are synthesized into a single
-conditioning description, and an image model renders a photorealistic **2×4 collage** of one
-coherent room. You can then refine the design conversationally, with state preserved between
-turns.
+[`skills/`](skills/README.md) is the harness's memory: 50+ worked example scenes (each a
+recipe + a runnable program, indexed by *layout pattern* — a pharmacy pulls the retail_store
+skeleton), workflow guides, and hundreds of atomic lessons learned across build iterations.
+`retriever_core` organizes it all into a knowledge graph and selects context by **reasoning
+over the catalog** — no embeddings — so the agent is briefed with exactly the recipes and
+traps relevant to the room it's about to design.
 
-### Extra setup
+## Interior Planner
 
-`planner_core` reuses `sceneprogllm` and your `OPENAI_API_KEY` (set above); its dependencies
-are covered by `requirements.txt`.
-
-Its data lives in `assets/`:
-- `skills.json` — the design skills library (committed).
-- `rag_cache.npz` — cached embeddings of the skills. This is **not** committed; it is built
-  automatically the first time you run the planner (a one-time embedding pass over
-  `skills.json`) and reused afterwards.
-
-### Quick start
+`planner_core` is a lighter companion path that generates interior-design **images** (not 3D
+geometry): a retrieval-augmented planner that turns a prompt into a photorealistic 2×4 collage
+of one coherent room, with conversational editing. The 3D pipeline uses it for design briefs
+and reference collages, but it also stands alone:
 
 ```python
 from planner_core import InteriorPlanner
 
 planner = InteriorPlanner()
-
-# Initial generation
-result = planner("A gym in San Diego")
-result.save("v1.png")
-
-# Iterative edits — design state is preserved between calls
-result = planner.edit("make it more minimalist, remove most equipment")
-result.save("v2.png")
-
-result = planner.edit("add large windows with ocean views")
-result.save("v3.png")
+result = planner("A gym in San Diego");  result.save("v1.png")
+result = planner.edit("make it more minimalist");  result.save("v2.png")
 ```
 
-### How it works
+<details>
+<summary><b>How the planner works</b></summary>
 
-1. **Retrieve** — `SkillsRAG` embeds the prompt and returns the top-k most similar skill cards from `skills.json` (cosine similarity over the cached embeddings).
-2. **Synthesize** — an LLM composes the retrieved cards into one reusable conditioning *skill* (design principles, materials, lighting, composition cues).
-3. **Render** — an image model turns the prompt + conditioning skill into an eight-panel editorial collage of a single consistent room.
-4. **Edit** — `edit(instruction)` refines the current conditioning skill and re-renders, keeping the originally retrieved skills.
+1. **Retrieve** — `SkillsRAG` embeds the prompt and returns the top-k most similar design
+   skill cards from `assets/skills.json` (cosine similarity; the `rag_cache.npz` embedding
+   cache is built automatically on first run).
+2. **Synthesize** — an LLM composes the retrieved cards into one conditioning *skill*
+   (design principles, materials, lighting, composition cues).
+3. **Render** — an image model turns prompt + conditioning skill into an eight-panel
+   editorial collage of a single consistent room.
+4. **Edit** — `edit(instruction)` refines the current conditioning skill and re-renders,
+   keeping the originally retrieved skills; state is preserved between turns.
 
-Each `generate`/`edit` returns a `DesignResult` with `.image`, the synthesized `.skill`, the
-`.retrieved` cards, and a `.save(path)` helper.
+Each call returns a `DesignResult` with `.image`, the synthesized `.skill`, the `.retrieved`
+cards, and a `.save(path)` helper. `InteriorPlanner(retrieval_top_k=3)` controls retrieval.
 
-| Call | Description |
-|---|---|
-| `InteriorPlanner(retrieval_top_k=3)` | Construct the planner (loads the skills library + embedding cache). |
-| `planner(prompt)` / `planner.generate(prompt)` | Generate a fresh design; resets state. |
-| `planner.edit(instruction)` | Refine the current design; raises if nothing has been generated yet. |
-| `DesignResult.save(path)` | Save the generated image. |
+</details>
 
-## Notes
+## Repository layout
 
-- Coordinate system: the floor is the **XZ plane** and **Y is up**; rooms span
-  `x ∈ [0, WIDTH]`, `z ∈ [0, DEPTH]`, with the back wall at `z = 0`.
-- Large datasets, generated `.blend`/render outputs, and the documentation site are excluded
-  from this repo (see `.gitignore`); the docs live at
-  [interioragent/docs](https://github.com/interioragent/docs).
+Two layers: **`IDSDL/` is the scene engine**, and **`generator_core` / `planner_core` /
+`retriever_core` are the agentic tier above it**. Dependencies flow one way —
+`*_core → IDSDL`, never the reverse.
 
-## Text→scene generation (`main.py`)
-
-One command turns a prompt into a `.blend` scene, encoding the same workflow used to
-hand-build the library scenes (see `skills/SKILLS.md`):
-
-```bash
-python main.py "a cozy ramen bar with counter seating" --out results/ramen_bar
 ```
-
-Pipeline (`generator_core/pipeline.py`):
-
-1. **Plan** — `planner_core` produces a design brief + reference collage.
-2. **Retrieve** — `retriever_core` selects context by **reasoning over the whole
-   knowledge catalog** (no embeddings): the worked example recipes (indexed by *layout
-   pattern*, so a pharmacy pulls the retail_store skeleton), the workflow guides, and
-   the atomic lessons likely to fire (lighting density, window voids, retrieval SET
-   traps, …). Inspect the catalog offline: `python -m retriever_core --catalog`.
-3. **Asset stress test** — the shopping list is batch-resolved against the warm
-   retriever and audited (similarity + chosen mesh), so the author pins/rewords weak
-   picks before writing any placement.
-4. **Author** — a pluggable `Author` writes the IDSDL program. Default is a single
-   LLM (`--author llm`); `--author command --command '<shell cmd>'` delegates to ANY
-   external coding agent (Claude Code, Codex, aider, …) via a prepared workspace
-   (`TASK.md` + `scene.py`) — nothing is hardcoded to a specific agent.
-5. **Build + inner loop** — each build produces the room VLM strip + textual VLM
-   feedback; a **critic** that encodes the `skills/workflow/vlm_feedback.md` playbook
-   turns feedback into concrete program directives until converged (`--max-inner`).
-6. **Outer loop** — a **design judge** scores the built room against the plan
-   (strip vs. collage + brief, 0–10) and emits gap directives until the score clears
-   `--threshold` (default 8.0) or `--max-outer` is exhausted.
-
-Every run writes full provenance to `<out>/trace.json` (procedural signature, selected
-traces, asset audit, per-iteration feedback→directives, judge scores) plus
-`program.py`, `scene.blend`, `final_strip.png`.
-
-**Render policy:** builds run under the minimal render policy by default — the only
-render per compile is the room VLM strip (the single critique channel). Set
-`IDSDL_MINIMAL_RENDERS=0` for full per-group renders + the 8-view interior set
-(see `IDSDL/render_policy.py`).
-
-## MCP server (warm, typed tools for agents)
-
-`IDSDL/service/mcp_server.py` is a stdio [MCP](https://modelcontextprotocol.io) server that
-exposes the asset/scene tooling as **warm, typed tools returning structured data + inline
-images** — so an agent (e.g. Claude Code) drives the asset-discovery loop without cold-reloading
-the ~687 MB embeddings on every CLI call. The shared logic lives in `IDSDL/service/core.py`
-(warm singletons: base retriever, router, planner); the workbench CLI uses the same core.
-
-The `mcp` dependency is covered by `pip install -r requirements.txt`.
-Registration is `.mcp.json` (project-scoped; Claude Code discovers it on session start and
-prompts to approve `interioragent` — it launches `tools/interioragent_mcp.sh`, which picks `$IDSDL_PYTHON`,
-then the `interioragent` conda env if present, then `python3`). Requires `OPENAI_API_KEY` in
-the environment **at launch** — the warm process snapshots it. If the key rotates mid-session,
-call the **reload_credentials** tool (pass the fresh key, or write `OPENAI_API_KEY=...` to
-`<repo>/.env` and call it bare)
-instead of restarting; LLM-backed tools also detect a stale key and point you there rather
-than dumping a 401 traceback.
-
-For **Claude Desktop** (or any client that doesn't launch from the repo root), point at the
-launcher by absolute path — it anchors itself to the repo, so no working directory matters:
-
-```json
-{
-  "mcpServers": {
-    "interioragent": {
-      "command": "/abs/path/to/interioragent/tools/interioragent_mcp.sh",
-      "env": {
-        "IDSDL_PYTHON": "/abs/path/to/conda/envs/interioragent/bin/python",
-        "OPENAI_API_KEY": "sk-..."
-      }
-    }
-  }
-}
+IDSDL/                # THE ENGINE — scene DSL, solver, retrieval, renderer
+  scene.py            #   SceneProgRoom — the top-level scene API
+  groups.py           #   RelativeGroup / AroundGroup / GridGroup / RoomGroup
+  constraints.py      #   gradient + VLM constraints and the layout solvers
+  datasets/           #   3D-mesh retrievers over FutureHSSD (data via the bundle)
+  shop/               #   asset acquisition (Sketchfab/Meshy -> normalize -> ingest)
+  service/            #   MCP server + shared warm core; the integration hub
+generator_core/       # SceneGenerator: plan -> retrieve -> author -> build -> critic
+planner_core/         # InteriorPlanner (design briefs + collages) + SkillsRAG
+retriever_core/       # TraceRetriever — reasons over the knowledge catalog
+skills/               # the knowledge library: worked examples + guides + lessons
+main.py               # text -> finished scene, fully automatic
+workbench.py          # build/inspect a single scene program; day-to-day dev CLI
+tests.py              # IDSDL feature test suite (doubles as an example gallery)
+tools/                # dev tooling (MCP launcher, docs figures, bundle builder, ...)
 ```
-
-Startup takes ~10–20 s (the embeddings warm once); a missing dataset or key is reported on
-stderr with the fix. The long tools (`run_scene`, `shop_run`, `plan`, `ingest_glbs`) take
-minutes but run off the event loop, so the server stays responsive throughout — pings are
-answered and status/browse tools work mid-build (heavy tools themselves run one at a time).
-Give your client a generous per-tool timeout for those calls, or use the
-`generate_scene_start/status/result` job tools for the full pipeline.
-
-Tools (`mcp__interioragent__*`): **retrieve / inspect** (route+resolve a query → candidate contact sheet
-inline), **browse** (montage of dataset matches), **reselect / show / pin** (session-memory picks
-— instant, no re-retrieval; `pin` → the `AddAsset(asset_id=…)` snippet), **candidates / gallery /
-pool_add** (pool curation), **ingest_glbs** (custom-asset ingestion + auto re-warm), **shop_search
-/ shop_run / shop_apply** (find an asset the library does NOT have on Sketchfab — or generate one
-with Meshy — normalize, verify and ingest it, re-warmed so it is retrievable in the same session;
-anything the pipeline will not judge alone lands on a `HELP.md` for you), **plan**
-(design brief + collage) and **run_scene** (build+render a DSL program → VLM feedback + room views).
-
-Knowledge + generation tools: **catalog** (the tacit-knowledge index, offline),
-**retrieve_context** (reasoning-based trace retrieval → bundle.md for an agent to read before
-authoring a scene — this is the agent-as-author path: plan → retrieve_context → write the
-program yourself with retrieve/pin → run_scene), **lint_program** (static API check of a scene
-program in milliseconds — `run_scene`/`workbench run` refuse to build on errors), and
-**generate_scene_start / _status / _result** (the full main.py pipeline as a background job —
-takes 15–45 min, so it is job-based with live strip previews while it runs).
-
-Guided-flow tools — the 9-gate recipe as a server-side state machine (`IDSDL/service/flow.py`):
-**howto** (orientation card for a fresh agent), **flow_start / flow_status / flow_advance /
-flow_override**. Each gate's card says what to do and what evidence to bring back; evidence is
-validated mechanically (files exist, program lints clean, FRESH phase-N build report, no
-unresolved `[Lint]`/`WARNING` lines) before the next step is revealed, and overrides are
-recorded in the flow's provenance. State is file-backed under `tmp/flows/`, so a disconnected
-agent resumes exactly where it stopped.
-
-### Iterative verification (lints + phases)
-
-Two mechanisms make "verify early, cheap" mechanical rather than aspirational:
-- **Deterministic lints** (`IDSDL/lints.py`): post-compile geometric checks (floor objects
-  floating/sunk, lighting starfield) recorded in the build's VLM feedback, plus `lint_program`
-  — a static AST validation of a program against the real DSL surface that catches invented
-  verbs/kwargs in milliseconds instead of a failed multi-minute build. `workbench lint`,
-  `workbench run` (pre-build), the MCP `lint_program` tool and the generation pipeline all use it.
-- **Phase-gated builds** (`IDSDL/phases.py`): a program gates its statements with
-  `if PHASE >= n:` (1 anchors / 2 surfaces / 3 walls+mood); `workbench run --phase 1` then
-  builds just the floor layout in ~1–2 min (vs ~9 for a full build) so layout errors are caught
-  before any expensive dressing. Non-gated programs are unaffected (default = build everything).
-  The generation pipeline runs phase-1/2 gate builds on every freshly authored program.
 
 ## About
 
-InteriorAgent-IDSDL is part of the Ph.D. research of **Kunal Gupta** (CSE, UC San Diego) on
-codifying design expertise into computational form so generative AI systems can perform better
-on creative tasks.
+InteriorAgent is part of the Ph.D. research of **Kunal Gupta** (CSE, UC San Diego) on
+codifying design expertise into computational form so generative AI systems can perform
+better on creative tasks.
 
 ## License
 
 Code and documentation are released under the [MIT License](LICENSE). The vendored
 [three.js](https://github.com/mrdoob/three.js) viewer (`IDSDL/vendor/three/`) is MIT-licensed
-by the Three.js Authors. The 3D asset datasets (3D-FUTURE, HSSD, custom
-ingests) are downloaded separately and are **not** covered by the MIT license — see the
-dataset-terms notice in [Installation](#installation) and accept the upstream terms at the
-official [3D-FUTURE](https://tianchi.aliyun.com/dataset/98063) and
+by the Three.js Authors. The 3D asset datasets (3D-FUTURE, HSSD, custom ingests) are
+downloaded separately and are **not** covered by the MIT license — see the dataset-terms
+notice in [Getting started](#getting-started) and accept the upstream terms at the official
+[3D-FUTURE](https://tianchi.aliyun.com/dataset/98063) and
 [HSSD](https://huggingface.co/datasets/hssd/hssd-models) pages before using the bundles.
