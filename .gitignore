@@ -91,3 +91,6 @@ NEXT_STEPS.md
 backups/
 # Regenerable embedding cache — ships in the datasets bundle, not git (IDSDL/wall.py rebuilds it if absent)
 IDSDL/assets/wall_textures_embeddings.npz
+
+# The shareable datasets bundle (built by tools/make_datasets_bundle.py) — never in git
+idsdl_datasets*.zip
