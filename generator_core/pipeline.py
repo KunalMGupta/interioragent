@@ -471,6 +471,13 @@ class SceneGenerator:
 
             if verdict["score"] > best["score"]:
                 best = {"score": verdict["score"], **last_good}
+                # Snapshot the blend NOW: scene.blend is a fixed path every later
+                # build overwrites, and unlike program/strip it can't be re-emitted
+                # from `best` at the end — without this, a lower-scored final
+                # revision ships as scene.blend under the best version's score.
+                blend = out / "scene.blend"
+                if blend.exists():
+                    shutil.copy2(blend, out / "scene_best.blend")
 
             if verdict["score"] >= self.judge_threshold or outer == self.max_outer:
                 break
@@ -489,6 +496,11 @@ class SceneGenerator:
         final_build = best["build"] or last_good["build"] or build
         if final_build and final_build.strip and os.path.exists(final_build.strip):
             shutil.copy(final_build.strip, out / "final_strip.png")
+        # restore the best-judged blend over whatever the LAST build left behind
+        best_blend = out / "scene_best.blend"
+        if best["build"] is not None and best_blend.exists():
+            shutil.copy2(best_blend, out / "scene.blend")
+            best_blend.unlink()
         trace["final"] = {
             "score": best["score"],
             "program": str(out / "program.py"),

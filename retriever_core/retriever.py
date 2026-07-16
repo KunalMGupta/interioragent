@@ -151,6 +151,10 @@ class TraceRetriever:
 
     def _clean_ids(self, values, kind: str) -> list[str]:
         """Normalize selector output to existing card ids of the right kind."""
+        if isinstance(values, str):
+            # selector LLMs intermittently emit a bare string for a one-element
+            # list field; iterating it per character silently drops the pick
+            values = [values]
         out = []
         for v in values or []:
             v = str(v).strip().strip("`")
