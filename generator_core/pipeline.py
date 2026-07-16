@@ -178,18 +178,63 @@ class SceneGenerator:
                         "Each entry is one retrieval query: a specific object with "
                         "style/material/color (e.g. 'a tall dark wood back bar cabinet "
                         "with shelves of liquor bottles'). Anchors first, then secondary "
-                        "surface items, then wall/ceiling decor. No room-level entries.",
+                        "surface items, then wall/ceiling decor. No room-level entries. "
+                        "Only shop for discrete FURNITURE and PROPS the library can hold: "
+                        "wall/floor/ceiling FINISHES (paneling, wainscot, brick, tiles, "
+                        "backsplashes) are place_walls texture strings, NOT assets; light "
+                        "fixtures are add_lighting queries, NOT assets (never LED strips); "
+                        "skip architectural trim (foot rails, inlays, cove details) and "
+                        "micro-utensils (cutlery, chopsticks, dispensers) — a home-furniture "
+                        "dataset will substitute a wrong-kind object at a plausible score. "
+                        "Prefer fewer, self-contained pieces (a stocked display cabinet) "
+                        "over many tiny parts to assemble.",
             response_format="list", model_name=self.model_name)
         items = lister(f"User prompt: {prompt}\n\nDesign brief:\n{brief}\n\n"
                        f"List the asset queries the scene needs (max {self.stress_cap}).")
         return [str(x).strip() for x in items][: self.stress_cap]
+
+    # Below this similarity a pick is suspect even when the desc sounds plausible.
+    # 0.30 let a balcony railing ship as a "foot rail" (0.52) and a wall panel as
+    # "floor tiles" (0.46) — the ramen_bar postmortem. Descs at 0.44-0.55 were
+    # consistently wrong-kind objects.
+    STRESS_WEAK_SIM = 0.45
+
+    def _flag_mismatches(self, results: list[dict]) -> None:
+        """One batch LLM pass over the audit table: mark rows where the CHOSEN asset
+        is a different KIND of object than the query asked for (a candlestick for
+        'chopstick holders'). A similarity number alone never catches these; the
+        desc text does. Best-effort — the audit survives without it."""
+        try:
+            from sceneprogllm import LLM
+            judge = LLM(
+                system_desc="You audit retrieval results for a 3D asset library. For "
+                            "each numbered row (query -> chosen asset description), "
+                            "answer whether the chosen asset is fundamentally a "
+                            "DIFFERENT KIND of object than the query requested "
+                            "(railing for a foot rail, wall panel for floor tiles, "
+                            "candlestick for a chopstick holder). Style/color/material "
+                            "differences are NOT mismatches. Respond with JSON: "
+                            '{"mismatched": "<comma-separated row numbers, e.g. '
+                            '\'0, 3, 5\', or \'none\'>"}',
+                response_format="json",
+                response_params={"mismatched": "str"},
+                model_name=self.model_name)
+            table = "\n".join(f"{i}. {r['query']!r} -> {r['desc']!r}"
+                              for i, r in enumerate(results) if r.get("model"))
+            resp = judge(table)
+            raw = resp["mismatched"] if isinstance(resp, dict) else resp.mismatched
+            for i in {int(x) for x in re.findall(r"\d+", str(raw))}:
+                if 0 <= i < len(results):
+                    results[i]["mismatch"] = True
+        except Exception:
+            pass
 
     def _stress_test(self, queries: list[str], out: Path, log) -> str:
         """Batch-resolve every query against the warm router; audit table à la
         skills/workflow/asset_selection.md (sim | query | chosen desc)."""
         from IDSDL.service import core as svc
         svc.warm()
-        rows, results = [], []
+        results = []
         for i, q in enumerate(queries):
             try:
                 d = svc.retrieve(q)
@@ -198,18 +243,31 @@ class SceneGenerator:
                 sim = c.get("similarity") or 0.0
                 row = {"query": q, "sim": sim, "model": c.get("model"),
                        "desc": (c.get("desc") or "")[:80],
-                       "weak": bool(sim < 0.30)}
+                       "weak": bool(sim < self.STRESS_WEAK_SIM)}
             except Exception as e:
                 row = {"query": q, "sim": 0.0, "model": None,
                        "desc": f"RETRIEVAL ERROR: {e}", "weak": True}
             results.append(row)
-            flag = "  << WEAK (reword or pin)" if row["weak"] else ""
-            rows.append(f"{row['sim']:.3f}  {q:<52}  -> {row['model']}  {row['desc']}{flag}")
-            log(f"  [{i+1}/{len(queries)}] {rows[-1]}")
+            log(f"  [{i+1}/{len(queries)}] {row['sim']:.3f}  {q[:52]:<52}  -> {row['desc']}")
+        self._flag_mismatches(results)
+        rows = []
+        for r in results:
+            flag = ""
+            if r.get("mismatch"):
+                flag = "  << WRONG KIND (the chosen mesh is a different object — reword, pin, or DROP)"
+            elif r["weak"]:
+                flag = "  << WEAK (reword or pin)"
+            rows.append(f"{r['sim']:.3f}  {r['query']:<52}  -> {r['model']}  {r['desc']}{flag}")
         (out / "stress_test.json").write_text(json.dumps(results, indent=2))
         table = "sim    query" + " " * 49 + "-> chosen\n" + "\n".join(rows)
         weak = sum(r["weak"] for r in results)
-        table += f"\n\n{len(results) - weak}/{len(results)} resolved cleanly; {weak} weak."
+        bad = sum(bool(r.get("mismatch")) for r in results)
+        table += (f"\n\n{len(results) - weak - bad}/{len(results)} resolved cleanly; "
+                  f"{weak} weak; {bad} wrong-kind.")
+        if bad or weak:
+            table += ("\nDo NOT place a WRONG KIND pick as-is: reword the query "
+                      "(name the object class, not the room), pin a browsed id, or drop "
+                      "the item — a tidy arrangement of wrong objects still reads wrong.")
         return table
 
     def _lint_gate(self, task, program_src: str, log, max_tries: int = 2) -> str:

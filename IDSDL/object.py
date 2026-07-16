@@ -208,9 +208,13 @@ class SceneProgObject:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.__class__._zone_stack.pop()
+        if exc_type is not None:
+            # an error inside the with-block: don't compile the half-built group —
+            # a secondary compile failure would bury the real error
+            return False
         self.compile()
         self.recenter()
-        self.__class__._zone_stack.pop()
 
     def __str__(self):
         return self.get_descriptions()
@@ -746,6 +750,21 @@ class SceneProgObject:
 
         if self._is_ancestor_of(obj):
             raise ValueError("Cannot add an ancestor as a child")
+
+        if obj.parent is not None and obj.parent is not self:
+            # Silent re-parenting left the object in BOTH groups' children lists
+            # (the old parent still placed it) while its transform chain followed
+            # the new parent — the composed station visibly ripped apart, and the
+            # solver reported nonsense occupancy/overlaps for the rest of the run.
+            def _label(o):
+                d = getattr(o, "description", None)
+                return f"{o.name} ({d!r})" if d and d != o.name else f"{o.name}"
+            raise ValueError(
+                f"{_label(obj)} already belongs to group {_label(obj.parent)} and cannot "
+                f"be added to {_label(self)}. Don't anchor/compose a new group on an "
+                f"object that is already inside another group — target the OWNING "
+                f"group instead (e.g. anchor on that group, or call place_on_top(...) "
+                f"inside the owning group's own with-block, which targets its anchor).")
 
         if obj not in self.children:
             self.children.append(obj)
