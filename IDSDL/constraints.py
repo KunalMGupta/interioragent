@@ -283,21 +283,26 @@ class ConstraintBase:
         else:
             raise ValueError("Constraint type must be 'GRADIENT' or 'VLM'")
 
+    # Facing classifiers over the FULL circle (rotation normalized to [0, 360)).
+    # The old `% 180` forms collapsed opposite facings — an object rotated 180
+    # passed is_aligned_zpos, so directional clearance/access landed BEHIND it
+    # and the zneg/xneg branches of the if/elif chains below were unreachable
+    # for the canonical 0/90/180/270 rotations.
+    def _facing_rotation(self, obj):
+        return float(obj.get_rotation()) % 360
+
     def is_aligned_zpos(self, obj):
-        rotation = float(obj.get_rotation())
-        return np.abs(rotation) % 180 < 45
+        r = self._facing_rotation(obj)
+        return min(r, 360 - r) < 45
 
     def is_aligned_xpos(self, obj):
-        rotation = float(obj.get_rotation())
-        return np.abs(rotation - 90) % 180 < 45
+        return abs(self._facing_rotation(obj) - 90) < 45
 
     def is_aligned_zneg(self, obj):
-        rotation = float(obj.get_rotation())
-        return np.abs(rotation - 180) % 180 < 45
+        return abs(self._facing_rotation(obj) - 180) < 45
 
     def is_aligned_xneg(self, obj):
-        rotation = float(obj.get_rotation())
-        return np.abs(rotation - 270) % 180 < 45
+        return abs(self._facing_rotation(obj) - 270) < 45
     
 
 class OverlapConstraint(ConstraintBase):
@@ -983,16 +988,22 @@ class VisibilityConstraint(ConstraintBase):
                 mag = 10.0 / (norm_vt if norm_vt > 1e-3 else 1.0)
 
                 if norm_vt < 1e-3:
+                    # degenerate (collinear) case: pick the push side from the group's
+                    # SEEDED rng, not the global random module — a seeded scene must
+                    # reproduce the same layout every run (cf. groups.py corner facings)
+                    rng = getattr(self.group, "rng", None)
+                    pick = ((lambda opts: opts[int(rng.integers(len(opts)))])
+                            if rng is not None else random.choice)
                     rel = (v2 - v1) / (np.linalg.norm(v2 - v1) + 1e-3)
                     if rel @ np.array([0, 0, 1], dtype=np.float32) > 0.9 or rel @ np.array([0, 0, -1], dtype=np.float32) > 0.9:
-                        vt = random.choice(
+                        vt = pick(
                             [
                                 np.array([1, 0, 0], dtype=np.float32),
                                 np.array([-1, 0, 0], dtype=np.float32),
                             ]
                         )
                     else:
-                        vt = random.choice(
+                        vt = pick(
                             [
                                 np.array([0, 0, 1], dtype=np.float32),
                                 np.array([0, 0, -1], dtype=np.float32),

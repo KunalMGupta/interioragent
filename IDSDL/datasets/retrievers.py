@@ -268,6 +268,33 @@ Respond with the chosen number and a brief reason.
         top_models = [self.all_models[i] for i in top_indices]
         top_similarities = similarities[top_indices]
         return top_models, top_similarities
+
+    @property
+    def _model_index(self):
+        """{model id -> row in all_embeddings}, rebuilt if the index was re-warmed."""
+        cached = getattr(self, "_model_index_cache", None)
+        if cached is None or cached[0] is not self.all_models:
+            cached = (self.all_models,
+                      {m: i for i, m in enumerate(self.all_models.tolist())})
+            self._model_index_cache = cached
+        return cached[1]
+
+    def _pool_topk(self, models, query, k):
+        """Rank a curated category pool against a query; top-k (models, similarities).
+
+        all_models is the ON-DISK-FILTERED index (ids whose mesh is missing are
+        dropped at load), so the pool must be filtered to present ids first and the
+        top-k positions taken from that SAME filtered list. Taking positions from the
+        similarity ranking but reading the unfiltered pool returned the wrong asset —
+        or an off-disk one that crashed the build — on any partial install."""
+        present = [m for m in models if m in self._model_index]
+        if not present:
+            return [], np.array([])
+        embds = self.all_embeddings[[self._model_index[m] for m in present]]
+        embd = np.array(self.encoder.embed_query(query))
+        similarities = np.dot(embds, embd)
+        top_indices = np.argsort(similarities)[-k:][::-1]
+        return [present[i] for i in top_indices], similarities[top_indices]
     
     def build_context(self, models):
         context = ""
@@ -439,6 +466,12 @@ Pick the single numbered candidate that best matches the query.
 
         top_models, top_similarities = self.get_likely_asset(query)
         top_models, top_similarities = self.remove_bad_assets(top_models, top_similarities)
+        if not top_models:
+            raise ValueError(
+                f"{self.name}: no usable candidates for {query!r} — either every asset "
+                f"in this category pool is missing its mesh on disk (minimal install? "
+                f"install the full datasets bundle or acquire one via the asset shop), "
+                f"or nothing scored above the 0.4 similarity floor (reword the query).")
         if self.USE_VISUAL_SELECTION:
             model, candidates, sheet, reasoning = self.select_best_model_visual(
                 query, top_models, top_similarities)
@@ -487,15 +520,7 @@ Typically, this includes furniture like cabinets, tables, dressers, sideboards, 
             self.case_goods = json.load(f)
 
     def get_likely_asset(self, query: str) -> str:
-        case_goods_idx = [self.all_models.tolist().index(model) for model in self.case_goods if model in self.all_models]
-        case_goods_embds = np.array([self.all_embeddings[i] for i in case_goods_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(case_goods_embds, embd)
-
-        # Get top 20 most similar models
-        top_indices = np.argsort(similarities)[-20:][::-1]
-        top_models = [self.case_goods[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
+        top_models, top_similarities = self._pool_topk(self.case_goods, query, 20)
 
         filtered_models = []
         filtered_similarities = []
@@ -591,16 +616,7 @@ Unless specified, assume the request is for a filled cabinet/shelf.
         else:
             candidate_models = self.shelfs_or_cabinets["filled"]
 
-        candidate_idxs = [self.all_models.tolist().index(model) for model in candidate_models if model in self.all_models]
-        candidate_embds = np.array([self.all_embeddings[i] for i in candidate_idxs])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(candidate_embds, embd)
-        # Get top 20 most similar models
-        top_indices = np.argsort(similarities)[-20:][::-1]
-        top_models = [candidate_models[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-
-        return top_models, top_similarities
+        return self._pool_topk(candidate_models, query, 20)
     
 class ClockRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -619,15 +635,7 @@ Typically, this includes wall clocks, table clocks, and alarm clocks.
             self.clocks = json.load(f)
 
     def get_likely_asset(self, query: str) -> str:
-        clocks_idx = [self.all_models.tolist().index(model) for model in self.clocks if model in self.all_models]
-        clocks_embds = np.array([self.all_embeddings[i] for i in clocks_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(clocks_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.clocks[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.clocks, query, 10)
 
 class MirrorRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -645,15 +653,7 @@ Typically, this includes wall mirrors, table mirrors, and decorative mirrors.
         with open(os.path.join(os.path.dirname(__file__), "assets/mirrors.json"), "r") as f:
             self.mirrors = json.load(f)
     def get_likely_asset(self, query: str) -> str:
-        mirrors_idx = [self.all_models.tolist().index(model) for model in self.mirrors if model in self.all_models]
-        mirrors_embds = np.array([self.all_embeddings[i] for i in mirrors_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(mirrors_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.mirrors[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.mirrors, query, 10)
     
 class KitchenUnitRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -670,15 +670,7 @@ Retrieves kitchen unit which is a complete kitchen set that includes cabinets, s
         with open(os.path.join(os.path.dirname(__file__), "assets/kitchen_set.json"), "r") as f:
             self.kitchen_units = json.load(f)
     def get_likely_asset(self, query: str) -> str:
-        kitchen_units_idx = [self.all_models.tolist().index(model) for model in self.kitchen_units if model in self.all_models]
-        kitchen_units_embds = np.array([self.all_embeddings[i] for i in kitchen_units_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(kitchen_units_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.kitchen_units[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.kitchen_units, query, 10)
     
 
 class Painting:
@@ -801,15 +793,7 @@ Retrieves wall art objects that are placed on the wall. These include paintings,
         self.bad_paintings = ["future/90579f33-88b9-4805-be6d-69a596011576"]
 
     def get_likely_asset(self, query: str) -> str:
-        wall_art_idx = [self.all_models.tolist().index(model) for model in self.wall_art if model in self.all_models]
-        wall_art_embds = np.array([self.all_embeddings[i] for i in wall_art_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(wall_art_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.wall_art[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.wall_art, query, 10)
         
     def __call__(self, query: str) -> tuple[str, float]:
 
@@ -817,7 +801,8 @@ Retrieves wall art objects that are placed on the wall. These include paintings,
         for model in top_models:
             if model in self.bad_paintings:
                 top_similarities[top_models.index(model)] = -1  # Invalidate the similarity for bad paintings
-        if top_similarities.max() < 0.5:
+        # empty pool (no wall art on disk at all) falls through to the generator too
+        if len(top_similarities) == 0 or top_similarities.max() < 0.5:
             # If no suitable model is found, generate a painting
             path, scale = self.painting_generator(query)
             return path, scale
@@ -844,15 +829,7 @@ Only use this retriever when specifically looking for table top decor.
             self.table_top_decor = json.load(f)
 
     def get_likely_asset(self, query: str) -> str:
-        table_top_idx = [self.all_models.tolist().index(model) for model in self.table_top_decor if model in self.all_models]
-        table_top_embds = np.array([self.all_embeddings[i] for i in table_top_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(table_top_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.table_top_decor[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.table_top_decor, query, 10)
     
 class FloorPlantsRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -870,15 +847,7 @@ Retrieves large floor plants that are placed on the floor as part of the room de
             self.floor_plants = json.load(f)
             
     def get_likely_asset(self, query: str) -> str:
-        floor_plants_idx = [self.all_models.tolist().index(model) for model in self.floor_plants if model in self.all_models]
-        floor_plants_embds = np.array([self.all_embeddings[i] for i in floor_plants_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(floor_plants_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.floor_plants[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.floor_plants, query, 10)
     
 
 class HumansAndSculpturesRetriever(FutureHSSDAssetRetriever):
@@ -900,15 +869,7 @@ Retrieves humans and human sized sculptures that are placed on the floor as part
             self.humans_and_sculptures = json.load(f)
         
     def get_likely_asset(self, query: str) -> str:
-        humans_and_sculptures_idx = [self.all_models.tolist().index(model) for model in self.humans_and_sculptures if model in self.all_models]
-        humans_and_sculptures_embds = np.array([self.all_embeddings[i] for i in humans_and_sculptures_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(humans_and_sculptures_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.humans_and_sculptures[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.humans_and_sculptures, query, 10)
     
 class ClothesRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -928,15 +889,7 @@ Note that coat hangers are not included in this retriever, they are considered a
         with open(os.path.join(os.path.dirname(__file__), "assets/clothes.json"), "r") as f:
             self.clothes = json.load(f)
     def get_likely_asset(self, query: str) -> str:
-        clothes_idx = [self.all_models.tolist().index(model) for model in self.clothes if model in self.all_models]
-        clothes_embds = np.array([self.all_embeddings[i] for i in clothes_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(clothes_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.clothes[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.clothes, query, 10)
     
 class BathroomVanityUnitRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -955,15 +908,7 @@ Only use this retriever when specifically looking for bathroom vanity units. Not
             self.bathroom_vanity_units = json.load(f)
 
     def get_likely_asset(self, query: str) -> str:
-        bathroom_vanity_units_idx = [self.all_models.tolist().index(model) for model in self.bathroom_vanity_units if model in self.all_models]
-        bathroom_vanity_units_embds = np.array([self.all_embeddings[i] for i in bathroom_vanity_units_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(bathroom_vanity_units_embds, embd)
-        # Get top 5 most similar models
-        top_indices = np.argsort(similarities)[-5:][::-1]
-        top_models = [self.bathroom_vanity_units[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.bathroom_vanity_units, query, 5)
     
 class DressingVanityUnitRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -981,15 +926,7 @@ Notably, it does not include a stool or chair, as these are considered furniture
         with open(os.path.join(os.path.dirname(__file__), "assets/dressing_vanity_unit.json"), "r") as f:
             self.dressing_vanity_units = json.load(f)
     def get_likely_asset(self, query: str) -> str:
-        dressing_vanity_units_idx = [self.all_models.tolist().index(model) for model in self.dressing_vanity_units if model in self.all_models]
-        dressing_vanity_units_embds = np.array([self.all_embeddings[i] for i in dressing_vanity_units_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(dressing_vanity_units_embds, embd)
-        # Get top 5 most similar models
-        top_indices = np.argsort(similarities)[-5:][::-1]
-        top_models = [self.dressing_vanity_units[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.dressing_vanity_units, query, 5)
 
 class BathroomToiletSetRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -1012,15 +949,7 @@ Only use this retriever when specifically looking for a toilet / WC.
             self.toilet_sets = json.load(f)
 
     def get_likely_asset(self, query: str) -> str:
-        toilet_idx = [self.all_models.tolist().index(model) for model in self.toilet_sets if model in self.all_models]
-        toilet_embds = np.array([self.all_embeddings[i] for i in toilet_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(toilet_embds, embd)
-        # Get top 5 most similar models
-        top_indices = np.argsort(similarities)[-5:][::-1]
-        top_models = [self.toilet_sets[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.toilet_sets, query, 5)
 
 class ApplianceRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -1040,15 +969,7 @@ Only use this retriever when specifically looking for appliances.
         with open(os.path.join(os.path.dirname(__file__), "assets/appliances.json"), "r") as f:
             self.appliances = json.load(f)
     def get_likely_asset(self, query: str) -> str:
-        appliances_idx = [self.all_models.tolist().index(model) for model in self.appliances if model in self.all_models]
-        appliances_embds = np.array([self.all_embeddings[i] for i in appliances_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(appliances_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.appliances[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.appliances, query, 10)
     
 class GymEquipmentRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -1068,15 +989,7 @@ Only use this retriever when specifically looking for gym equipment.
         with open(os.path.join(os.path.dirname(__file__), "assets/gym_equipment.json"), "r") as f:
             self.gym_equipment = json.load(f)
     def get_likely_asset(self, query: str) -> str:
-        gym_equipment_idx = [self.all_models.tolist().index(model) for model in self.gym_equipment if model in self.all_models]
-        gym_equipment_embds = np.array([self.all_embeddings[i] for i in gym_equipment_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(gym_equipment_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.gym_equipment[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.gym_equipment, query, 10)
         
 class BathroomFurnitureAndMiscellaneousRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -1097,15 +1010,7 @@ Only use this retriever when specifically looking for bathroom furniture and mis
             self.bathroom = json.load(f)
 
     def get_likely_asset(self, query: str) -> str:
-        bathroom_idx = [self.all_models.tolist().index(model) for model in self.bathroom if model in self.all_models]
-        bathroom_embds = np.array([self.all_embeddings[i] for i in bathroom_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(bathroom_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.bathroom[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.bathroom, query, 10)
     
 class GameEquipmentRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -1125,15 +1030,7 @@ Only use this retriever when specifically looking for game equipment.
             self.game_equipment = json.load(f)
 
     def get_likely_asset(self, query: str) -> str:
-        game_equipment_idx = [self.all_models.tolist().index(model) for model in self.game_equipment if model in self.all_models]
-        game_equipment_embds = np.array([self.all_embeddings[i] for i in game_equipment_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(game_equipment_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.game_equipment[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.game_equipment, query, 10)
     
 class CountersRetriever(FutureHSSDAssetRetriever):
     def __init__(self):
@@ -1152,15 +1049,7 @@ Only use this retriever when specifically looking for counters.
             self.counters = json.load(f)
 
     def get_likely_asset(self, query: str) -> str:
-        counters_idx = [self.all_models.tolist().index(model) for model in self.counters if model in self.all_models]
-        counters_embds = np.array([self.all_embeddings[i] for i in counters_idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(counters_embds, embd)
-        # Get top 10 most similar models
-        top_indices = np.argsort(similarities)[-10:][::-1]
-        top_models = [self.counters[i] for i in top_indices]
-        top_similarities = similarities[top_indices]
-        return top_models, top_similarities
+        return self._pool_topk(self.counters, query, 10)
 
 
 class PresentationFixtureRetriever(FutureHSSDAssetRetriever):
@@ -1192,15 +1081,7 @@ WallArtRetriever.
             self.fixtures = json.load(f)
 
     def get_likely_asset(self, query: str):
-        models = [m for m in self.fixtures if m in self.all_models]
-        idx = [self.all_models.tolist().index(m) for m in models]
-        embds = np.array([self.all_embeddings[i] for i in idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(embds, embd)
-        top = np.argsort(similarities)[-20:][::-1]
-        top_models = [models[i] for i in top]
-        top_similarities = similarities[top]
-        return top_models, top_similarities
+        return self._pool_topk(self.fixtures, query, 20)
 
 
 class MedicalFixtureRetriever(FutureHSSDAssetRetriever):
@@ -1240,15 +1121,7 @@ piece. Do NOT use it for generic residential furniture, decorative art, or plant
             self.fixtures = json.load(f)
 
     def get_likely_asset(self, query: str):
-        models = [m for m in self.fixtures if m in self.all_models]
-        idx = [self.all_models.tolist().index(m) for m in models]
-        embds = np.array([self.all_embeddings[i] for i in idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(embds, embd)
-        top = np.argsort(similarities)[-20:][::-1]
-        top_models = [models[i] for i in top]
-        top_similarities = similarities[top]
-        return top_models, top_similarities
+        return self._pool_topk(self.fixtures, query, 20)
 
 
 class HairSalonRetriever(FutureHSSDAssetRetriever):
@@ -1345,15 +1218,7 @@ use it for the desk itself (that is the default FutureHSSDAssetRetriever), for w
             self.pool = json.load(f)
 
     def get_likely_asset(self, query: str):
-        models = [m for m in self.pool if m in self.all_models]
-        idx = [self.all_models.tolist().index(m) for m in models]
-        embds = np.array([self.all_embeddings[i] for i in idx])
-        embd = np.array(self.encoder.embed_query(query))
-        similarities = np.dot(embds, embd)
-        top = np.argsort(similarities)[-20:][::-1]
-        top_models = [models[i] for i in top]
-        top_similarities = similarities[top]
-        return top_models, top_similarities
+        return self._pool_topk(self.pool, query, 20)
 
 
 class ShopFixtureRetriever(FutureHSSDAssetRetriever):
