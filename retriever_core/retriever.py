@@ -72,6 +72,24 @@ Respond with ONLY a JSON object (no prose outside it) with exactly these keys:
 """
 
 
+def _strip_decision_log(text: str) -> str:
+    """Drop an append-per-scene '## Decision log' section from a bundled workflow doc.
+
+    The log is the RAW history; its entries are distilled into individually
+    anchored lesson cards ({#vlm-...}) that the selector already picks under
+    'Lessons likely to fire'. Bundling the whole log nearly doubled bundle.md
+    (141 KB of a 324 KB bundle) as pure duplication. The source file is
+    untouched — catalog browsing and direct reads still see the full log."""
+    m = re.search(r"^## Decision log.*$", text, re.M)
+    if not m:
+        return text
+    return text[:m.start()] + (
+        "## Decision log — omitted from bundles\n"
+        "(The raw per-scene log is distilled into `lesson:vlm/...` cards; the ones "
+        "relevant to this scene are already included under 'Lessons likely to fire'. "
+        "For the full history read skills/workflow/vlm_feedback.md directly.)\n")
+
+
 @dataclass
 class ContextBundle:
     prompt: str
@@ -217,7 +235,7 @@ class TraceRetriever:
             parts.append("\n# Workflow guides")
             for cid in sel["workflow_docs"]:
                 card = self.catalog.by_id(cid)
-                parts.append("\n" + self.catalog.card_text(card))
+                parts.append("\n" + _strip_decision_log(self.catalog.card_text(card)))
 
         if sel["lessons"]:
             parts.append("\n# Lessons likely to fire on this scene")
