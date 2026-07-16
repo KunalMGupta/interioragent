@@ -494,7 +494,10 @@ class RelativeGroup(AnchorGroup):
     def place_on_front_right_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
         inner_width, inner_depth = self.get_inner_aabb()
-        front_right_further = center + front_dir * (inner_depth / 2 + obj.get_depth() / 2 + CIRCULATION_GAP) + right_dir * (inner_width / 2 + obj.get_width() / 2 + CIRCULATION_GAP)
+        # rotation -90 swaps the object's world extents: width along z, depth along x
+        # (mirrors place_on_front_left_further; the unswapped form overlapped/gapped
+        # non-square objects on this one diagonal)
+        front_right_further = center + front_dir * (inner_depth / 2 + obj.get_width() / 2 + CIRCULATION_GAP) + right_dir * (inner_width / 2 + obj.get_depth() / 2 + CIRCULATION_GAP)
         obj.set_location(front_right_further[0], self.compute_obj_y(obj), front_right_further[2])
         obj.set_rotation(-90)
         self.add_child(obj)

@@ -180,6 +180,10 @@ class SceneProgRoom:
             if cand is None:
                 raise ValueError(f"no retrieval candidate matching {choice!r}")
         obj.load(mesh_path=cand["path"])
+        # A width/depth override on the OLD asset leaves transform.scale non-uniform,
+        # and scale() multiplies per-axis — without a reset the new mesh inherits the
+        # old asset's stretch. (Re-apply any explicit width=/depth= override after.)
+        obj.transform.set_scale([1.0, 1.0, 1.0])
         obj.scale(cand["scale"])
         if getattr(obj, "retrieval_query", None):
             obj.description = obj.retrieval_query
@@ -410,10 +414,14 @@ obj.scale = [{scale[0]}, {scale[2]}, {scale[1]}]
 """
             if obj in self.ceiling_lights:
                 w, h, d = obj.get_whd()
+                # Per-fixture energy: add_lighting splits scene.light_budget across N
+                # fixtures (object.py). The render serializer honors it — the exported
+                # .blend must too, or a multi-fixture / dimmed room exports N× too bright.
+                energy = float(getattr(obj, "light_energy", 500))
                 lines += f"""
 # Create a new area light
 light_data = bpy.data.lights.new(name='{obj_name}_Light', type='AREA')
-light_data.energy = 500       # Strength in watts
+light_data.energy = {energy}       # Strength in watts
 light_data.shape = 'RECTANGLE'  # Or 'SQUARE'
 light_data.size = {w}          # Width (if RECTANGLE, this is X)
 light_data.size_y = {d}        # Height (only used for RECTANGLE)
@@ -464,7 +472,16 @@ bpy.ops.import_scene.gltf(filepath=r'{obj.mesh_path}')
 bpy.ops.file.pack_all()
 """
 
+        # The Blender runner reports failures only in its return string — verify the
+        # .blend actually landed (and is fresh) so a crashed subprocess fails loudly
+        # here instead of surfacing later as a missing/stale deliverable.
+        mtime_before = os.path.getmtime(target) if os.path.exists(target) else None
         self.exec(lines, target, verbose=True)
+        if not os.path.exists(target) or (
+                mtime_before is not None and os.path.getmtime(target) == mtime_before):
+            raise RuntimeError(
+                f"Blender export did not write {target!r} — the Blender subprocess "
+                f"likely failed; check the output above and BLENDER_PATH/BLENDER_PYTHON.")
         # self.renderer.render_from_edge_midpoints(target, output_paths=['tmp/right.png', 'tmp/back.png', 'tmp/left.png', 'tmp/front.png'])
 
 # from scene import SceneProgRoom
