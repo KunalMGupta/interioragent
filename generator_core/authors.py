@@ -172,8 +172,14 @@ class CommandAuthor(Author):
         task_file.write_text(task_md)
         program_file.write_text(program or "# Write the IDSDL scene program here.\n")
 
-        cmd = self.command.format(workspace=self.workspace, task_file=task_file,
-                                  program_file=program_file)
+        # Substitute ONLY the three documented placeholders. str.format() would
+        # choke on any other brace in the user's command (shell `{}`/`{a,b}`,
+        # inline JSON) before the subprocess even runs.
+        cmd = self.command
+        for key, val in (("{workspace}", self.workspace),
+                         ("{task_file}", task_file),
+                         ("{program_file}", program_file)):
+            cmd = cmd.replace(key, str(val))
         subprocess.run(cmd, shell=True, cwd=self.workspace, timeout=self.timeout,
                        check=True, env={**os.environ})
         result = program_file.read_text()
