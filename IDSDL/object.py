@@ -1003,6 +1003,7 @@ class SceneProgObject:
         density = float(np.clip(density, 0.0, 1.0))
 
         light = self.scene.AddAsset(desc, modulate_scale=modulate_scale)
+        light.scale_solve_exempt = True   # fixtures are sized by the cap below, not solve_scales
 
         # Cap the fixture height at 1.5 m: shorten tall lights without touching width/depth.
         MAX_LIGHT_HEIGHT = 1.5

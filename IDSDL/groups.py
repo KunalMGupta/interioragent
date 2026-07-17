@@ -81,6 +81,8 @@ class AnchorGroup(SceneProgObject):
     ON_TOP_MAX_COMBINED_HEIGHT = 3.5  # anchor + on-top object stack must not exceed this [m]
 
     def _fit_on_top(self, obj, anchor_w, anchor_h, anchor_d, n):
+        if getattr(obj, "scale_solve_locked", False):
+            return  # size was deliberately set by solve_scales — seat it, don't resize
         w0, h0, d0 = obj.get_whd()
         if min(w0, h0, d0) <= 0:
             return
@@ -112,7 +114,11 @@ class AnchorGroup(SceneProgObject):
         # Primary: VLM-tournament placement (renders candidates, judges, applies the best).
         # Falls back to the deterministic AABB layout below on any failure or if disabled.
         from IDSDL import vlm_placement
+        from IDSDL.stability import stabilize_objects
         if vlm_placement.place_smart(self, self.anchor, objs, "on_top", log=print):
+            # The tournament judges visibility/surface, not physics — an edge tile
+            # can win with the object half off the support. Nudge back to stable.
+            stabilize_objects(self.anchor, objs, log=print)
             return
 
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
@@ -143,8 +149,14 @@ class AnchorGroup(SceneProgObject):
 
         for i, obj in enumerate(objs):
             obj.set_location(locs[i][0], height + self.compute_obj_y(obj), locs[i][2])
+            # Measured re-seat: compute_obj_y depends on the object's current
+            # origin convention, which drifts across recompiles — correct the
+            # actual bottom onto the anchor's actual top (no-op when already right).
+            a = obj.get_aabb()
+            obj.translate(0, float(vmax[1] - a[0, 1]), 0)
             obj.ignore_overlap = True
             self.add_child(obj)
+        stabilize_objects(self.anchor, objs, log=print)
 
     @placemethod
     def place_inside(self, objs):
@@ -156,7 +168,9 @@ class AnchorGroup(SceneProgObject):
         objs = self.to_list(objs)
 
         from IDSDL import vlm_placement
+        from IDSDL.stability import stabilize_objects
         if vlm_placement.place_smart(self, self.anchor, objs, "inside", log=print):
+            stabilize_objects(self.anchor, objs, log=print)
             return
 
         # Fallback: AABB interior — fit each object, then line them up along the anchor's
@@ -177,6 +191,7 @@ class AnchorGroup(SceneProgObject):
             obj.set_location(locs[i][0], mid_y + self.compute_obj_y(obj), locs[i][2])
             obj.ignore_overlap = True
             self.add_child(obj)
+        stabilize_objects(self.anchor, objs, log=print)
 
     @placemethod
     def place_rug(self, desc, size, asset_id=None):
@@ -221,8 +236,21 @@ class AnchorGroup(SceneProgObject):
         rug.set_location(location[0], self.compute_obj_y(rug), location[2])
         self.add_child(rug)
         rug.ignore_overlap = True
+        rug.scale_solve_exempt = True
 
         return rug
+
+    def solve_scales(self, rounds=3, k=4, **kw):
+        """Opt-in VLM search over the members' RELATIVE SIZES (post-compile).
+
+        Call after the group's with-block. Proposer/critic tournament over
+        per-member scale factors (tools/scale_solver.py, benchmark-validated);
+        on success the factors are applied and the group recompiles so the
+        layout re-solves against the new sizes. Heavy (renders + LLM calls,
+        minutes per group) — never automatic. IDSDL_SMART_SCALE=0 disables.
+        Returns the winning factors dict or None."""
+        from IDSDL.vlm_scale import solve_group_scales
+        return solve_group_scales(self, rounds=rounds, k=k, **kw)
 
     def compile(self):
         self.reset_compile_state()
@@ -262,7 +290,7 @@ class AnchorGroup(SceneProgObject):
             op.execute()
 
         op = self.get_operation("add_lighting")
-        if op is not None:
+        if op is not None and "add_lighting" not in getattr(self, "_recompile_skip", ()):
             op.execute()
 
         # Apply opt-in rotation overrides after positions have settled, so the
