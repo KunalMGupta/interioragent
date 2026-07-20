@@ -3,8 +3,9 @@
 Renders candidate arrangements of small objects on/inside an anchor and uses a VLM
 value-iteration tournament (see tools/planar_regions.py) to pick the best, then applies the
 winning transforms to the DSL objects. This is the *primary* path; it is heavy (needs
-Blender + a GPU + OPENAI_API_KEY), so any failure returns False and the caller falls back to
-the deterministic AABB placement. Disable globally with env IDSDL_SMART_PLACEMENT=0.
+Blender + a render device + OPENAI_API_KEY), so any failure returns False and the caller falls
+back to the deterministic AABB placement. Disable globally with env IDSDL_SMART_PLACEMENT=0.
+Select the preview device with IDSDL_SMART_PLACEMENT_DEVICE=auto|cpu|gpu.
 
 Frame: at place_* compile time the group's parent is identity, so the anchor's world mesh is
 exported as the solver's base frame; the per-item placements come back in that same frame and

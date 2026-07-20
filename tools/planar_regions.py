@@ -21,6 +21,7 @@ import argparse
 import math
 import os
 import re
+import sys
 
 import numpy as np
 import trimesh
@@ -580,15 +581,36 @@ def glb_to_blend(glb_path, workdir):
     return blend
 
 
+def smart_placement_uses_gpu():
+    """Choose the device for the many tiny, concurrent placement previews.
+
+    ``auto`` preserves the existing GPU path except on macOS.  Cycles/Metal is
+    faster for substantial room renders, but three independent Blender workers
+    contending for one Apple GPU made 384px/8-sample previews stall for up to
+    120 seconds in testing.  CPU avoids that Metal contention while retaining
+    the existing three-way workload; normal room/final renders still use Metal.
+    """
+    value = os.environ.get("IDSDL_SMART_PLACEMENT_DEVICE", "auto").strip().lower()
+    if value == "cpu":
+        return False
+    if value == "gpu":
+        return True
+    if value != "auto":
+        raise ValueError(
+            "IDSDL_SMART_PLACEMENT_DEVICE must be one of: auto, cpu, gpu"
+        )
+    return sys.platform != "darwin"
+
+
 def render_blend(blend_path, png_path, res=640, samples=16):
-    """GPU-bound strict front render. Keep concurrency low (shares one GPU's VRAM).
+    """Strict front render for a small smart-placement candidate.
 
     A fresh SceneRenderer/SceneProgExec per call avoids racing on the shared instance's
     log_path/tmp_exec_path.
     """
     from IDSDL.renderer.renderer import SceneRenderer
     SceneRenderer(resolution_x=res, resolution_y=res, samples=samples,
-                  cuda=True).render_from_front(blend_path, png_path)
+                  cuda=smart_placement_uses_gpu()).render_from_front(blend_path, png_path)
     return png_path
 
 
@@ -726,7 +748,8 @@ def generate_and_select(base_path, base_desc, item_models, mode="on_top", k=10,
         f.write(_GLB2BLEND)
     log(f"  {n_items} items, {len(regions)} region(s), tile={tile:.3f}m -> {len(tiles)} tiles "
         f"({n_top} on top); {generations} gen x {k} candidates (mode={mode}, "
-        f"convert_workers={workers}, render_workers={render_workers})")
+        f"convert_workers={workers}, render_workers={render_workers}, "
+        f"render_device={'gpu' if smart_placement_uses_gpu() else 'cpu'})")
 
     last_winner_glb = None
     gen_records = []
