@@ -191,6 +191,11 @@ class SceneProgObjectWall:
         j_min = max(0, int(y_min / dy)) + 1
         j_max = min(wall.ny - 1, int(y_max / dy)) - 1
 
+        if i_min > i_max or j_min > j_max:
+            print(f"WARNING: {type(self).__name__} on {wall.name} spans too few "
+                  f"wall cells to cut an opening (i:{i_min}..{i_max}, "
+                  f"j:{j_min}..{j_max}); the wall was left solid.")
+            return
         for i in range(i_min, i_max + 1):
             for j in range(j_min, j_max + 1):
                 wall.holes.add((i, j))
