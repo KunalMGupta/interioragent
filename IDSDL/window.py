@@ -130,7 +130,7 @@ class SceneProgObjectWall:
         if wall.name == "back_wall":
             rot(mesh, 0)
         elif wall.name == "left_wall":
-            rot(mesh, 270)
+            rot(mesh, 90)
         elif wall.name == "front_wall":
             rot(mesh, 180)
         elif wall.name == "right_wall":
@@ -260,8 +260,6 @@ class Window(SceneProgObjectWall):
         pos = (pos[0], pos[1] + 0.2, 0.1)
         pos = self.transform_position(pos, wall)
         mesh = self.translate(mesh, pos)
-        if wall.name in ["left_wall"]:
-            mesh.invert()
         mesh.export(self.curtain_path_instance)
 
         return self, Curtain(self.curtain_path_instance)
@@ -295,8 +293,6 @@ class Window(SceneProgObjectWall):
         pos = (pos[0], pos[1] + 0.1, 0.1)
         pos = self.transform_position(pos, wall)
         mesh = self.translate(mesh, pos)
-        if wall.name in ["left_wall"]:
-            mesh.invert()
         mesh.export(self.curtain_path_instance)
 
         return self, Curtain(self.curtain_path_instance)
@@ -334,8 +330,6 @@ class Window(SceneProgObjectWall):
         pos = (pos[0], pos[1] - 0.05, 0.08)
         pos = self.transform_position(pos, wall)
         mesh = self.translate(mesh, pos)
-        if wall.name in ["left_wall"]:
-            mesh.invert()
         mesh.export(self.curtain_path_instance)
 
         return self, Curtain(self.curtain_path_instance)
