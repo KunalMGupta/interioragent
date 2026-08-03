@@ -4,6 +4,11 @@
 # Python resolution: $IDSDL_PYTHON > the interioragent conda env if present > python3 on PATH.
 cd "$(dirname "$0")/.."
 PY="${IDSDL_PYTHON:-}"
+if [ -z "$PY" ] && [ -n "$CONDA_PREFIX" ]; then
+  # a conda env is active: derive the install base from it (handles any install location)
+  base="${CONDA_PREFIX%%/envs/*}"
+  [ -x "$base/envs/interioragent/bin/python" ] && PY="$base/envs/interioragent/bin/python"
+fi
 if [ -z "$PY" ]; then
   for root in /opt/conda "$HOME/miniforge3" "$HOME/miniconda3" "$HOME/anaconda3" "$HOME/mambaforge"; do
     if [ -x "$root/envs/interioragent/bin/python" ]; then
