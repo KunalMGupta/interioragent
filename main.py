@@ -22,6 +22,15 @@ import re
 import sys
 from pathlib import Path
 
+# Cap per-job thread pools BEFORE numpy/BLAS/Blender are imported downstream.
+# Without this every job auto-detects all cores (~127 threads each); N concurrent
+# jobs then oversubscribe the box by ~3x and spend their time context-switching.
+# Inherited by child processes (workbench.py run, Blender). Tune with SCENE_THREADS.
+_threads = os.environ.get("SCENE_THREADS", "4")
+for _v in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
+           "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ.setdefault(_v, _threads)
+
 
 def main(argv=None):
     # stream progress even when stdout is piped (generate.log, MCP jobs)
