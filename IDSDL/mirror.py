@@ -16,7 +16,7 @@ imports the glb as a wall_object with its baked-in material.
 import trimesh
 import numpy as np
 
-from window import SceneProgObjectWall
+from IDSDL.window import SceneProgObjectWall
 
 
 class Mirror(SceneProgObjectWall):
