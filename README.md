@@ -160,6 +160,18 @@ stderr with the fix. Long tools (`run_scene`, `shop_run`, `plan`, `ingest_glbs`)
 but run off the event loop, so the server stays responsive throughout — give your client a
 generous per-tool timeout, or use the `generate_scene_start/status/result` job tools.
 
+**Verify your install** before pointing a client at it — this speaks the MCP protocol at the
+launcher exactly the way a client would, and prints the server's own explanation on failure:
+
+```bash
+python3 tools/mcp_smoke.py             # handshake + tool listing + a howto call
+python3 tools/mcp_smoke.py --retrieve  # also a real asset retrieval (~20 s)
+```
+
+If it fails with a message about the `mcp` package or the conda env, the launcher could not
+find your `interioragent` environment — either install deps into it
+(`pip install -r requirements.txt`) or set `IDSDL_PYTHON` to the right interpreter.
+
 <details>
 <summary><b>The full tool roster</b> — assets, knowledge, generation, guided flow</summary>
 
