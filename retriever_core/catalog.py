@@ -26,6 +26,43 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 
+
+def _example_holdout_filter(files):
+    """Example-scaling ablation knob (OFF by default -> returns files unchanged, so normal runs
+    and the live generation are unaffected). Controlled by env:
+      IDSDL_EXAMPLE_KEEP_FRAC : fraction of worked examples to KEEP (default 1.0 = all).
+      IDSDL_EXAMPLE_SEED      : seed for the deterministic keep/drop hash (default "42").
+      IDSDL_EXAMPLE_HOLDOUT   : comma list of example names to always drop (overrides keep).
+      IDSDL_EXAMPLE_KEEPLIST  : comma list of names to always keep (overrides frac).
+    Selection is a stable per-name hash so the SAME subset is used across every prompt in a run
+    (reproducible OOD ablation) without persisting a manifest."""
+    import hashlib
+    keeplist = {x.strip() for x in os.environ.get("IDSDL_EXAMPLE_KEEPLIST", "").split(",") if x.strip()}
+    holdout = {x.strip() for x in os.environ.get("IDSDL_EXAMPLE_HOLDOUT", "").split(",") if x.strip()}
+    try:
+        keep_frac = float(os.environ.get("IDSDL_EXAMPLE_KEEP_FRAC", "1") or "1")
+    except ValueError:
+        keep_frac = 1.0
+    if keep_frac >= 1.0 and not holdout:
+        return files
+    seed = os.environ.get("IDSDL_EXAMPLE_SEED", "42")
+
+    def keep(name):
+        if name in keeplist:
+            return True
+        if name in holdout:
+            return False
+        if keep_frac >= 1.0:
+            return True
+        h = int(hashlib.sha1(f"{seed}:{name}".encode()).hexdigest(), 16) % 10000
+        return h < keep_frac * 10000
+
+    kept = [f for f in files if keep(f.stem)]
+    import sys as _sys
+    print(f"[catalog] example holdout active: kept {len(kept)}/{len(files)} worked examples "
+          f"(keep_frac={keep_frac}, seed={seed}, holdout={len(holdout)})", file=_sys.stderr)
+    return kept
+
 # Polished program lookup: worked-example name -> candidate program paths, first
 # hit wins. scenes/work/ holds the iterated builds (sometimes under a renamed
 # key); the top-level scenes/<name>.py is the fallback.
@@ -181,9 +218,10 @@ class KnowledgeCatalog:
         described by its own frontmatter (id/category/pattern/family/read_for).
         The README table remains the human index; the frontmatter is the
         machine truth."""
-        for f in sorted((self.root / "skills/examples").glob("*.md")):
-            if f.name.startswith("_") or f.name == "README.md":
-                continue
+        files = [f for f in sorted((self.root / "skills/examples").glob("*.md"))
+                 if not f.name.startswith("_") and f.name != "README.md"]
+        files = _example_holdout_filter(files)
+        for f in files:
             name = f.stem
             meta, _ = _parse_frontmatter(f.read_text())
             rel = f"skills/examples/{name}.md"
