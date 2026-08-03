@@ -94,3 +94,19 @@ IDSDL/assets/wall_textures_embeddings.npz
 
 # The shareable datasets bundle (built by tools/make_datasets_bundle.py) — never in git
 idsdl_datasets*.zip
+
+# Research experiments (A/B benchmark, baselines) — lives on disk / research branches,
+# never in the release repo
+experiment/
+
+# Per-scene iteration case study pulled out of results/ — dev scratch
+ramen_bar/
+
+# Log siblings of the sceneprogexec transient scripts, and stray pipeline transcripts
+/[0-9]*.log
+/results_*.log
+
+# Batch-dispatcher state scribbles
+/_d.json
+/_launch.json
+/_disk.txt
