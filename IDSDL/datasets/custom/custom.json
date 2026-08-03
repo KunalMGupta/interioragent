@@ -1815,5 +1815,137 @@
    "compound microscope",
    "microscope"
   ]
+ },
+ "custom/000ddbc68fc7ada0856d4fe73bfcdb9d1c9bcfc2": {
+  "description": "Industrial dark-gray metal coffee roaster with a conical hopper.",
+  "placement": "NA",
+  "freetop": false,
+  "on_top_or_inside": true,
+  "scale": 0.8777,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "12a5599e2f5c4b75a460361190c55c0c",
+   "url": "https://sketchfab.com/3d-models/12a5599e2f5c4b75a460361190c55c0c",
+   "license": "CC Attribution",
+   "author": "klmj3214",
+   "name": "coffeeroaster"
+  },
+  "aliases": [
+   "coffee roaster",
+   "roasted coffee beans"
+  ]
+ },
+ "custom/80f89885a090a60fd0d47b2490f90ca1919f640a": {
+  "description": "Square terrazzo tile in beige with multicoloured aggregate chips.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 1.1,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "e0177c609e8a4be69c6e708a49761c53",
+   "url": "https://sketchfab.com/3d-models/e0177c609e8a4be69c6e708a49761c53",
+   "license": "CC Attribution",
+   "author": "MAPEI",
+   "name": "MAPEI COMPAZZO CSM 2029"
+  },
+  "aliases": [
+   "terrazzo wall panel",
+   "terrazzo floor"
+  ]
+ },
+ "custom/587fcf0bbda4c22225c95dd7d7d0fc355e015dfa": {
+  "description": "Light grey terrazzo tile panel with speckled chips for wall application.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.65,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "c1d759dc12db44f5a24e122d9ac62ef7",
+   "url": "https://sketchfab.com/3d-models/c1d759dc12db44f5a24e122d9ac62ef7",
+   "license": "CC Attribution",
+   "author": "MAPEI",
+   "name": "MAPEI COMPAZZO CSM 2019"
+  },
+  "aliases": [
+   "terrazzo tile",
+   "terrazzo floor"
+  ]
+ },
+ "custom/5dcdda1093d57451719a7efd0e53219c6f0b8301": {
+  "description": "Rustic wooden-framed hanging chalkboard sign with a black slate surface.",
+  "placement": "wall",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.75,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "a66b3f71dc0a43b58e58c0ede1c4e7c2",
+   "url": "https://sketchfab.com/3d-models/a66b3f71dc0a43b58e58c0ede1c4e7c2",
+   "license": "CC Attribution",
+   "author": "ffedo",
+   "name": "Chalkboard Sign in Wooden Frame Georgian Bakery"
+  },
+  "aliases": [
+   "chalkboard sign in wooden frame",
+   "bakery sign"
+  ]
+ },
+ "custom/e97c629d1cc76f3e281214b099a2a5c824ef9730": {
+  "description": "Grey stainless-steel commercial deep fryer with digital controls and a side rack for frying baskets.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.5879,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "1ba1067d7ec14f6ea6bd025f6f920dc9",
+   "url": "https://sketchfab.com/3d-models/1ba1067d7ec14f6ea6bd025f6f920dc9",
+   "license": "CC Attribution",
+   "author": "JJangdol",
+   "name": "Low poly - Deep Fryer, Basket, Skimmer Set"
+  },
+  "aliases": [
+   "Deep fryer with basket and skimmer",
+   "deep fryer"
+  ]
+ },
+ "custom/1370eb16cff75757d1192cbbce1de046f61485fa": {
+  "description": "Industrial grey steel cabinet with a vented front and a flat top.",
+  "placement": "floor",
+  "freetop": true,
+  "on_top_or_inside": false,
+  "scale": 0.6,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "8c2e6ea787a04578bed2042f3cddd5ff",
+   "url": "https://sketchfab.com/3d-models/8c2e6ea787a04578bed2042f3cddd5ff",
+   "license": "CC Attribution",
+   "author": "Tombolaso",
+   "name": "Towel dispenser"
+  },
+  "aliases": [
+   "Towel dispenser",
+   "napkin dispenser"
+  ]
+ },
+ "custom/71bb69729fa6783e9b09ef5d89d09fbd0be1e0a0": {
+  "description": "Tall rectangular metal waste bin with a grey fabric-lined interior.",
+  "placement": "floor",
+  "freetop": false,
+  "on_top_or_inside": false,
+  "scale": 0.1438,
+  "provenance": {
+   "source": "sketchfab",
+   "uid": "1ecc2a062c8b47b791480efb697e4d12",
+   "url": "https://sketchfab.com/3d-models/1ecc2a062c8b47b791480efb697e4d12",
+   "license": "CC Attribution",
+   "author": "Mick Chambers",
+   "name": "Diner Napkin Dispenser"
+  },
+  "aliases": [
+   "napkin dispenser"
+  ]
  }
 }

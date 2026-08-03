@@ -6,16 +6,23 @@ edit by hand; rerun `python -c "from IDSDL.ingest import write_attributions; wri
 
 ## CC Attribution
 
+- **coffeeroaster** by klmj3214 — https://sketchfab.com/3d-models/12a5599e2f5c4b75a460361190c55c0c  (`custom/000ddbc68fc7ada0856d4fe73bfcdb9d1c9bcfc2`)
+- **Towel dispenser** by Tombolaso — https://sketchfab.com/3d-models/8c2e6ea787a04578bed2042f3cddd5ff  (`custom/1370eb16cff75757d1192cbbce1de046f61485fa`)
 - **Microscope** by Eugen Vahrushin — https://sketchfab.com/3d-models/9562226299a045bab13c3d66f8593208  (`custom/1388565231beaa915a417ac1f7b73071d39bd96b`)
+- **MAPEI COMPAZZO CSM 2019** by MAPEI — https://sketchfab.com/3d-models/c1d759dc12db44f5a24e122d9ac62ef7  (`custom/587fcf0bbda4c22225c95dd7d7d0fc355e015dfa`)
 - **Deerhurst Baptismal Font** by Carolyn Twomey — https://sketchfab.com/3d-models/76b6e5f2cfe24733a4599c4c7d5b06a9  (`custom/5d52b2a4231cb781037dbe4f8cb2bedf9064e612`)
+- **Chalkboard Sign in Wooden Frame Georgian Bakery** by ffedo — https://sketchfab.com/3d-models/a66b3f71dc0a43b58e58c0ede1c4e7c2  (`custom/5dcdda1093d57451719a7efd0e53219c6f0b8301`)
 - **Orthodox Eagle Lectern – Patras** by iedu360.eu — https://sketchfab.com/3d-models/57027b38666e48098d3c1169ec4fdf21  (`custom/62d6d409ed05914327ce628b6c758b0e06fa73fe`)
 - **Siena - Duomo Piccolomini Altar (Scaniverse)** by JFN — https://sketchfab.com/3d-models/241be05f4982426a8b481b26fd24c3de  (`custom/652289695c42e48521dd1b332cb6b4cffd6b9222`)
+- **Diner Napkin Dispenser** by Mick Chambers — https://sketchfab.com/3d-models/1ecc2a062c8b47b791480efb697e4d12  (`custom/71bb69729fa6783e9b09ef5d89d09fbd0be1e0a0`)
 - **Pipe Organ Complete** by Jdavis1220 — https://sketchfab.com/3d-models/edde6b72a50a49c4bd470bad5efd6b74  (`custom/801dcb37b0e6d1a5fd40a45b59acfcd9e2c9e5ad`)
+- **MAPEI COMPAZZO CSM 2029** by MAPEI — https://sketchfab.com/3d-models/e0177c609e8a4be69c6e708a49761c53  (`custom/80f89885a090a60fd0d47b2490f90ca1919f640a`)
 - **Pipe Organs** by Ryoce — https://sketchfab.com/3d-models/a8c0797a4a07498a9eadaead25e5e3e8  (`custom/96da925c6a6a74153563bc51e035d0b1ce636e45`)
 - **Sacrifice Table** by DivyeSh PanchAl — https://sketchfab.com/3d-models/99d4eff5fe0544b9bf22b7a0b69cb169  (`custom/b7786c70b417f0139c1d2991b6ed00fb78f1ecee`)
 - **Tang Dyansty Altar Table** by sharkbitestudios — https://sketchfab.com/3d-models/677fc51dc1c84bf8b5fe9d2263f9d676  (`custom/b7b3457db2dd2aa2ad2c87765dfa41615a9cdf20`)
 - **Low poly stylized stone table** by mahrcheen — https://sketchfab.com/3d-models/8357876dd2504c67840706b75241e56c  (`custom/be6dcfec14a9dd1a6d469bbb594728826b35d868`)
 - **Typewriter** by freddy1231 — https://sketchfab.com/3d-models/0b6766c2df0e4901b8c387283d544027  (`custom/c56e29ccc74da4c747b3714ecd21f5bc7fd778fe`)
+- **Low poly - Deep Fryer, Basket, Skimmer Set** by JJangdol — https://sketchfab.com/3d-models/1ba1067d7ec14f6ea6bd025f6f920dc9  (`custom/e97c629d1cc76f3e281214b099a2a5c824ef9730`)
 - **Font, Church of St Mary, Kempsey** by Shiro Morturn — https://sketchfab.com/3d-models/929d1a3e77c746b797c6c7376bb257d2  (`custom/f0aa5a5336811f136080381619e05ccb663721b8`)
 
 ## CC Attribution-NonCommercial-ShareAlike
