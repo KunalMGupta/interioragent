@@ -418,7 +418,7 @@ def howto():
 
 This server wraps a Python DSL (IDSDL) that compiles declarative scene programs
 into solved, rendered Blender rooms. The best scenes come from a specific
-recipe distilled from ~26 worked examples: plan first, retrieve tacit knowledge,
+recipe distilled from 55+ worked examples: plan first, retrieve tacit knowledge,
 eyeball assets BEFORE placements, then build in verified phases — never write
 the whole scene and hope.
 

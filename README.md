@@ -12,7 +12,7 @@ Everything the agent needs ships in this repo:
 - **A live toolbox** — an [MCP server](#1-let-an-agent-drive-mcp) with warm, typed tools for
   asset retrieval, shopping, planning, and building, driven interactively by any MCP client
   (Claude Code, Claude Desktop, …).
-- **A design knowledge library** — [`skills/`](skills/README.md): 50+ worked example scenes
+- **A design knowledge library** — [`skills/`](skills/README.md): 55+ worked example scenes
   and hundreds of atomic build lessons, organized as a knowledge graph that a retriever
   *reasons* over (no embeddings) to brief the agent before it designs.
 - **IDSDL, the scene engine** — a Python DSL where you compose interiors by *design intent*
@@ -302,7 +302,7 @@ For day-to-day scene development, `workbench.py` builds/inspects a single progra
 
 ## The knowledge library
 
-[`skills/`](skills/README.md) is the harness's memory: 50+ worked example scenes (each a
+[`skills/`](skills/README.md) is the harness's memory: 55+ worked example scenes (each a
 recipe + a runnable program, indexed by *layout pattern* — a pharmacy pulls the retail_store
 skeleton), workflow guides, and hundreds of atomic lessons learned across build iterations.
 `retriever_core` organizes it all into a knowledge graph and selects context by **reasoning

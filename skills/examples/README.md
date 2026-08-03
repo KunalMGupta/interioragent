@@ -61,6 +61,8 @@ a worked example.
 | [fast_food.md](fast_food.md) | fast food / burger joint | **The category whose every FIXTURE is missing — and it still reads** |
 | [wine_cellar.md](wine_cellar.md) | wine cellar / tasting room | **READ FOR ANY DIM BRIEF (cellar, bar, cinema, speakeasy).** — READ FOR ANY DIM BRIEF (cellar, bar, cinema, speakeasy). Layout is the library corridor verbatim (twin stocked rack runs on the long walls + a central tasting table) — zero layout iterations |
 | [art_studio.md](art_studio.md) | art studio / painter's loft | **The TOOL-IN-USE room: the hero is a gap, and the picker's rank-1 is its TOY version.** |
+| [study_room.md](study_room.md) | residential computer study | **Hero workstation + a LOADED IDENTITY WALL** — wall mass is paid in floor area (slots are THIRDS, so a longer run grows the shell); coverage bought with width-only stretches on camera-height-pinned pieces; the L-desk bbox chair trap — READ FOR ANY ROOM WHOSE IDENTITY IS A LOADED WALL |
+| [media_room.md](media_room.md) | home cinema / game media room | **Focal-front theatre** — TIERED seating via the `bottom=` lift (AABB-referenced + `ignore_overlap` + `is_static`); the wall-hung hero's ASPECT beats the 10× height penalty (freeform, 16:9, never 4:3); lighting density is relative to the FIXTURE's footprint — READ FOR ANY RISER/STAGE OR LARGE WALL-HUNG PIECE |
 
 | [laundry_room.md](laundry_room.md) | home laundry / utility room | **Fix the SHELL with SLOTS, not `modulate_scale` — the transferable version of the footprint rule.** |
 | [pantry.md](pantry.md) | pantry / walk-in larder / dry store | **You CANNOT densely stock a tall rack with `place_inside` — adding goods makes it EMPTIER, and that inverts jewelry_shop's instinct.** |
