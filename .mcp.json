@@ -3,7 +3,9 @@
     "interioragent": {
       "command": "./tools/interioragent_mcp.sh",
       "env": {
-        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "IDSDL_ACQUIRE": "low",
+        "IDSDL_ACQUIRE_BUDGET": "0"
       }
     }
   }
