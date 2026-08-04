@@ -163,8 +163,8 @@ def main():
         (1,   (lo.x - 9.0, corridor_y, eye + 0.3)),
         (150, (center.x - span_x * 0.12, corridor_y, eye + 0.6)),
         (250, (center.x + span_x * 0.10, corridor_y - span_y * 0.35, eye + span * 0.24)),
-        # tight ending: the title nearly fills the frame
-        (N_FRAMES, (center.x, center.y - span_y * 0.45, lo.z + span_x * 1.5)),
+        # approved ending: title large in frame with a clear margin (2026-08-04 review)
+        (N_FRAMES, (center.x, center.y - span_y * 0.5, lo.z + span_x * 1.75)),
     ]
     tgt_keys = [
         (1,   (lo.x + 4.0, corridor_y, eye + 0.6)),
