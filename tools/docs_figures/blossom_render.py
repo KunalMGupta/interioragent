@@ -18,7 +18,8 @@ RES = (1280, 720)
 STILL_RES = (1600, 900)
 SAMPLES = 32
 FPS = 24
-N_FRAMES = 384
+CRANE_END = 384      # the crane reaches its final pose here...
+N_FRAMES = 432       # ...then HOLDS it for 2 s, so the reveal visibly rests
 
 
 def mesh_objects():
@@ -159,18 +160,22 @@ def main():
     corridor_y = center.y + span_y / 6.0
     eye = lo.z + 1.7
 
+    # approved ending: option B of the 2026-08-04 review (2.0x width, two-thirds frame)
+    end_cam = (center.x, center.y - span_y * 0.55, lo.z + span_x * 2.0)
+    end_tgt = (center.x, center.y, lo.z)
     cam_keys = [
         (1,   (lo.x - 9.0, corridor_y, eye + 0.3)),
         (150, (center.x - span_x * 0.12, corridor_y, eye + 0.6)),
         (250, (center.x + span_x * 0.10, corridor_y - span_y * 0.35, eye + span * 0.24)),
-        # approved ending: title large in frame with a clear margin (2026-08-04 review)
-        (N_FRAMES, (center.x, center.y - span_y * 0.5, lo.z + span_x * 1.75)),
+        (CRANE_END, end_cam),
+        (N_FRAMES, end_cam),
     ]
     tgt_keys = [
         (1,   (lo.x + 4.0, corridor_y, eye + 0.6)),
         (150, (center.x + span_x * 0.25, corridor_y, eye + 0.4)),
         (250, (center.x, center.y, lo.z + 1.0)),
-        (N_FRAMES, (center.x, center.y, lo.z)),
+        (CRANE_END, end_tgt),
+        (N_FRAMES, end_tgt),
     ]
     for ob, keys in ((cam, cam_keys), (target, tgt_keys)):
         for f, loc in keys:
