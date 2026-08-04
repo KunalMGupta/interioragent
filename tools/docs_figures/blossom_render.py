@@ -139,7 +139,8 @@ def main():
         (1,   (lo.x - 9.0, corridor_y, eye + 0.3)),
         (150, (center.x - span_x * 0.12, corridor_y, eye + 0.6)),
         (250, (center.x + span_x * 0.10, corridor_y - span_y * 0.35, eye + span * 0.24)),
-        (N_FRAMES, (center.x, center.y - span_y * 1.05, lo.z + span * 0.92)),
+        # end high enough that the widest line clears the 42° frustum with margin
+        (N_FRAMES, (center.x, center.y - span_y * 0.55, lo.z + span_x * 1.5)),
     ]
     tgt_keys = [
         (1,   (lo.x + 4.0, corridor_y, eye + 0.6)),

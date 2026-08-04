@@ -96,7 +96,9 @@ def make_backface_transparent(o):
 
 
 BOUNDARY_HUG = 0.55
-HIDE_DOT = 0.15        # hide wall-mounted meshes just past their wall's edge-on angle
+# Hide wall dressing slightly BEFORE its wall reaches edge-on: a zero-thickness
+# wall vanishes at grazing angles, and a door still visible there floats in air.
+HIDE_DOT = -0.1
 
 
 def boundary_meshes(lo, hi):
