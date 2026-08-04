@@ -769,12 +769,9 @@ class AroundGroup(AnchorGroup):
         def compute_rotations(angle, N):
             if N == 1:
                 return [0]
-            if N % 2 == 1:
-                half = N // 2
-                return [(-half + i) * (angle / (N - 1)) for i in range(N)]
-            else:
-                half = N // 2
-                return [(-half + 0.5 + i) * (angle / N) for i in range(N)]
+            # symmetric spread over the full angle for any N (odd or even)
+            step = angle / (N - 1)
+            return [(-(N - 1) / 2 + i) * step for i in range(N)]
 
         rot = compute_rotations(angle, N)
         for i, obj in enumerate(objects):
@@ -794,6 +791,9 @@ class GridGroup(SceneProgObject):
         self.randomness = max(0.0, min(randomness, 1.0))
         self.rng = scene._make_rng() if scene is not None and hasattr(scene, "_make_rng") \
             else np.random.default_rng()
+        # (obj, target) pairs from place_arc(towards=...), re-aimed at the target's
+        # final world position by RoomGroup._reaim_arc_children after room layout
+        self._arc_towards = []
 
     def _place_row(self, objects=None, along='x', facing='z', x0=0, z0=0):
         objects = self.to_list([] if objects is None else objects)
@@ -806,10 +806,14 @@ class GridGroup(SceneProgObject):
         base_gap = self.sparsity * (total_width / N)
 
         rng = self.rng
-        jitter_max = base_gap * self.randomness
+        # randomness must bite even at sparsity=0: floor the jitter amplitude on a
+        # fraction of the mean object width, and cap how far gaps dip into overlap
+        mean_width = float(total_width) / N
+        jitter_max = self.randomness * max(base_gap, 0.15 * mean_width)
 
         if N > 1:
             gaps = base_gap + rng.uniform(-jitter_max, jitter_max, size=N - 1)
+            gaps = np.maximum(gaps, -0.1 * mean_width)
         else:
             gaps = np.array([], dtype=np.float32)
 
@@ -881,7 +885,7 @@ class GridGroup(SceneProgObject):
             total_width = np.sum(widths)
             base_gap = self.sparsity * (total_width / N)
 
-            jitter_max = base_gap * self.randomness
+            jitter_max = self.randomness * max(base_gap, 0.15 * float(total_width) / N)
             max_total_gap = (base_gap + jitter_max) * (N - 1)
 
             return float(total_width + max_total_gap)
@@ -945,10 +949,12 @@ class GridGroup(SceneProgObject):
         base_gap = self.sparsity * (total_depth / len(object_rows))
 
         rng = self.rng
-        jitter_max = base_gap * self.randomness
+        mean_depth = float(total_depth) / len(object_rows)
+        jitter_max = self.randomness * max(base_gap, 0.15 * mean_depth)
 
         if len(object_rows) > 1:
             gaps = base_gap + rng.uniform(-jitter_max, jitter_max, size=len(object_rows) - 1)
+            gaps = np.maximum(gaps, -0.1 * mean_depth)
         else:
             gaps = np.array([], dtype=np.float32)
 
@@ -978,6 +984,19 @@ class GridGroup(SceneProgObject):
         inter_row_gap = self.sparsity * 0.5
         angle = 90 + self.sparsity * 60
 
+        # With towards=, the arc curves AROUND the target: row radii are measured
+        # from the target's boundary, and the arc opens from the target back toward
+        # the group origin, so every object sits in front of the target facing it.
+        if towards is not None:
+            target_loc = np.asarray(towards.get_world_location(), dtype=float)
+            base_radius = max(float(towards.get_width()), float(towards.get_depth())) / 2.0
+            v = np.array([-target_loc[0], -target_loc[2]], dtype=float)
+            v_norm = float(np.linalg.norm(v))
+            bisector = v / v_norm if v_norm > 1e-6 else np.array([0.0, 1.0])
+            phi = float(np.degrees(np.arctan2(bisector[0], bisector[1])))
+        else:
+            target_loc, base_radius, phi = None, 0.0, 0.0
+
         def angle_subtended(obj, radius):
             width = obj.get_width()
             depth = obj.get_depth()
@@ -993,7 +1012,7 @@ class GridGroup(SceneProgObject):
             used_angle = 0
 
             for obj in objects:
-                obj_angle = angle_subtended(obj, curr_dist)
+                obj_angle = angle_subtended(obj, base_radius + curr_dist)
                 if used_angle + obj_angle > angle:
                     if tmp:
                         object_rows.append(tmp)
@@ -1018,23 +1037,27 @@ class GridGroup(SceneProgObject):
         def compute_rotations(angle, N):
             if N == 1:
                 return [0]
-            if N % 2 == 1:
-                half = N // 2
-                return [(-half + i) * (angle / (N - 1)) for i in range(N)]
-            else:
-                half = N // 2
-                return [(-half + 0.5 + i) * (angle / N) for i in range(N)]
+            # symmetric spread over the full angle for any N (odd or even)
+            step = angle / (N - 1)
+            return [(-(N - 1) / 2 + i) * step for i in range(N)]
 
         for row in object_rows:
             rots = compute_rotations(angle, len(row))
             for (obj, dist), rot in zip(row, rots):
-                x = dist * np.sin(np.radians(rot)) + (self.rng.random() - 0.5) * self.randomness * self.sparsity * obj.get_width()
+                jx = (self.rng.random() - 0.5) * self.randomness * 0.5 * obj.get_width()
+                jz = (self.rng.random() - 0.5) * self.randomness * 0.5 * obj.get_depth()
                 y = self.compute_obj_y(obj)
-                z = -dist * np.cos(np.radians(rot)) + (self.rng.random() - 0.5) * self.randomness * self.sparsity * obj.get_depth()
-                obj.set_location(x, y, z)
                 if towards is not None:
+                    radius = base_radius + dist
+                    x = target_loc[0] + radius * np.sin(np.radians(phi + rot)) + jx
+                    z = target_loc[2] + radius * np.cos(np.radians(phi + rot)) + jz
+                    obj.set_location(x, y, z)
                     obj.face_towards(towards)
+                    self._arc_towards.append((obj, towards))
                 else:
+                    x = dist * np.sin(np.radians(rot)) + jx
+                    z = -dist * np.cos(np.radians(rot)) + jz
+                    obj.set_location(x, y, z)
                     obj.set_rotation(-rot)
                 self.add_child(obj)
 
@@ -2231,6 +2254,28 @@ class RoomGroup(SceneProgObject):
             dz = float(self.rng.uniform(-1, 1)) * self.randomness * slack_z
             obj.set_location(t[0] + dx, t[1], t[2] + dz)
 
+    def _reaim_arc_children(self):
+        """Re-aim GridGroup.place_arc(towards=...) objects at their target's final
+        world position. The arc's facings were baked when the grid compiled (frame
+        identical to world at that point); once this room repositions the grid and/or
+        the target independently, only the yaw can still be honoured — positions stay
+        frozen with the group, but every arc object turns to look at the target."""
+        def walk(node):
+            yield node
+            for c in getattr(node, "children", []):
+                yield from walk(c)
+
+        for node in walk(self):
+            for obj, target in getattr(node, "_arc_towards", []):
+                t = np.asarray(target.get_world_location(), dtype=float)
+                p = np.asarray(obj.get_world_location(), dtype=float)
+                dx, dz = float(t[0] - p[0]), float(t[2] - p[2])
+                if np.hypot(dx, dz) < 1e-6:
+                    continue
+                needed = np.degrees(np.arctan2(dx, dz))   # face_towards convention
+                delta = float(needed) - float(obj.get_world_rotation())
+                obj.set_rotation(float(obj.get_local_rotation()) + delta)
+
     # Auto door clearance: every doorway keeps a patch of floor clear so a door can
     # open and people can pass. Reuses the existing ClearanceConstraint via an invisible,
     # static floor proxy at the doorway — no new constraint type, zero author action.
@@ -2717,6 +2762,10 @@ class RoomGroup(SceneProgObject):
         # Apply opt-in rotation overrides after layout/wall placement settle, so the
         # VLM rotation check below judges the corrected orientation.
         self._apply_orientations()
+
+        # GridGroup.place_arc(towards=...) facings were baked when the grid compiled,
+        # before this room moved the grid and/or its target — re-aim at final spots.
+        self._reaim_arc_children()
 
         self.RoomProportionsConstraint()
         self.RotationConstraint()

@@ -274,8 +274,8 @@ class SceneProgRoom:
     def FacingGroup(self):
         return FacingGroup(self)
 
-    def RingsGroup(self, sparsity: float = 0.0):
-        return RingsGroup(self, sparsity=sparsity)
+    def RingsGroup(self, sparsity: float = 0.0, jitter: float = 0.0):
+        return RingsGroup(self, sparsity=sparsity, jitter=jitter)
 
     def MirrorStationGroup(self, max_top=None):
         return MirrorStationGroup(self, max_top=max_top)

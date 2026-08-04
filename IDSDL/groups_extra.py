@@ -100,7 +100,7 @@ class PileGroup(AnchorGroup):
         x0, z0, _ = _anchor_base(self)
         footprints = [max(float(o.get_width()), float(o.get_depth())) for o in objs]
         radius = spread * float(np.mean(footprints)) * np.sqrt(max(N, 1))
-        rng = np.random.default_rng()
+        rng = self.rng   # seeded per-group stream — reproducible under scene seed
         for o in objs:
             r = radius * np.sqrt(rng.random())
             theta = rng.random() * 2 * np.pi
@@ -199,6 +199,7 @@ class RingsGroup(AroundGroup):
                                self.compute_obj_y(o),
                                z0 + radius * np.cos(theta))
                 o.face_towards(self.anchor)
+                self._apply_jitter(o)   # honour the inherited AroundGroup jitter knob
                 self.add_child(o)
                 ring_outer = max(ring_outer, prev_outer + base_dist + float(o.get_depth()))
             prev_outer = ring_outer + 0.1

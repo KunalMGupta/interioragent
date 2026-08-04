@@ -1696,6 +1696,116 @@ def test_56():
 
 
 # ---------------------------------------------------------------------------
+# 57-60  Targeted placement fixes (2026-08): arc-around-target + room re-aim,
+#        randomness decoupled from sparsity, RingsGroup jitter, seeded PileGroup
+# ---------------------------------------------------------------------------
+def test_57():
+    """place_arc(towards=): objects surround the target at a standoff and face it,
+    even after a RoomGroup repositions the grid and the target independently."""
+    header(57, "GridGroup place_arc towards= geometry + room re-aim")
+    scene = SceneProgRoom("test57", seed=SEED)
+    fireplace = scene.AddAsset("an electric fireplace with a dark mantel")
+    chair = scene.AddAsset("a cozy lounge chair")
+    chairs = 5 * chair
+    with scene.GridGroup(sparsity=0.3) as arc:
+        arc.place_arc(chairs, towards=fireplace)
+
+    with scene.RoomGroup() as room:
+        room.grad_solver = None      # keep placements analytic for exact assertions
+        room.place_on_back_wall_center(fireplace, facing="front")
+        room.place_on_center(arc, facing="back")
+
+    t = np.array(fireplace.get_location(), dtype=float)
+    standoff = max(float(fireplace.get_width()), float(fireplace.get_depth())) / 2.0
+    for c in chairs:
+        p = np.array(c.get_location(), dtype=float)
+        rel = t - p
+        d = float(np.hypot(rel[0], rel[2]))
+        needed = float(np.degrees(np.arctan2(rel[0], rel[2])))
+        err = abs((float(c.get_rotation()) - needed + 180.0) % 360.0 - 180.0)
+        print(f"  chair dist={d:.2f} (standoff={standoff:.2f})  yaw err={err:.2f} deg")
+        assert err < 2.0, f"chair not facing target after room layout: err={err:.1f} deg"
+    scene.export("results/test57_arc_towards.blend")
+
+
+def test_58():
+    """GridGroup.randomness must bite even at sparsity=0 (was a silent no-op)."""
+    header(58, "GridGroup randomness decoupled from sparsity")
+    scene = SceneProgRoom("test58", seed=SEED)
+
+    def gap_std(group):
+        xs = sorted(c.get_location()[0] for c in group.children)
+        return float(np.std(np.diff(xs)))
+
+    with scene.GridGroup(sparsity=0.0, randomness=0.9) as row:
+        chair = scene.AddAsset("a standard classroom chair with a plastic seat")
+        row.place_row(8 * chair)
+    scene.bind(row)
+    s = gap_std(row)
+    print(f"  gap std at sparsity=0, randomness=0.9 -> {s:.4f}")
+    assert s > 1e-3, "randomness had no effect at sparsity=0"
+    scene.export("results/test58_randomness_sparsity0.blend")
+
+
+def test_59():
+    """RingsGroup honours the inherited jitter knob (was silently ignored)."""
+    header(59, "RingsGroup jitter wiring")
+    scene = SceneProgRoom("test59", seed=SEED)
+
+    def max_yaw_err(chairs, anchor):
+        c = np.array(anchor.get_location(), dtype=float)
+        errs = []
+        for o in chairs:
+            p = np.array(o.get_location(), dtype=float)
+            needed = float(np.degrees(np.arctan2(c[0] - p[0], c[2] - p[2])))
+            errs.append(abs((float(o.get_rotation()) - needed + 180.0) % 360.0 - 180.0))
+        return max(errs)
+
+    chair = scene.AddAsset("an upholstered accent chair")
+    ring_a, ring_b = 6 * chair, 6 * chair
+    with scene.RingsGroup(sparsity=0.2) as g0:
+        g0.grad_solver = None
+        table_a = scene.AddAsset("a large round dining table with a dark wood finish")
+        g0.set_anchor(table_a)
+        g0.place_rings([ring_a])
+    scene.bind(g0)
+    with scene.RingsGroup(sparsity=0.2, jitter=0.8) as g1:
+        g1.grad_solver = None
+        table_b = scene.AddAsset("a large round dining table with a dark wood finish")
+        g1.set_anchor(table_b)
+        g1.place_rings([ring_b])
+    scene.bind(g1)
+
+    err0, err1 = max_yaw_err(ring_a, table_a), max_yaw_err(ring_b, table_b)
+    print(f"  max yaw deviation  jitter=0 -> {err0:.3f} deg   jitter=0.8 -> {err1:.3f} deg")
+    assert err0 < 1e-3, f"jitter=0 ring should face the anchor exactly, err={err0:.3f}"
+    assert err1 > 0.5, f"jitter=0.8 ring shows no rotational perturbation, err={err1:.3f}"
+    scene.export("results/test59_rings_jitter.blend")
+
+
+def test_60():
+    """PileGroup scatter is reproducible under the scene seed (was unseeded)."""
+    header(60, "PileGroup seeded reproducibility")
+
+    def build():
+        scene = SceneProgRoom("test60", seed=SEED)
+        cushion = scene.AddAsset("a square floor cushion")
+        cushions = 5 * cushion
+        with scene.PileGroup() as pile:
+            pile.grad_solver = None   # compare the raw scatter, not the solve
+            pile.place_pile(cushions, spread=0.8)
+        scene.bind(pile)
+        return np.array([c.get_location() for c in cushions], dtype=float), \
+            np.array([float(c.get_rotation()) for c in cushions], dtype=float)
+
+    loc1, rot1 = build()
+    loc2, rot2 = build()
+    print(f"  max |dloc|={np.abs(loc1 - loc2).max():.2e}  max |drot|={np.abs(rot1 - rot2).max():.2e}")
+    assert np.allclose(loc1, loc2, atol=1e-6), "pile positions differ across same-seed builds"
+    assert np.allclose(rot1, rot2, atol=1e-6), "pile rotations differ across same-seed builds"
+
+
+# ---------------------------------------------------------------------------
 # Registry + runner
 # ---------------------------------------------------------------------------
 
@@ -1761,6 +1871,11 @@ TESTS = {
     54: test_54,   # RoomGroup auto ceiling (never below the tallest asset)
     55: test_55,   # asset-shop triage gates (panel->rotation, skip vs ask, size prior)
     56: test_56,   # acquisition dial (low/mid/high; only ever spend on a measured gap)
+    # --- targeted placement fixes (2026-08) ---
+    57: test_57,   # GridGroup place_arc towards= (arc around target + room re-aim)
+    58: test_58,   # GridGroup randomness decoupled from sparsity
+    59: test_59,   # RingsGroup jitter wiring
+    60: test_60,   # PileGroup seeded reproducibility
 }
 
 

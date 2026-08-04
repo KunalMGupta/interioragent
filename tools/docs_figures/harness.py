@@ -39,28 +39,64 @@ def _load_env():
                 os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 
+_VLM_ORIG = {}
+
+
+def _vlm_classes():
+    from IDSDL import constraints
+    return (constraints.ObjectProportionsConstraint,
+            constraints.RoomProportionsConstraint)
+
+
 def _stub_vlm_constraints():
     """Docs figures must be deterministic: VLM proportion passes become no-ops."""
-    from IDSDL import constraints
+    for cls in _vlm_classes():
+        _VLM_ORIG.setdefault(cls, cls.compute_gradients)
+        cls.compute_gradients = lambda self: "no rescale"
 
-    constraints.ObjectProportionsConstraint.compute_gradients = (
-        lambda self: "no rescale")
-    constraints.RoomProportionsConstraint.compute_gradients = (
-        lambda self: "no rescale")
+
+def _live_vlm_constraints(log):
+    """VLM-demo figures run the REAL constraint and record its verdicts in `log`."""
+    for cls in _vlm_classes():
+        orig = _VLM_ORIG.setdefault(cls, cls.compute_gradients)
+
+        def wrapped(self, _orig=orig):
+            r = _orig(self)
+            log.append(f"[{type(self).__name__}] {r}")
+            return r
+
+        cls.compute_gradients = wrapped
 
 
 def build_and_render(name, build_fn, mode="group", views=("persp", "top"),
-                     seed=SEED):
+                     seed=SEED, vlm=False):
     from IDSDL.scene import SceneProgRoom
 
     os.makedirs(SCRATCH, exist_ok=True)
     os.makedirs(OUT, exist_ok=True)
-    _stub_vlm_constraints()
+    vlm_log = []
+    prev_minimal = os.environ.get("IDSDL_MINIMAL_RENDERS")
+    if vlm:
+        _live_vlm_constraints(vlm_log)
+        # minimal-render mode skips the anchor-group VLM critique entirely
+        os.environ["IDSDL_MINIMAL_RENDERS"] = "0"
+    else:
+        _stub_vlm_constraints()
 
-    blend = os.path.join(SCRATCH, f"{name}.blend")
-    scene = SceneProgRoom(name, seed=seed)
-    build_fn(scene)
-    scene.export(blend)
+    try:
+        blend = os.path.join(SCRATCH, f"{name}.blend")
+        scene = SceneProgRoom(name, seed=seed)
+        build_fn(scene)
+        scene.export(blend)
+    finally:
+        if vlm:
+            if prev_minimal is None:
+                os.environ.pop("IDSDL_MINIMAL_RENDERS", None)
+            else:
+                os.environ["IDSDL_MINIMAL_RENDERS"] = prev_minimal
+    if vlm:
+        with open(os.path.join(OUT, f"{name}_vlm.txt"), "w") as f:
+            f.write("\n".join(vlm_log) + "\n")
 
     cmd = [BLENDER, "--background", blend, "--python", STUDIO, "--",
            OUT, name, mode, ",".join(views)]
@@ -88,7 +124,7 @@ def main():
         try:
             build_and_render(n, spec["build"], spec.get("mode", "group"),
                              spec.get("views", ("persp", "top")),
-                             spec.get("seed", SEED))
+                             spec.get("seed", SEED), vlm=spec.get("vlm", False))
         except Exception as e:
             print(f"FAIL {n}: {e}")
             failed.append(n)
