@@ -20,6 +20,29 @@ argv = sys.argv[sys.argv.index("--") + 1:]
 OUT = argv[0]
 MODE = argv[1] if len(argv) > 1 else "video"
 
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def retarget_missing_images():
+    """Blends built elsewhere reference unpacked textures under the build
+    machine's absolute path (e.g. /work/IDSDL/datasets/...). Remap anything
+    missing onto this checkout's dataset tree so walls don't render magenta."""
+    fixed = 0
+    for im in bpy.data.images:
+        if im.packed_file or im.source != "FILE" or not im.filepath:
+            continue
+        if os.path.exists(bpy.path.abspath(im.filepath)):
+            continue
+        idx = im.filepath.find("IDSDL/datasets")
+        if idx >= 0:
+            cand = os.path.join(REPO, im.filepath[idx:])
+            if os.path.exists(cand):
+                im.filepath = cand
+                im.reload()
+                fixed += 1
+    if fixed:
+        print(f"[orbit] retargeted {fixed} missing texture path(s)")
+
 RES = (1280, 720)
 SAMPLES = int(os.environ.get("ORBIT_SAMPLES", "64"))
 FRAMES = int(os.environ.get("ORBIT_FRAMES", "240"))
@@ -193,6 +216,7 @@ def setup_render(animation):
 
 
 def main():
+    retarget_missing_images()
     objs = mesh_objects()
     if not objs:
         raise SystemExit("[orbit] no mesh objects in blend")
