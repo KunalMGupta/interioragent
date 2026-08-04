@@ -3076,10 +3076,32 @@ User Input: Generate ASCII art for '{query}'
 Your Response:
 """
         import ast
-        response = self.llm(prompt)
-        response = self._sanitize_output(response)
-        response = ast.literal_eval(response)
-        return self.sanitize(response)
+        # Cache per character: repeated letters get identical glyphs, and each
+        # LLM response is validated — an empty or unparseable bitmap is retried
+        # instead of crashing WordGenerator on a 0-point array.
+        if not hasattr(self, "_glyph_cache"):
+            self._glyph_cache = {}
+        if query in self._glyph_cache:
+            return self._glyph_cache[query]
+        last_err = None
+        for attempt in range(3):
+            try:
+                # vary the prompt across retries so a prompt-keyed LLM cache
+                # can't replay the same malformed response
+                suffix = "" if attempt == 0 else (
+                    f"\n(Attempt {attempt + 1}: the previous output was invalid — "
+                    "return a python list of equal-length strings using '*' cells.)\n")
+                response = self.llm(prompt + suffix)
+                response = self._sanitize_output(response)
+                response = ast.literal_eval(response)
+                pts, w = self.sanitize(response)
+                if len(pts) > 0:
+                    self._glyph_cache[query] = (pts, w)
+                    return pts, w
+                last_err = f"empty glyph bitmap for {query!r}"
+            except (ValueError, SyntaxError, IndexError) as e:
+                last_err = e
+        raise RuntimeError(f"AlphabetGenerator failed for {query!r}: {last_err}")
     
 class WordGenerator:
     def __init__(self):

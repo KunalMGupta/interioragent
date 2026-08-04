@@ -73,13 +73,16 @@ def hide_camera_side_walls(lo, hi):
         if "ceiling" in n or flat_z:
             o.hide_render = True
             continue
+        cy = (bb_lo.y + bb_hi.y) / 2
+        ocx = (bb_lo.x + bb_hi.x) / 2
         is_wallish = ("wall" in n) or (
             (bb_hi.z - bb_lo.z) > (hi.z - lo.z) * 0.7
             and min(bb_hi.x - bb_lo.x, bb_hi.y - bb_lo.y) < 0.3)
-        if not is_wallish:
+        hugs_culled_wall = (
+            (cy < lo.y + 0.2 and (bb_hi.y - bb_lo.y) < 0.4)
+            or (ocx > hi.x - 0.2 and (bb_hi.x - bb_lo.x) < 0.4))
+        if not (is_wallish or hugs_culled_wall):
             continue
-        cy = (bb_lo.y + bb_hi.y) / 2
-        ocx = (bb_lo.x + bb_hi.x) / 2
         if cy < lo.y + 0.3 or ocx > hi.x - 0.3:
             o.hide_render = True
 

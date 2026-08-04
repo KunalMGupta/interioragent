@@ -241,7 +241,7 @@ def grid_arc(scene):
     fireplace = scene.AddAsset(
         "a brick fireplace with a glowing fire",
         asset_id="hssd/afbe5bf0c84434cd80351009cc16cc741d9900e2")
-    fireplace.set_location(0, 0, -2.4)
+    fireplace.set_location(0, -fireplace.get_aabb()[0, 1], -2.4)  # rest on the floor
     with scene.GridGroup(sparsity=0.4) as seating:
         chair = scene.AddAsset("a cozy lounge chair")
         seating.place_arc(5 * chair, towards=fireplace)
@@ -811,13 +811,15 @@ def sweep_room_randomness_10(scene):
 # ------------------------------------------------------------------
 
 def _vlm_proportions(scene):
-    with scene.RelativeGroup() as bedside:
-        nightstand = scene.AddAsset("a small wooden nightstand with a drawer")
-        bedside.set_anchor(nightstand)
-        lamp = scene.AddAsset("a modern table lamp with a white shade",
-                              modulate_scale=3.0)
-        bedside.place_on_top(lamp)
-    scene.bind(bedside)
+    # main-op placement: the VLM critique renders BEFORE delayed verbs like
+    # place_on_top run, so the oversized object must be a main placement
+    with scene.RelativeGroup() as seating:
+        sofa = scene.AddAsset("a modern 3-seat sofa")
+        seating.set_anchor(sofa)
+        table = scene.AddAsset("a low rectangular oak coffee table",
+                               modulate_scale=3.2)
+        seating.place_on_front(table)
+    scene.bind(seating)
 
 
 @fig("vlm_proportions_before", views=("persp",))          # VLM stubbed: no rescale
