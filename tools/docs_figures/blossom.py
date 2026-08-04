@@ -19,8 +19,8 @@ sys.path.insert(0, REPO)
 from tools.docs_figures import harness   # noqa: E402
 
 SENTENCE = "InteriorAgent\n3DV\t2026\nVancouver"
-# modulate_scale > 1 closes the gaps between per-cell trees -> a fuller canopy
-TREE_SCALE = 1.45
+# <1 leaves air between per-cell trees so the letterforms stay readable
+TREE_SCALE = float(os.environ.get("BLOSSOM_TREE_SCALE", "0.87"))
 
 
 def _patch_glyphs():

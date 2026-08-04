@@ -11,8 +11,8 @@ import sys
 import bpy
 from mathutils import Vector
 
-argv = sys.argv[sys.argv.index("--") + 1:]
-OUT_DIR = argv[0]
+argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+OUT_DIR = argv[0] if argv else "."
 
 RES = (1280, 720)
 STILL_RES = (1600, 900)
@@ -39,29 +39,52 @@ def world_bbox(objs):
 
 
 def setup_world():
+    """Procedural daylight: a Nishita sky drives both the backdrop and the sun."""
     for o in list(bpy.context.scene.objects):
         if o.type == "LIGHT":
             bpy.data.objects.remove(o, do_unlink=True)
     world = bpy.data.worlds.new("sky")
     world.use_nodes = True
-    bg = world.node_tree.nodes["Background"]
-    bg.inputs[0].default_value = (0.93, 0.96, 1.0, 1.0)   # pale sky
-    bg.inputs[1].default_value = 1.0
+    nt = world.node_tree
+    bg = nt.nodes["Background"]
+    sky = nt.nodes.new("ShaderNodeTexSky")
+    sky.sky_type = "NISHITA"
+    sky.sun_elevation = math.radians(55)
+    sky.sun_rotation = math.radians(120)
+    sky.sun_intensity = 0.5
+    sky.altitude = 200
+    nt.links.new(sky.outputs["Color"], bg.inputs["Color"])
+    bg.inputs[1].default_value = 0.7
     bpy.context.scene.world = world
-    sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN"))
-    sun.data.energy = 3.5
-    sun.data.angle = math.radians(15)
-    sun.rotation_euler = (math.radians(55), 0, math.radians(120))
-    bpy.context.collection.objects.link(sun)
 
 
 def add_ground(z, span):
-    mat = bpy.data.materials.new("ground")
+    """Grass: two greens mixed by noise, with a darker large-scale patchiness."""
+    mat = bpy.data.materials.new("grass")
     mat.use_nodes = True
-    bsdf = mat.node_tree.nodes["Principled BSDF"]
-    bsdf.inputs["Base Color"].default_value = (0.82, 0.86, 0.78, 1.0)  # soft grass
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
     bsdf.inputs["Roughness"].default_value = 1.0
-    bpy.ops.mesh.primitive_plane_add(size=span * 6, location=(0, 0, z - 0.002))
+    coords = nt.nodes.new("ShaderNodeTexCoord")      # Object coords = meters
+    noise = nt.nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 3.0        # blade-level speckle
+    noise.inputs["Detail"].default_value = 8.0
+    patch = nt.nodes.new("ShaderNodeTexNoise")
+    patch.inputs["Scale"].default_value = 0.05       # broad patchiness (~20 m)
+    nt.links.new(coords.outputs["Object"], noise.inputs["Vector"])
+    nt.links.new(coords.outputs["Object"], patch.inputs["Vector"])
+    blade = nt.nodes.new("ShaderNodeMixRGB")
+    blade.inputs["Color1"].default_value = (0.10, 0.22, 0.05, 1.0)
+    blade.inputs["Color2"].default_value = (0.22, 0.34, 0.09, 1.0)
+    dark = nt.nodes.new("ShaderNodeMixRGB")
+    dark.blend_type = "MULTIPLY"
+    dark.inputs["Fac"].default_value = 0.35
+    dark.inputs["Color2"].default_value = (0.55, 0.62, 0.45, 1.0)
+    nt.links.new(noise.outputs["Fac"], blade.inputs["Fac"])
+    nt.links.new(blade.outputs["Color"], dark.inputs["Color1"])
+    nt.links.new(patch.outputs["Fac"], dark.inputs["Fac"])
+    nt.links.new(dark.outputs["Color"], bsdf.inputs["Base Color"])
+    bpy.ops.mesh.primitive_plane_add(size=span * 8, location=(0, 0, z - 0.002))
     floor = bpy.context.active_object
     floor.data.materials.append(mat)
 
@@ -74,6 +97,7 @@ def setup_render(res, animation):
     sc.render.resolution_x, sc.render.resolution_y = res
     sc.view_settings.view_transform = "Filmic"
     sc.view_settings.look = "Medium Contrast"
+    sc.view_settings.exposure = -2.0      # Nishita sky is physically bright
     if animation:
         sc.render.image_settings.file_format = "FFMPEG"
         sc.render.ffmpeg.format = "MPEG4"
@@ -139,8 +163,8 @@ def main():
         (1,   (lo.x - 9.0, corridor_y, eye + 0.3)),
         (150, (center.x - span_x * 0.12, corridor_y, eye + 0.6)),
         (250, (center.x + span_x * 0.10, corridor_y - span_y * 0.35, eye + span * 0.24)),
-        # end high enough that the widest line clears the 42° frustum with margin
-        (N_FRAMES, (center.x, center.y - span_y * 0.55, lo.z + span_x * 1.5)),
+        # tight ending: the title nearly fills the frame
+        (N_FRAMES, (center.x, center.y - span_y * 0.45, lo.z + span_x * 1.5)),
     ]
     tgt_keys = [
         (1,   (lo.x + 4.0, corridor_y, eye + 0.6)),
@@ -161,4 +185,5 @@ def main():
     print(f"[blossom] wrote {OUT_DIR}/blossom_walkthrough.mp4")
 
 
-main()
+if __name__ == "__main__":
+    main()
