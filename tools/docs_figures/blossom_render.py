@@ -50,9 +50,9 @@ def setup_world():
     bg = nt.nodes["Background"]
     sky = nt.nodes.new("ShaderNodeTexSky")
     sky.sky_type = "NISHITA"
-    sky.sun_elevation = math.radians(55)
+    sky.sun_elevation = math.radians(50)
     sky.sun_rotation = math.radians(120)
-    sky.sun_intensity = 0.5
+    sky.sun_intensity = 0.85
     sky.altitude = 200
     nt.links.new(sky.outputs["Color"], bg.inputs["Color"])
     bg.inputs[1].default_value = 0.7
@@ -75,8 +75,8 @@ def add_ground(z, span):
     nt.links.new(coords.outputs["Object"], noise.inputs["Vector"])
     nt.links.new(coords.outputs["Object"], patch.inputs["Vector"])
     blade = nt.nodes.new("ShaderNodeMixRGB")
-    blade.inputs["Color1"].default_value = (0.10, 0.22, 0.05, 1.0)
-    blade.inputs["Color2"].default_value = (0.22, 0.34, 0.09, 1.0)
+    blade.inputs["Color1"].default_value = (0.045, 0.13, 0.025, 1.0)
+    blade.inputs["Color2"].default_value = (0.11, 0.24, 0.05, 1.0)
     dark = nt.nodes.new("ShaderNodeMixRGB")
     dark.blend_type = "MULTIPLY"
     dark.inputs["Fac"].default_value = 0.35
@@ -90,6 +90,32 @@ def add_ground(z, span):
     floor.data.materials.append(mat)
 
 
+def enrich_tree_materials(sat=1.15, val=1.30):
+    """Rich cherry-forest canopy: push saturation and brightness of every imported
+    (tree) material's base color via a Hue/Sat node. The authored grass is skipped."""
+    import colorsys
+    for mat in bpy.data.materials:
+        if not mat.use_nodes or mat.name == "grass":
+            continue
+        nt = mat.node_tree
+        for node in list(nt.nodes):
+            if node.type != "BSDF_PRINCIPLED":
+                continue
+            inp = node.inputs["Base Color"]
+            if inp.links:
+                src = inp.links[0].from_socket
+                hs = nt.nodes.new("ShaderNodeHueSaturation")
+                hs.inputs["Saturation"].default_value = sat
+                hs.inputs["Value"].default_value = val
+                nt.links.new(src, hs.inputs["Color"])
+                nt.links.new(hs.outputs["Color"], inp)
+            else:
+                c = list(inp.default_value)
+                h, l, s = colorsys.rgb_to_hls(*c[:3])
+                r, g, b = colorsys.hls_to_rgb(h, min(1.0, l * val), min(1.0, s * sat))
+                inp.default_value = (r, g, b, c[3])
+
+
 def setup_render(res, animation):
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
@@ -97,8 +123,8 @@ def setup_render(res, animation):
     sc.cycles.use_denoising = True
     sc.render.resolution_x, sc.render.resolution_y = res
     sc.view_settings.view_transform = "Filmic"
-    sc.view_settings.look = "Medium Contrast"
-    sc.view_settings.exposure = -2.0      # Nishita sky is physically bright
+    sc.view_settings.look = "High Contrast"
+    sc.view_settings.exposure = -2.5      # Nishita sky is physically bright
     if animation:
         sc.render.image_settings.file_format = "FFMPEG"
         sc.render.ffmpeg.format = "MPEG4"
@@ -130,6 +156,7 @@ def main():
 
     setup_world()
     add_ground(lo.z, span)
+    enrich_tree_materials()
 
     cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
     bpy.context.collection.objects.link(cam)
@@ -160,8 +187,8 @@ def main():
     corridor_y = center.y + span_y / 6.0
     eye = lo.z + 1.7
 
-    # approved ending: option B of the 2026-08-04 review (2.0x width, two-thirds frame)
-    end_cam = (center.x, center.y - span_y * 0.55, lo.z + span_x * 2.0)
+    # approved ending: 2.2x width (raised once more in the 2026-08-04 style review)
+    end_cam = (center.x, center.y - span_y * 0.55, lo.z + span_x * 2.2)
     end_tgt = (center.x, center.y, lo.z)
     cam_keys = [
         (1,   (lo.x - 9.0, corridor_y, eye + 0.3)),
