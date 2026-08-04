@@ -287,21 +287,34 @@ a per-scene facing hack.)
 
 ## Randomness / realism (jitter)
 
-Perfectly-centered, perfectly-aligned layouts read as synthetic. Three opt-in knobs add
-controlled irregularity, all **reproducible**: a seeded scene (`SceneProgRoom(name, seed=...)`)
-gives every group its own RNG derived from the seed, so the same seed reproduces the same
-jittered layout; an unseeded scene re-rolls each run.
+Perfectly-centered, perfectly-aligned layouts read as synthetic. **Every group** takes two
+opt-in knobs — a spacing knob (`sparsity=0–1`) and a perturbation knob (`jitter=0–1`;
+`randomness` on GridGroup/RoomGroup) — all **reproducible**: a seeded scene
+(`SceneProgRoom(name, seed=...)`) gives every group its own RNG derived from the seed, so
+the same seed reproduces the same jittered layout; an unseeded scene re-rolls each run.
+At the 0.0 defaults every layout is exactly the legacy deterministic one.
 
-| Group | Param | Effect |
-|-------|-------|--------|
-| `AroundGroup(jitter=0–1)` | per-seat | position offset (≤25% of the object's size) + rotation (±12° at 1.0) on `place_circle`/`place_arc`/`place_rectilinear` |
-| `RoomGroup(randomness=0–1)` | free-standing floor placements | position jitter within the **free space of each item's layout slot** (translation only — facing is preserved, so a desk grid still faces its wall) |
-| `GridGroup(randomness=0–1)` | row/grid gaps | jitters the inter-item gaps (needs `sparsity>0` to have gaps to jitter) |
+| Group | sparsity | jitter |
+|-------|----------|--------|
+| `AroundGroup` | standoff from the anchor | per-seat offset (≤25% of the object's size) + ±12° on `place_circle`/`place_arc`/`place_rectilinear` |
+| `RingsGroup` | radial standoff **and** ring-to-ring separation | as AroundGroup |
+| `GridGroup(randomness=)` | row/grid gaps | jitters inter-item gaps (works even at `sparsity=0`) |
+| `RoomGroup(randomness=)` | — | floor items drift within the **free space of their own slot** (translation only — facing preserved) |
+| `RelativeGroup` | scales the side/front/circulation gaps of every directional slot (and the `_further` ring stays consistent) | in-slot slide (clamped to half the gap, so "left" stays left) + ±10° off the slot pose |
+| `StackGroup` | vertical gap between levels | upper levels slide within the footprint below + ±8° (bottom level stays put) |
+| `PyramidGroup` | in-tier spacing | in-slot slide + ±6°; tiers stay centered and seated |
+| `PileGroup` | widens the scatter disk | accepted but inert — a pile is already maximal randomness |
+| `SymmetryGroup` | gap from the anchor | one draw per pair applied **mirrored** to both twins — the pair stays exactly symmetric |
+| `FacingGroup` | in-row spacing + row standoff | per-seat slide/push in the row's local frame + ±10° off dead-facing |
+| `MirrorStationGroup` | chair↔counter and beside gaps | shelf decor drifts in its slot + anchor turns ±10°; the mirror/counter wall chain stays rigid |
+| `WorkstationGroup` | chair gap from the desk | chair slides along the desk, tucks/pushes back, ±20°; the desk and desktop items stay put |
+| `KitchenIslandGroup` | stool gap from the island | stools only: in-slot slide + ±15°; the island keeps its audited entry/aisle pose |
 
-Safe by construction: AroundGroup and RoomGroup run their overlap/out-of-bounds gradient
-solve *after* the jitter, so nothing ends up interpenetrating or out of the room. GridGroup
-is deterministic (no solve), so keep its `randomness` modest. Good defaults: seating
-`jitter≈0.4`, rooms `randomness≈0.15–0.3`, grids `randomness≈0.2–0.4`.
+Groups that run a gradient solve (Around, Relative, Pile, Room) relax any overlap the jitter
+introduces. The rigid motifs (Stack, Pyramid, Symmetry, Facing, MirrorStation, KitchenIsland)
+apply jitter *final* — their clamps are sized so the arrangement stays intact, but keep their
+`jitter` moderate. Good defaults: seating `jitter≈0.4`, rooms `randomness≈0.15–0.3`, grids
+`randomness≈0.2–0.4`, rigid motifs `jitter≈0.3`.
 
 ## Constraints (see workflow/constraints.md for the full model)
 

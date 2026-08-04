@@ -13,7 +13,7 @@ import traceback
 import numpy as np
 
 from IDSDL.scene import SceneProgRoom
-from IDSDL.groups import BasicRoomGroup
+from IDSDL.groups import BasicRoomGroup, SIDE_GAP
 
 SEED = 42
 
@@ -1806,6 +1806,346 @@ def test_60():
 
 
 # ---------------------------------------------------------------------------
+# 61-64  sparsity/jitter knobs for every motif group (2026-08)
+# ---------------------------------------------------------------------------
+def test_61():
+    """Every newly-knobbed group responds to sparsity and/or jitter (effect exists)."""
+    header(61, "sparsity/jitter effect sweep across the motif groups")
+    scene = SceneProgRoom("test61", seed=SEED)
+
+    def build_stack(**kw):
+        box = scene.AddAsset("a wooden storage crate")
+        boxes = 3 * box
+        with scene.StackGroup(**kw) as g:
+            g.grad_solver = None
+            g.place_stack(boxes)
+        scene.bind(g)
+        return boxes
+
+    tidy, tall = build_stack(), build_stack(sparsity=0.8)
+    top = lambda objs: max(float(o.get_aabb()[0, 1]) for o in objs)
+    print(f"  stack top-level bottom: sparsity=0 -> {top(tidy):.2f}, 0.8 -> {top(tall):.2f}")
+    assert top(tall) > top(tidy) + 0.1, "StackGroup sparsity did not open vertical gaps"
+    wobbly = build_stack(jitter=0.8)
+    dx = max(abs(float(o.get_location()[0]) - float(wobbly[0].get_location()[0])) for o in wobbly[1:])
+    print(f"  stack max |dx| at jitter=0.8 -> {dx:.3f}")
+    assert dx > 1e-3, "StackGroup jitter did not slide upper levels"
+
+    def build_pyr(**kw):
+        crate = scene.AddAsset("a wooden storage crate")
+        crates = 6 * crate
+        with scene.PyramidGroup(**kw) as g:
+            g.grad_solver = None
+            g.place_pyramid(crates)
+        scene.bind(g)
+        return crates
+
+    p0, p1 = build_pyr(), build_pyr(sparsity=0.8)
+    span = lambda objs: (max(float(o.get_location()[0]) for o in objs[:3])
+                         - min(float(o.get_location()[0]) for o in objs[:3]))
+    print(f"  pyramid base-tier span: sparsity=0 -> {span(p0):.2f}, 0.8 -> {span(p1):.2f}")
+    assert span(p1) > span(p0) + 0.05, "PyramidGroup sparsity did not widen tiers"
+
+    def build_pile(**kw):
+        cushion = scene.AddAsset("a square floor cushion")
+        cushions = 5 * cushion
+        with scene.PileGroup(**kw) as g:
+            g.grad_solver = None
+            g.place_pile(cushions, spread=0.8)
+        scene.bind(g)
+        c = np.mean([[float(v) for v in o.get_location()] for o in cushions], axis=0)
+        return float(np.mean([np.hypot(float(o.get_location()[0]) - c[0],
+                                       float(o.get_location()[2]) - c[2]) for o in cushions]))
+
+    r0, r1 = build_pile(), build_pile(sparsity=0.8)
+    print(f"  pile mean scatter radius: sparsity=0 -> {r0:.2f}, 0.8 -> {r1:.2f}")
+    assert r1 > r0, "PileGroup sparsity did not widen the scatter disk"
+
+    def build_sym(**kw):
+        with scene.SymmetryGroup(**kw) as g:
+            g.grad_solver = None
+            bed = scene.AddAsset("a queen-sized bed with a wooden frame")
+            g.set_anchor(bed)
+            ns = scene.AddAsset("a small wooden nightstand with a drawer")
+            g.place_flanking(ns)
+        scene.bind(g)
+        flanks = [c for c in g.get_children() if c is not bed]
+        return bed, flanks
+
+    bed0, f0 = build_sym()
+    bed1, f1 = build_sym(sparsity=0.8)
+    gap = lambda bed, fl: min(abs(float(c.get_location()[0]) - float(bed.get_location()[0]))
+                              for c in fl)
+    print(f"  symmetry flank offset: sparsity=0 -> {gap(bed0, f0):.2f}, 0.8 -> {gap(bed1, f1):.2f}")
+    assert gap(bed1, f1) > gap(bed0, f0) + 0.3, "SymmetryGroup sparsity did not widen the gap"
+    bed2, f2 = build_sym(jitter=0.8)
+    dz = abs(float(f2[0].get_location()[2]) - float(bed2.get_location()[2]))
+    print(f"  symmetry |dz| at jitter=0.8 -> {dz:.3f}")
+    assert dz > 1e-3, "SymmetryGroup jitter did not perturb the pair"
+
+    def yaw_err(objs, anchor):
+        c = np.array(anchor.get_location(), dtype=float)
+        errs = []
+        for o in objs:
+            p = np.array(o.get_location(), dtype=float)
+            needed = float(np.degrees(np.arctan2(c[0] - p[0], c[2] - p[2])))
+            errs.append(abs((float(o.get_rotation()) - needed + 180.0) % 360.0 - 180.0))
+        return max(errs)
+
+    def build_facing(**kw):
+        chair = scene.AddAsset("a cozy lounge chair")
+        s1, s2 = 2 * chair, 2 * chair
+        with scene.FacingGroup(**kw) as g:
+            g.grad_solver = None
+            table = scene.AddAsset("a rectangular wooden coffee table")
+            g.set_anchor(table)
+            g.place_facing_rows(s1, s2)
+        scene.bind(g)
+        return table, s1 + s2
+
+    t0, rows0 = build_facing()
+    t1, rows1 = build_facing(jitter=0.8)
+    e0, e1 = yaw_err(rows0, t0), yaw_err(rows1, t1)
+    print(f"  facing max yaw err: jitter=0 -> {e0:.3f}, 0.8 -> {e1:.3f}")
+    assert e0 < 1e-3 and e1 > 0.5, "FacingGroup jitter did not perturb facing yaw"
+
+    def build_rel(**kw):
+        with scene.RelativeGroup(**kw) as g:
+            g.grad_solver = None
+            sofa = scene.AddAsset("a modern three-seat sofa")
+            g.set_anchor(sofa)
+            side = scene.AddAsset("a small wooden nightstand with a drawer")
+            g.place_on_left(side)
+        scene.bind(g)
+        return float(abs(side.get_location()[0] - sofa.get_location()[0])) \
+            - float(sofa.get_width()) / 2.0 - float(side.get_width()) / 2.0
+
+    g0, g1 = build_rel(), build_rel(sparsity=0.8)
+    print(f"  relative left gap: sparsity=0 -> {g0:.3f} (SIDE_GAP={SIDE_GAP}), 0.8 -> {g1:.3f}")
+    assert abs(g0 - SIDE_GAP) < 1e-5, "RelativeGroup default gap changed"
+    assert abs(g1 - SIDE_GAP * 1.8) < 1e-5, "RelativeGroup sparsity gap formula wrong"
+    gj = build_rel(jitter=0.8)
+    print(f"  relative left gap at jitter=0.8 -> {gj:.3f}")
+    assert abs(gj - SIDE_GAP) > 1e-3, "RelativeGroup jitter did not move the placement"
+
+    def build_rings(s):
+        chair = scene.AddAsset("an upholstered accent chair")
+        inner, outer = 4 * chair, 6 * chair
+        with scene.RingsGroup(sparsity=s) as g:
+            g.grad_solver = None
+            table = scene.AddAsset("a large round dining table with a dark wood finish")
+            g.set_anchor(table)
+            g.place_rings([inner, outer])
+        scene.bind(g)
+        c = np.array(table.get_location(), dtype=float)
+        return float(np.mean([np.hypot(float(o.get_location()[0]) - c[0],
+                                       float(o.get_location()[2]) - c[2]) for o in outer]))
+
+    rr0, rr1 = build_rings(0.0), build_rings(0.6)
+    print(f"  rings outer radius: sparsity=0 -> {rr0:.2f}, 0.6 -> {rr1:.2f}")
+    assert rr1 > rr0 + 0.5, "RingsGroup sparsity did not separate the rings"
+    scene.export("results/test61_knob_sweep.blend")
+
+
+def test_62():
+    """Group contracts survive max knobs: symmetry stays mirrored, the kitchen island
+    stays audit-placed with only the stools wobbling, the mirror station's wall chain is
+    untouched, and the workstation chair still reads as seated at the desk."""
+    header(62, "contract preservation at high sparsity/jitter")
+    scene = SceneProgRoom("test62", seed=SEED)
+
+    with scene.SymmetryGroup(sparsity=0.5, jitter=0.8) as sym:
+        sym.grad_solver = None
+        bed = scene.AddAsset("a queen-sized bed with a wooden frame")
+        sym.set_anchor(bed)
+        ns = scene.AddAsset("a small wooden nightstand with a drawer")
+        sym.place_flanking(ns)
+    scene.bind(sym)
+    flanks = [c for c in sym.get_children() if c is not bed]
+    cx = float(bed.get_location()[0])
+    xs = sorted(float(c.get_location()[0]) for c in flanks)
+    zs = [float(c.get_location()[2]) for c in flanks]
+    print(f"  symmetry: midpoint err={abs((xs[0]+xs[1])/2 - cx):.4f}  dz={abs(zs[0]-zs[1]):.4f}")
+    assert abs((xs[0] + xs[1]) / 2 - cx) < 0.05, "jitter broke the mirror midpoint"
+    assert abs(zs[0] - zs[1]) < 0.05, "jitter broke the pair's equal depth"
+
+    U_SET = "future/3c2bf09e-eb79-4a8f-a3f4-36446e9ea656"
+    COUNTER = "hssd/f8b8235c6e241b3ef1922a7560736535d9c9219c"
+    STOOL = "hssd/ce64089b08a3ba3e5a2c4c8e70c627c71c64cccc"
+    with scene.KitchenIslandGroup(sparsity=0.6, jitter=0.8) as kz:
+        kz.grad_solver = None
+        kitchen = scene.AddAsset("a complete navy fitted kitchen unit", asset_id=U_SET)
+        kitchen.scale(kitchen.get_width() * 2.4 / kitchen.get_height())
+        kz.set_anchor(kitchen)
+        island = kz.place_island(
+            scene.AddAsset("a navy kitchen island counter", asset_id=COUNTER))
+        stools = kz.place_stools(
+            2 * scene.AddAsset("a rustic wooden bar stool", asset_id=STOOL))
+    scene.bind(kz)
+    a = kz.analysis
+    print(f"  island: shape={a['shape']} mode={a['mode']} entry={a.get('entry', 0):.2f}")
+    assert a["shape"] == "U" and a["mode"] == "tip", "knobs changed the island classification"
+    assert a["entry"] >= 0.85, "knobs broke the walkable entry guarantee"
+    k_aabb, i_aabb = kitchen.get_aabb(), island.get_aabb()
+    assert abs(i_aabb[1, 2] - k_aabb[1, 2]) < a["cell"] * 2 + 0.02, "island tip no longer flush"
+    surviving = [s for s in stools if s in kz.children]
+    assert surviving, "stools vanished under the knobs"
+    for s in surviving:
+        yaw = abs(float(s.get_rotation()) % 360.0 - 180.0)
+        assert yaw < 20.0, f"stool yaw wandered past its clamp: {yaw:.1f}"
+
+    def build_station(jit):
+        with scene.MirrorStationGroup(jitter=jit) as st:
+            st.grad_solver = None
+            ch = scene.AddAsset("an upholstered accent chair")
+            st.set_anchor(ch)
+            counter = scene.AddAsset("a narrow wooden console table")
+            st.place_counter(counter)
+            mirror = scene.AddAsset("a round framed wall mirror")
+            st.place_mirror(mirror)
+        scene.bind(st)
+        m_aabb = mirror.get_aabb()
+        return (float(mirror.get_location()[2]) - float(ch.get_location()[2]),
+                float((m_aabb[0, 1] + m_aabb[1, 1]) / 2))
+
+    (dz0, cy0), (dz1, cy1) = build_station(0.0), build_station(0.8)
+    print(f"  mirror wall chain: dz {dz0:.4f} vs {dz1:.4f}   center_y {cy0:.3f} vs {cy1:.3f}")
+    assert abs(dz0 - dz1) < 1e-4, "jitter moved the mirror off the wall chain"
+    assert abs(cy0 - cy1) < 1e-4, "jitter changed the mirror mounting height"
+
+    FLAT_DESK = "hssd/a42e2ef37ca205ecb1927bde89c6b618ddcda71b"
+    with scene.WorkstationGroup(sparsity=0.5, jitter=0.8) as ws:
+        ws.grad_solver = None
+        desk = scene.AddAsset("a simple flat wooden office desk", asset_id=FLAT_DESK)
+        ws.set_anchor(desk)
+        chair = ws.place_chair(scene.AddAsset("an ergonomic office chair"))
+    scene.bind(ws)
+    ch_rot = float(chair.get_rotation()) % 360.0
+    dz = float(chair.get_location()[2]) - float(desk.get_location()[2])
+    print(f"  workstation chair: rot={ch_rot:.1f}  dz={dz:.2f}")
+    assert abs(ch_rot - 180.0) < 25.0, "chair yaw wandered past its clamp"
+    assert dz > float(desk.get_depth()) / 2.0, "chair no longer in front of the desk"
+    scene.export("results/test62_knob_contracts.blend")
+
+
+def test_63():
+    """Knobbed layouts are reproducible under the scene seed (same-seed build twice)."""
+    header(63, "seeded reproducibility with knobs on")
+
+    def build():
+        scene = SceneProgRoom("test63", seed=SEED)
+        tracked = []
+
+        box = scene.AddAsset("a wooden storage crate")
+        boxes = 3 * box
+        with scene.StackGroup(sparsity=0.5, jitter=0.7) as g:
+            g.grad_solver = None
+            g.place_stack(boxes)
+        scene.bind(g)
+        tracked.extend(boxes)
+
+        with scene.SymmetryGroup(sparsity=0.5, jitter=0.7) as g:
+            g.grad_solver = None
+            bed = scene.AddAsset("a queen-sized bed with a wooden frame")
+            g.set_anchor(bed)
+            g.place_flanking(scene.AddAsset("a small wooden nightstand with a drawer"))
+        scene.bind(g)
+        tracked.extend(g.get_children())
+
+        chair = scene.AddAsset("a cozy lounge chair")
+        s1, s2 = 2 * chair, 2 * chair
+        with scene.FacingGroup(sparsity=0.5, jitter=0.7) as g:
+            g.grad_solver = None
+            table = scene.AddAsset("a rectangular wooden coffee table")
+            g.set_anchor(table)
+            g.place_facing_rows(s1, s2)
+        scene.bind(g)
+        tracked.extend([table] + s1 + s2)
+
+        with scene.RelativeGroup(sparsity=0.5, jitter=0.7) as g:
+            g.grad_solver = None
+            sofa = scene.AddAsset("a modern three-seat sofa")
+            g.set_anchor(sofa)
+            side = scene.AddAsset("a small wooden nightstand with a drawer")
+            g.place_on_left(side)
+            far = scene.AddAsset("a cozy lounge chair")
+            g.place_on_front_further(far)
+        scene.bind(g)
+        tracked.extend([sofa, side, far])
+
+        return np.array([[float(v) for v in o.get_location()] for o in tracked]), \
+            np.array([float(o.get_rotation()) for o in tracked])
+
+    loc1, rot1 = build()
+    loc2, rot2 = build()
+    print(f"  {len(loc1)} transforms  max |dloc|={np.abs(loc1 - loc2).max():.2e}  "
+          f"max |drot|={np.abs(rot1 - rot2).max():.2e}")
+    assert np.allclose(loc1, loc2, atol=1e-6), "knobbed positions differ across same-seed builds"
+    assert np.allclose(rot1, rot2, atol=1e-6), "knobbed rotations differ across same-seed builds"
+
+
+def test_64():
+    """Default-path invariance canary: a no-kwargs group and an explicit sparsity=0, jitter=0
+    group are bit-identical, and the zero-knob spacing formulas equal the legacy constants.
+    If this ever fails, some knob path draws RNG or shifts a gap at defaults."""
+    header(64, "defaults are inert (sparsity=0, jitter=0 == legacy)")
+
+    def build(explicit):
+        kw = dict(sparsity=0.0, jitter=0.0) if explicit else {}
+        scene = SceneProgRoom("test64", seed=SEED)
+        out = []
+
+        box = scene.AddAsset("a wooden storage crate")
+        boxes = 3 * box
+        with scene.StackGroup(**kw) as g:
+            g.grad_solver = None
+            g.place_stack(boxes)
+        scene.bind(g)
+        out.extend(boxes)
+        heights = [float(b.get_height()) for b in boxes]
+        bots = [float(b.get_aabb()[0, 1]) for b in boxes]
+        for i in range(1, len(boxes)):
+            assert abs((bots[i] - bots[i - 1]) - heights[i - 1]) < 1e-5, \
+                "stack gap at defaults is not exactly zero"
+
+        with scene.SymmetryGroup(**kw) as g:
+            g.grad_solver = None
+            bed = scene.AddAsset("a queen-sized bed with a wooden frame")
+            g.set_anchor(bed)
+            ns = scene.AddAsset("a small wooden nightstand with a drawer")
+            g.place_flanking(ns)
+        scene.bind(g)
+        flanks = [c for c in g.get_children() if c is not bed]
+        out.extend([bed] + flanks)
+        # (no exact-gap pin here: face_towards swaps the flanks' AABB width/depth, so the
+        # placement-time width isn't recoverable; the pair midpoint is translation-proof)
+        xs = sorted(float(c.get_location()[0]) for c in flanks)
+        assert abs((xs[0] + xs[1]) / 2 - float(bed.get_location()[0])) < 1e-5, \
+            "flanking pair not centred on the anchor at defaults"
+
+        with scene.RelativeGroup(**kw) as g:
+            g.grad_solver = None
+            sofa = scene.AddAsset("a modern three-seat sofa")
+            g.set_anchor(sofa)
+            side = scene.AddAsset("a small wooden nightstand with a drawer")
+            g.place_on_left(side)
+        scene.bind(g)
+        out.extend([sofa, side])
+        d = abs(float(side.get_location()[0]) - float(sofa.get_location()[0]))
+        expect = float(sofa.get_width()) / 2.0 + float(side.get_width()) / 2.0 + SIDE_GAP
+        assert abs(d - expect) < 1e-5, "relative SIDE_GAP at defaults changed"
+
+        return np.array([[float(v) for v in o.get_location()] for o in out]), \
+            np.array([float(o.get_rotation()) for o in out])
+
+    loc_a, rot_a = build(explicit=False)
+    loc_b, rot_b = build(explicit=True)
+    print(f"  {len(loc_a)} transforms  max |dloc|={np.abs(loc_a - loc_b).max():.2e}")
+    assert np.array_equal(loc_a, loc_b), "explicit 0.0 knobs differ from no-kwargs build"
+    assert np.array_equal(rot_a, rot_b), "explicit 0.0 knobs differ from no-kwargs build (rot)"
+
+
+# ---------------------------------------------------------------------------
 # Registry + runner
 # ---------------------------------------------------------------------------
 
@@ -1876,6 +2216,11 @@ TESTS = {
     58: test_58,   # GridGroup randomness decoupled from sparsity
     59: test_59,   # RingsGroup jitter wiring
     60: test_60,   # PileGroup seeded reproducibility
+    # --- sparsity/jitter for every motif group (2026-08) ---
+    61: test_61,   # effect sweep: every knobbed group responds
+    62: test_62,   # contracts hold at max knobs (mirror pair, island audit, wall chain)
+    63: test_63,   # seeded reproducibility with knobs on
+    64: test_64,   # defaults are inert (the no-extra-RNG canary)
 }
 
 

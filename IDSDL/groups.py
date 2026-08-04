@@ -363,6 +363,31 @@ class RelativeGroup(AnchorGroup):
             'place_inside',
         ]
 
+    def _gap(self, g):
+        """Instance-scaled spacing: exactly ``g`` at sparsity=0. Never mutates the module
+        constants (they have consumers outside this group)."""
+        return g * (1.0 + self.sparsity)
+
+    def _jit_rel(self, obj, axis_dir, gap):
+        """Lived-in wobble for a directional slot: slide along the placement axis (clamped to
+        half the slot's gap so 'left' stays unambiguously left), a freer nudge perpendicular
+        to it, and a small yaw added to the slot's hard rotation. Draws nothing at jitter=0;
+        overlaps this introduces are relaxed by the group's grad solve."""
+        if self.jitter <= 0:
+            return
+        w, _, d = (float(v) for v in obj.get_whd())
+        along = float(np.clip(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_POS_FRACTION
+                              * max(w, d), -gap / 2.0, gap / 2.0))
+        perp = float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_POS_FRACTION * min(w, d))
+        ax = np.asarray(axis_dir, dtype=float)
+        ax = ax / (np.linalg.norm(ax) + 1e-9)
+        pv = np.array([ax[2], 0.0, -ax[0]])   # horizontal perpendicular
+        t = obj.transform.translation
+        obj.set_location(t[0] + along * ax[0] + perp * pv[0], t[1],
+                         t[2] + along * ax[2] + perp * pv[2])
+        obj.set_rotation(float(obj.transform.rotation)
+                         + float(self.rng.uniform(-1, 1) * self.jitter * 10.0))
+
     def get_inner_aabb(self):
         if self.inner_aabb is not None:
             return self.inner_aabb
@@ -380,17 +405,17 @@ class RelativeGroup(AnchorGroup):
         op_left = self.get_operation('place_on_left')
 
         right_extent = max([
-            op_front_right.obj.get_width() + SIDE_GAP if op_front_right is not None else 0,
-            op_back_right.obj.get_width() + SIDE_GAP if op_back_right is not None else 0,
-            op_right.obj.get_width() + SIDE_GAP if op_right is not None else 0,
+            op_front_right.obj.get_width() + self._gap(SIDE_GAP) if op_front_right is not None else 0,
+            op_back_right.obj.get_width() + self._gap(SIDE_GAP) if op_back_right is not None else 0,
+            op_right.obj.get_width() + self._gap(SIDE_GAP) if op_right is not None else 0,
             op_back.obj.get_width() / 2 - width / 2 if op_back is not None else 0,
             op_front.obj.get_width() / 2 - width / 2 if op_front is not None else 0,
         ])
 
         left_extent = max([
-            op_front_left.obj.get_width() + SIDE_GAP if op_front_left is not None else 0,
-            op_back_left.obj.get_width() + SIDE_GAP if op_back_left is not None else 0,
-            op_left.obj.get_width() + SIDE_GAP if op_left is not None else 0,
+            op_front_left.obj.get_width() + self._gap(SIDE_GAP) if op_front_left is not None else 0,
+            op_back_left.obj.get_width() + self._gap(SIDE_GAP) if op_back_left is not None else 0,
+            op_left.obj.get_width() + self._gap(SIDE_GAP) if op_left is not None else 0,
             op_back.obj.get_width() / 2 - width / 2 if op_back is not None else 0,
             op_front.obj.get_width() / 2 - width / 2 if op_front is not None else 0,
         ])
@@ -398,8 +423,8 @@ class RelativeGroup(AnchorGroup):
         inner_width = right_extent + left_extent + width
 
         inner_depth = sum([
-            op_front.obj.get_depth() + FRONT_BACK_GAP if op_front is not None else 0,
-            op_back.obj.get_depth() + FRONT_BACK_GAP if op_back is not None else 0,
+            op_front.obj.get_depth() + self._gap(FRONT_BACK_GAP) if op_front is not None else 0,
+            op_back.obj.get_depth() + self._gap(FRONT_BACK_GAP) if op_back is not None else 0,
         ]) + max([
             sum([
                 op_front_right.obj.get_depth() if op_front_right is not None else 0,
@@ -420,57 +445,64 @@ class RelativeGroup(AnchorGroup):
     @placemethod
     def place_on_left(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        left = center + left_dir * (width / 2 + obj.get_width() / 2 + SIDE_GAP)
+        left = center + left_dir * (width / 2 + obj.get_width() / 2 + self._gap(SIDE_GAP))
         obj.set_location(left[0], self.compute_obj_y(obj), left[2])
         obj.set_rotation(0)
+        self._jit_rel(obj, left_dir, self._gap(SIDE_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_right(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        right = center + right_dir * (width / 2 + obj.get_width() / 2 + SIDE_GAP)
+        right = center + right_dir * (width / 2 + obj.get_width() / 2 + self._gap(SIDE_GAP))
         obj.set_location(right[0], self.compute_obj_y(obj), right[2])
         obj.set_rotation(0)
+        self._jit_rel(obj, right_dir, self._gap(SIDE_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_right(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        front_right = center + front_dir * (depth / 2 - obj.get_depth() / 2) + right_dir * (width / 2 + obj.get_width() / 2 + SIDE_GAP)
+        front_right = center + front_dir * (depth / 2 - obj.get_depth() / 2) + right_dir * (width / 2 + obj.get_width() / 2 + self._gap(SIDE_GAP))
         obj.set_location(front_right[0], self.compute_obj_y(obj), front_right[2])
         obj.set_rotation(0)
+        self._jit_rel(obj, right_dir, self._gap(SIDE_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_left(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        front_left = center + front_dir * (depth / 2 - obj.get_depth() / 2) + left_dir * (width / 2 + obj.get_width() / 2 + SIDE_GAP)
+        front_left = center + front_dir * (depth / 2 - obj.get_depth() / 2) + left_dir * (width / 2 + obj.get_width() / 2 + self._gap(SIDE_GAP))
         obj.set_location(front_left[0], self.compute_obj_y(obj), front_left[2])
         obj.set_rotation(0)
+        self._jit_rel(obj, left_dir, self._gap(SIDE_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_right(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        back_right = center + back_dir * (depth / 2 - obj.get_depth() / 2) + right_dir * (width / 2 + obj.get_width() / 2 + SIDE_GAP)
+        back_right = center + back_dir * (depth / 2 - obj.get_depth() / 2) + right_dir * (width / 2 + obj.get_width() / 2 + self._gap(SIDE_GAP))
         obj.set_location(back_right[0], self.compute_obj_y(obj), back_right[2])
         obj.set_rotation(0)
+        self._jit_rel(obj, right_dir, self._gap(SIDE_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_left(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        back_left = center + back_dir * (depth / 2 - obj.get_depth() / 2) + left_dir * (width / 2 + obj.get_width() / 2 + SIDE_GAP)
+        back_left = center + back_dir * (depth / 2 - obj.get_depth() / 2) + left_dir * (width / 2 + obj.get_width() / 2 + self._gap(SIDE_GAP))
         obj.set_location(back_left[0], self.compute_obj_y(obj), back_left[2])
         obj.set_rotation(0)
+        self._jit_rel(obj, left_dir, self._gap(SIDE_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_front(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        front = center + front_dir * (depth / 2 + obj.get_depth() / 2 + FRONT_BACK_GAP)
+        front = center + front_dir * (depth / 2 + obj.get_depth() / 2 + self._gap(FRONT_BACK_GAP))
         obj.set_location(front[0], self.compute_obj_y(obj), front[2])
         obj.set_rotation(180)
+        self._jit_rel(obj, front_dir, self._gap(FRONT_BACK_GAP))
         self.add_child(obj)
 
     @placemethod
@@ -484,9 +516,10 @@ class RelativeGroup(AnchorGroup):
     @placemethod
     def place_on_back(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        back = center + back_dir * (depth / 2 + obj.get_depth() / 2 + FRONT_BACK_GAP)
+        back = center + back_dir * (depth / 2 + obj.get_depth() / 2 + self._gap(FRONT_BACK_GAP))
         obj.set_location(back[0], self.compute_obj_y(obj), back[2])
         obj.set_rotation(0)
+        self._jit_rel(obj, back_dir, self._gap(FRONT_BACK_GAP))
         self.add_child(obj)
 
     @placemethod
@@ -519,36 +552,40 @@ class RelativeGroup(AnchorGroup):
     def place_on_left_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
         inner_width, inner_depth = self.get_inner_aabb()
-        left_further = center + left_dir * (inner_width / 2 + obj.get_depth() / 2 + CIRCULATION_GAP)
+        left_further = center + left_dir * (inner_width / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(left_further[0], self.compute_obj_y(obj), left_further[2])
         obj.set_rotation(90)
+        self._jit_rel(obj, left_dir, self._gap(CIRCULATION_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_right_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
         inner_width, inner_depth = self.get_inner_aabb()
-        right_further = center + right_dir * (inner_width / 2 + obj.get_depth() / 2 + CIRCULATION_GAP)
+        right_further = center + right_dir * (inner_width / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(right_further[0], self.compute_obj_y(obj), right_further[2])
         obj.set_rotation(-90)
+        self._jit_rel(obj, right_dir, self._gap(CIRCULATION_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
         inner_width, inner_depth = self.get_inner_aabb()
-        front_further = center + front_dir * (inner_depth / 2 + obj.get_depth() / 2 + CIRCULATION_GAP)
+        front_further = center + front_dir * (inner_depth / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(front_further[0], self.compute_obj_y(obj), front_further[2])
         obj.set_rotation(180)
+        self._jit_rel(obj, front_dir, self._gap(CIRCULATION_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
         inner_width, inner_depth = self.get_inner_aabb()
-        back_further = center + back_dir * (inner_depth / 2 + obj.get_depth() / 2 + CIRCULATION_GAP)
+        back_further = center + back_dir * (inner_depth / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(back_further[0], self.compute_obj_y(obj), back_further[2])
         obj.set_rotation(0)
+        self._jit_rel(obj, back_dir, self._gap(CIRCULATION_GAP))
         self.add_child(obj)
 
     @placemethod
@@ -558,36 +595,40 @@ class RelativeGroup(AnchorGroup):
         # rotation -90 swaps the object's world extents: width along z, depth along x
         # (mirrors place_on_front_left_further; the unswapped form overlapped/gapped
         # non-square objects on this one diagonal)
-        front_right_further = center + front_dir * (inner_depth / 2 + obj.get_width() / 2 + CIRCULATION_GAP) + right_dir * (inner_width / 2 + obj.get_depth() / 2 + CIRCULATION_GAP)
+        front_right_further = center + front_dir * (inner_depth / 2 + obj.get_width() / 2 + self._gap(CIRCULATION_GAP)) + right_dir * (inner_width / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(front_right_further[0], self.compute_obj_y(obj), front_right_further[2])
         obj.set_rotation(-90)
+        self._jit_rel(obj, front_dir + right_dir, self._gap(CIRCULATION_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_front_left_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
         inner_width, inner_depth = self.get_inner_aabb()
-        front_left_further = center + front_dir * (inner_depth / 2 + obj.get_width() / 2 + CIRCULATION_GAP) + left_dir * (inner_width / 2 + obj.get_depth() / 2 + CIRCULATION_GAP)
+        front_left_further = center + front_dir * (inner_depth / 2 + obj.get_width() / 2 + self._gap(CIRCULATION_GAP)) + left_dir * (inner_width / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(front_left_further[0], self.compute_obj_y(obj), front_left_further[2])
         obj.set_rotation(90)
+        self._jit_rel(obj, front_dir + left_dir, self._gap(CIRCULATION_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_right_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
         inner_width, inner_depth = self.get_inner_aabb()
-        back_right_further = center + back_dir * (inner_depth / 2 + obj.get_depth() / 2 + CIRCULATION_GAP) + right_dir * (inner_width / 2 + obj.get_width() / 2 + CIRCULATION_GAP)
+        back_right_further = center + back_dir * (inner_depth / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP)) + right_dir * (inner_width / 2 + obj.get_width() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(back_right_further[0], self.compute_obj_y(obj), back_right_further[2])
         obj.set_rotation(0)
+        self._jit_rel(obj, back_dir + right_dir, self._gap(CIRCULATION_GAP))
         self.add_child(obj)
 
     @placemethod
     def place_on_back_left_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
         inner_width, inner_depth = self.get_inner_aabb()
-        back_left_further = center + back_dir * (inner_depth / 2 + obj.get_depth() / 2 + CIRCULATION_GAP) + left_dir * (inner_width / 2 + obj.get_width() / 2 + CIRCULATION_GAP)
+        back_left_further = center + back_dir * (inner_depth / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP)) + left_dir * (inner_width / 2 + obj.get_width() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(back_left_further[0], self.compute_obj_y(obj), back_left_further[2])
         obj.set_rotation(0)
+        self._jit_rel(obj, back_dir + left_dir, self._gap(CIRCULATION_GAP))
         self.add_child(obj)
 
 class AroundGroup(AnchorGroup):

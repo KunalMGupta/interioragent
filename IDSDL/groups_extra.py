@@ -36,7 +36,12 @@ def _anchor_base(group):
 
 class StackGroup(AnchorGroup):
     """Stack objects vertically, each resting on the one below. If an anchor is set, the stack
-    starts on top of it."""
+    starts on top of it. `sparsity` opens a vertical gap between levels; `jitter` slides each
+    level within the footprint of the one below (the bottom level stays put — no solver repair
+    happens on stacked items, so the clamp is what keeps the stack standing)."""
+
+    SPARSITY_GAP_FRACTION = 0.25   # max extra gap per level, as a fraction of its height
+    JITTER_YAW_DEG = 8.0
 
     @placemethod
     def place_stack(self, objs):
@@ -45,15 +50,33 @@ class StackGroup(AnchorGroup):
             return
         x0, z0, base_y = _anchor_base(self)
         cum = base_y
-        for obj in objs:
-            obj.set_location(x0, cum + self.compute_obj_y(obj), z0)
+        prev_w = prev_d = None
+        for i, obj in enumerate(objs):
+            x, z = x0, z0
+            dyaw = 0.0
+            if self.jitter > 0 and i > 0:
+                # stay inside the level below: offset at most half the smaller footprint
+                lim_x = self.jitter * min(prev_w, float(obj.get_width())) / 2.0
+                lim_z = self.jitter * min(prev_d, float(obj.get_depth())) / 2.0
+                x += float(self.rng.uniform(-1, 1) * lim_x)
+                z += float(self.rng.uniform(-1, 1) * lim_z)
+                dyaw = float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_YAW_DEG)
+            obj.set_location(x, cum + self.compute_obj_y(obj), z)
+            if dyaw:
+                obj.set_rotation(float(obj.transform.rotation) + dyaw)
             obj.ignore_overlap = True  # stacked items share a footprint
             self.add_child(obj)
-            cum += float(obj.get_height())
+            h = float(obj.get_height())
+            cum += h + self.sparsity * self.SPARSITY_GAP_FRACTION * h
+            prev_w, prev_d = float(obj.get_width()), float(obj.get_depth())
 
 
 class PyramidGroup(AnchorGroup):
-    """Arrange objects as centered tiers of decreasing count, stacked upward (a pyramid)."""
+    """Arrange objects as centered tiers of decreasing count, stacked upward (a pyramid).
+    `sparsity` widens the in-tier spacing; `jitter` slides items within their slot and adds
+    a small yaw (tiers stay centered and levels stay seated — only x and yaw are perturbed)."""
+
+    JITTER_YAW_DEG = 6.0
 
     @placemethod
     def place_pyramid(self, objs, base_count=None, spacing=0.05):
@@ -66,6 +89,7 @@ class PyramidGroup(AnchorGroup):
             while base_count * (base_count + 1) // 2 < N:
                 base_count += 1
 
+        spacing = spacing + self.sparsity * float(np.mean([float(o.get_width()) for o in objs]))
         x0, z0, base_y = _anchor_base(self)
         y = base_y
         idx = 0
@@ -77,7 +101,13 @@ class PyramidGroup(AnchorGroup):
             cx = x0 - total / 2.0
             tier_height = 0.0
             for o, w in zip(row, widths):
-                o.set_location(cx + w / 2.0, y + self.compute_obj_y(o), z0)
+                dx = dyaw = 0.0
+                if self.jitter > 0:
+                    dx = float(self.rng.uniform(-1, 1) * self.jitter * spacing / 2.0)
+                    dyaw = float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_YAW_DEG)
+                o.set_location(cx + w / 2.0 + dx, y + self.compute_obj_y(o), z0)
+                if dyaw:
+                    o.set_rotation(float(o.transform.rotation) + dyaw)
                 o.ignore_overlap = True
                 self.add_child(o)
                 cx += w + spacing
@@ -89,7 +119,9 @@ class PyramidGroup(AnchorGroup):
 
 class PileGroup(AnchorGroup):
     """Scatter objects organically within a disk, then let the inherited overlap solver
-    (AnchorGroup.compile runs OverlapConstraint + grad_optimize) relax them apart."""
+    (AnchorGroup.compile runs OverlapConstraint + grad_optimize) relax them apart.
+    `sparsity` widens the scatter disk. `jitter` is accepted (inherited) but inert: a pile is
+    already maximal randomness, and keeping the draw sequence fixed preserves seeded scenes."""
 
     @placemethod
     def place_pile(self, objs, spread=1.0):
@@ -99,7 +131,7 @@ class PileGroup(AnchorGroup):
             return
         x0, z0, _ = _anchor_base(self)
         footprints = [max(float(o.get_width()), float(o.get_depth())) for o in objs]
-        radius = spread * float(np.mean(footprints)) * np.sqrt(max(N, 1))
+        radius = spread * (1.0 + self.sparsity) * float(np.mean(footprints)) * np.sqrt(max(N, 1))
         rng = self.rng   # seeded per-group stream — reproducible under scene seed
         for o in objs:
             r = radius * np.sqrt(rng.random())
@@ -111,7 +143,12 @@ class PileGroup(AnchorGroup):
 
 class SymmetryGroup(AnchorGroup):
     """Flank the anchor with mirror-symmetric pairs. Each given object is placed on one side and
-    an auto-copy on the mirrored side, both turned to face the anchor."""
+    an auto-copy on the mirrored side, both turned to face the anchor. `sparsity` widens the gap
+    from the anchor; `jitter` perturbs each pair with a SINGLE draw applied mirrored to both
+    twins, so the pair stays exactly symmetric about the anchor at any jitter."""
+
+    SPARSITY_GAP_MAX = 0.6
+    JITTER_YAW_DEG = 10.0
 
     @placemethod
     def place_flanking(self, objs, gap=0.1):
@@ -120,18 +157,29 @@ class SymmetryGroup(AnchorGroup):
             return
         _, _, _, _, center, w0, _, _ = self.get_anchor_center_dirs()
         x0, _, z0 = center
+        gap = gap + self.sparsity * self.SPARSITY_GAP_MAX
         offset = float(w0) / 2.0 + gap
         for o in objs:
             ow = float(o.get_width())
             d = offset + ow / 2.0
-            o.set_location(x0 + d, self.compute_obj_y(o), z0)
+            dd = dz = dyaw = 0.0
+            if self.jitter > 0:
+                dd = float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_POS_FRACTION * ow)
+                dz = float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_POS_FRACTION
+                           * float(o.get_depth()))
+                dyaw = float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_YAW_DEG)
+            o.set_location(x0 + d + dd, self.compute_obj_y(o), z0 + dz)
             o.face_towards(self.anchor)
+            if dyaw:
+                o.set_rotation(float(o.transform.rotation) + dyaw)
             o.ignore_overlap = True
             self.add_child(o)
 
             mirror = o.copy()
-            mirror.set_location(x0 - d, self.compute_obj_y(mirror), z0)
+            mirror.set_location(x0 - d - dd, self.compute_obj_y(mirror), z0 + dz)
             mirror.face_towards(self.anchor)
+            if dyaw:
+                mirror.set_rotation(float(mirror.transform.rotation) - dyaw)
             mirror.ignore_overlap = True
             self.add_child(mirror)
 
@@ -140,7 +188,12 @@ class SymmetryGroup(AnchorGroup):
 
 class FacingGroup(AnchorGroup):
     """Place two parallel rows on opposite sides of the anchor, each row facing it
-    (e.g. two sofas across a coffee table)."""
+    (e.g. two sofas across a coffee table). `sparsity` widens both the in-row spacing and the
+    row's standoff from the anchor; `jitter` perturbs each seat within its slot (in the row's
+    local frame, so it rotates correctly with the anchor) plus a small yaw off dead-facing."""
+
+    SPARSITY_GAP_MAX = 0.6
+    JITTER_YAW_DEG = 10.0
 
     def _row(self, objs, sign, gap):
         objs = self.to_list(objs)
@@ -152,17 +205,30 @@ class FacingGroup(AnchorGroup):
         a = np.radians(self.anchor.get_rotation())
 
         widths = [float(o.get_width()) for o in objs]
-        spacing = 0.1
+        spacing = 0.1 + self.sparsity * self.SPARSITY_GAP_MAX
+        gap = gap + self.sparsity * self.SPARSITY_GAP_MAX
         total = sum(widths) + spacing * (n - 1)
         cx = -total / 2.0
         for o, w in zip(objs, widths):
             lx = cx + w / 2.0
             lz = sign * (float(d0) / 2.0 + gap + float(o.get_depth()) / 2.0)
+            dyaw = 0.0
+            if self.jitter > 0:
+                # in-slot slide along the row (clamped so neighbours can't swap) and a freer
+                # push toward/away from the anchor; both in the row's local frame
+                lx += float(np.clip(self.rng.uniform(-1, 1) * self.jitter
+                                    * self.JITTER_POS_FRACTION * w,
+                                    -spacing / 2.0, spacing / 2.0))
+                lz += float(self.rng.uniform(-1, 1) * self.jitter
+                            * self.JITTER_POS_FRACTION * float(o.get_depth()))
+                dyaw = float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_YAW_DEG)
             # rotate the (right, front) offset by the anchor yaw (sin/cos-from-+z convention)
             wx = x0 + lx * np.cos(a) + lz * np.sin(a)
             wz = z0 - lx * np.sin(a) + lz * np.cos(a)
             o.set_location(wx, self.compute_obj_y(o), wz)
             o.face_towards(self.anchor)
+            if dyaw:
+                o.set_rotation(float(o.transform.rotation) + dyaw)
             o.ignore_overlap = True
             self.add_child(o)
             cx += w + spacing
@@ -202,7 +268,8 @@ class RingsGroup(AroundGroup):
                 self._apply_jitter(o)   # honour the inherited AroundGroup jitter knob
                 self.add_child(o)
                 ring_outer = max(ring_outer, prev_outer + base_dist + float(o.get_depth()))
-            prev_outer = ring_outer + 0.1
+            # ring-to-ring separation honours sparsity too (radial standoff already does)
+            prev_outer = ring_outer + 0.1 + self.sparsity * 0.5
 
 
 class MirrorStationGroup(AnchorGroup):
@@ -320,7 +387,7 @@ class MirrorStationGroup(AnchorGroup):
         if self._counter is not None:
             c = self._counter
             wc, hc, dc = self._cap_height(c, self.COUNTER_MAX_HEIGHT)  # desk-height, not a bar table
-            cz_c = wall_z + self.CHAIR_COUNTER_GAP + dc / 2.0
+            cz_c = wall_z + self.CHAIR_COUNTER_GAP + self.sparsity * 0.25 + dc / 2.0
             c.set_rotation(180.0)
             c.set_location(cx, self.compute_obj_y(c), cz_c)
             c.ignore_overlap = True
@@ -343,7 +410,13 @@ class MirrorStationGroup(AnchorGroup):
             for i, it in enumerate(self._shelf_items):
                 _, hi, _ = (float(v) for v in it.get_whd())
                 ix = cx - ws / 2.0 + (i + 1) / (n + 1) * ws
-                it.set_rotation(180.0)
+                yaw = 180.0
+                if self.jitter > 0:
+                    # decor may drift within its own shelf slot and turn a little; the
+                    # mirror/counter/shelf carcass itself stays exactly on the wall plane
+                    ix += float(self.rng.uniform(-1, 1) * self.jitter * ws / (2.0 * (n + 1)))
+                    yaw += float(self.rng.uniform(-1, 1) * self.jitter * 15.0)
+                it.set_rotation(yaw)
                 it.set_location(ix, shelf_top + self.compute_obj_y(it), wall_z + ds / 2.0)
                 it.ignore_overlap = True
                 items_h = max(items_h, hi)
@@ -388,9 +461,15 @@ class MirrorStationGroup(AnchorGroup):
             obj, side = self._beside
             wb, _, _ = (float(v) for v in obj.get_whd())
             sign = 1.0 if side == "right" else -1.0
-            obj.set_location(cx + sign * (wa / 2.0 + self.BESIDE_GAP + wb / 2.0),
+            obj.set_location(cx + sign * (wa / 2.0 + self.BESIDE_GAP + self.sparsity * 0.25
+                                          + wb / 2.0),
                              self.compute_obj_y(obj), cz + da / 2.0)
             obj.ignore_overlap = True
+
+        # a lived-in seat: let the anchor turn slightly off dead-square toward the mirror
+        if self.jitter > 0:
+            self.anchor.set_rotation(float(self.anchor.get_rotation())
+                                     + float(self.rng.uniform(-1, 1) * self.jitter * 10.0))
 
     def compile(self):
         self._layout()
@@ -481,10 +560,21 @@ class WorkstationGroup(AnchorGroup):
         if self._chair is not None:
             ch = self._chair
             _, _, dch = (float(v) for v in ch.get_whd())
-            gap = self.CHAIR_GAP + (0.25 if self._chair_gap else 0.0)
-            ch.set_rotation(180.0)
-            ch.set_location(cx, self.compute_obj_y(ch), cz + da / 2.0 + gap + dch / 2.0)
+            gap = self.CHAIR_GAP + (0.25 if self._chair_gap else 0.0) + self.sparsity * 0.3
+            yaw = 180.0
+            chx = cx
+            if self.jitter > 0:
+                # a lived-in seat: slid a little along the desk, pushed back or tucked in,
+                # and turned off dead-square (the desk itself stays rigid)
+                chx += float(self.rng.uniform(-1, 1) * self.jitter * 0.25 * wa)
+                gap = max(0.02, gap + float(self.rng.uniform(-1, 1) * self.jitter * 0.15))
+                yaw += float(self.rng.uniform(-1, 1) * self.jitter * 20.0)
+            ch.set_rotation(yaw)
+            ch.set_location(chx, self.compute_obj_y(ch), cz + da / 2.0 + gap + dch / 2.0)
             ch.ignore_overlap = True
+
+        # desktop items are seated by place_on_top (VLM/tournament) — jitter deliberately
+        # does not touch them; the surface arrangement is place_on_top's contract.
 
         # desktop items: delegate to place_on_top so they seat on the REAL surface (no floating),
         # capped to a few. Records a delayed op that AnchorGroup.compile() executes after layout.
@@ -904,8 +994,17 @@ class KitchenIslandGroup(AnchorGroup):
             for k, st in enumerate(self._stools):
                 _, _, sd = (float(v) for v in st.get_whd())
                 frac = (k + 1) / (N + 1) - 0.5
-                p = e_along * (c_along + frac * wi) + out_dir * (row_n + self._stool_gap + sd / 2.0)
-                st.set_rotation(stool_rot)
+                gap = self._stool_gap + self.sparsity * 0.3
+                yaw = stool_rot
+                if self.jitter > 0:
+                    # only the stools get lived-in wobble: slide within the slot (bounded so
+                    # neighbours can't cross), push back a touch, turn a little. The island
+                    # itself stays rigid — its pose is audit-guarded (entry/aisle checks).
+                    frac += float(self.rng.uniform(-1, 1) * self.jitter * 0.5 / (N + 1))
+                    gap = max(0.02, gap + float(self.rng.uniform(-1, 1) * self.jitter * 0.05))
+                    yaw += float(self.rng.uniform(-1, 1) * self.jitter * 15.0)
+                p = e_along * (c_along + frac * wi) + out_dir * (row_n + gap + sd / 2.0)
+                st.set_rotation(yaw)
                 st.set_location(float(p[0]), self.compute_obj_y(st), float(p[1]))
                 st.ignore_overlap = True
 
