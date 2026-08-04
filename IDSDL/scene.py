@@ -249,8 +249,8 @@ class SceneProgRoom:
     # ----------------------------
     # group factories
     # ----------------------------
-    def RelativeGroup(self):
-        return RelativeGroup(self)
+    def RelativeGroup(self, sparsity: float = 0.0, jitter: float = 0.0):
+        return RelativeGroup(self, sparsity=sparsity, jitter=jitter)
 
     def AroundGroup(self, sparsity: float = 0.0, jitter: float = 0.0):
         return AroundGroup(self, sparsity=sparsity, jitter=jitter)
@@ -259,32 +259,32 @@ class SceneProgRoom:
         return GridGroup(self, sparsity=sparsity, randomness=randomness)
 
     # --- additional motif groups (IDSDL/groups_extra.py) ---
-    def StackGroup(self):
-        return StackGroup(self)
+    def StackGroup(self, sparsity: float = 0.0, jitter: float = 0.0):
+        return StackGroup(self, sparsity=sparsity, jitter=jitter)
 
-    def PyramidGroup(self):
-        return PyramidGroup(self)
+    def PyramidGroup(self, sparsity: float = 0.0, jitter: float = 0.0):
+        return PyramidGroup(self, sparsity=sparsity, jitter=jitter)
 
-    def PileGroup(self):
-        return PileGroup(self)
+    def PileGroup(self, sparsity: float = 0.0, jitter: float = 0.0):
+        return PileGroup(self, sparsity=sparsity, jitter=jitter)
 
-    def SymmetryGroup(self):
-        return SymmetryGroup(self)
+    def SymmetryGroup(self, sparsity: float = 0.0, jitter: float = 0.0):
+        return SymmetryGroup(self, sparsity=sparsity, jitter=jitter)
 
-    def FacingGroup(self):
-        return FacingGroup(self)
+    def FacingGroup(self, sparsity: float = 0.0, jitter: float = 0.0):
+        return FacingGroup(self, sparsity=sparsity, jitter=jitter)
 
     def RingsGroup(self, sparsity: float = 0.0, jitter: float = 0.0):
         return RingsGroup(self, sparsity=sparsity, jitter=jitter)
 
-    def MirrorStationGroup(self, max_top=None):
-        return MirrorStationGroup(self, max_top=max_top)
+    def MirrorStationGroup(self, max_top=None, sparsity: float = 0.0, jitter: float = 0.0):
+        return MirrorStationGroup(self, max_top=max_top, sparsity=sparsity, jitter=jitter)
 
-    def WorkstationGroup(self):
-        return WorkstationGroup(self)
+    def WorkstationGroup(self, sparsity: float = 0.0, jitter: float = 0.0):
+        return WorkstationGroup(self, sparsity=sparsity, jitter=jitter)
 
-    def KitchenIslandGroup(self, cell=0.06):
-        return KitchenIslandGroup(self, cell=cell)
+    def KitchenIslandGroup(self, cell=0.06, sparsity: float = 0.0, jitter: float = 0.0):
+        return KitchenIslandGroup(self, cell=cell, sparsity=sparsity, jitter=jitter)
 
     def RoomGroup(self, modulate_scale: float = 1.0, randomness: float = 0.0,
                   auto_render: bool = True,

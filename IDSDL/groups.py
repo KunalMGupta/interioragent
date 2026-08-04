@@ -36,12 +36,45 @@ BUFFER = 0.05
 
 
 class AnchorGroup(SceneProgObject):
-    def __init__(self, scene, name=None):
+    # Max perturbation at jitter=1.0: position offset as a fraction of the object's own
+    # size, and rotation in degrees. Kept modest so a real-world "lived-in" irregularity
+    # is added without breaking the arrangement (and, where a group runs the post-layout
+    # OverlapConstraint + grad solve, anything the jitter pushes into a neighbour still
+    # gets separated).
+    JITTER_POS_FRACTION = 0.25
+    JITTER_ROT_DEG = 12.0
+
+    def __init__(self, scene, name=None, sparsity=0.0, jitter=0.0):
         super().__init__(scene, name=name)
         self.anchor_info = None
         self.rug_multiplier = 1.15
+        self.sparsity = max(0.0, min(sparsity, 1.0))
+        self.jitter = max(0.0, min(jitter, 1.0))
         self.rng = scene._make_rng() if scene is not None and hasattr(scene, "_make_rng") \
             else np.random.default_rng()
+
+    def _jit_pos(self, obj):
+        """Random (dx, dz) world offset for `obj`, scaled by jitter and the object size."""
+        if self.jitter <= 0:
+            return 0.0, 0.0
+        w, _, d = obj.get_whd()
+        mag = self.jitter * self.JITTER_POS_FRACTION
+        return float(self.rng.uniform(-1, 1) * mag * w), float(self.rng.uniform(-1, 1) * mag * d)
+
+    def _jit_rot(self):
+        """Random rotation perturbation (degrees), scaled by jitter."""
+        if self.jitter <= 0:
+            return 0.0
+        return float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_ROT_DEG)
+
+    def _apply_jitter(self, obj):
+        """Nudge an already-placed object's local position and rotation by a jittered amount."""
+        if self.jitter <= 0:
+            return
+        dx, dz = self._jit_pos(obj)
+        t = obj.transform.translation
+        obj.set_location(t[0] + dx, t[1], t[2] + dz)
+        obj.set_rotation(float(obj.transform.rotation) + self._jit_rot())
 
     def set_anchor(self, anchor):
         self.anchor = anchor
@@ -305,8 +338,8 @@ class AnchorGroup(SceneProgObject):
 
 
 class RelativeGroup(AnchorGroup):
-    def __init__(self, scene, name=None):
-        super().__init__(scene, name=name)
+    def __init__(self, scene, name=None, sparsity=0.0, jitter=0.0):
+        super().__init__(scene, name=name, sparsity=sparsity, jitter=jitter)
         self.anchor_info = None
         self.inner_aabb = None
         self.operation_order = [
@@ -558,41 +591,7 @@ class RelativeGroup(AnchorGroup):
         self.add_child(obj)
 
 class AroundGroup(AnchorGroup):
-    # Max perturbation at jitter=1.0: position offset as a fraction of the object's own
-    # size, and rotation in degrees. Kept modest so a real-world "lived-in" irregularity
-    # is added without breaking the arrangement (and the post-layout OverlapConstraint +
-    # grad solve still separate anything the jitter pushes into a neighbour).
-    JITTER_POS_FRACTION = 0.25
-    JITTER_ROT_DEG = 12.0
-
-    def __init__(self, scene, name=None, sparsity=0.0, jitter=0.0):
-        super().__init__(scene, name=name)
-        self.anchor_info = None
-        self.sparsity = max(0.0, min(sparsity, 1.0))
-        self.jitter = max(0.0, min(jitter, 1.0))
-
-    def _jit_pos(self, obj):
-        """Random (dx, dz) world offset for `obj`, scaled by jitter and the object size."""
-        if self.jitter <= 0:
-            return 0.0, 0.0
-        w, _, d = obj.get_whd()
-        mag = self.jitter * self.JITTER_POS_FRACTION
-        return float(self.rng.uniform(-1, 1) * mag * w), float(self.rng.uniform(-1, 1) * mag * d)
-
-    def _jit_rot(self):
-        """Random rotation perturbation (degrees), scaled by jitter."""
-        if self.jitter <= 0:
-            return 0.0
-        return float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_ROT_DEG)
-
-    def _apply_jitter(self, obj):
-        """Nudge an already-placed object's local position and rotation by a jittered amount."""
-        if self.jitter <= 0:
-            return
-        dx, dz = self._jit_pos(obj)
-        t = obj.transform.translation
-        obj.set_location(t[0] + dx, t[1], t[2] + dz)
-        obj.set_rotation(float(obj.transform.rotation) + self._jit_rot())
+    # sparsity/jitter knobs and the _jit_* machinery are inherited from AnchorGroup.
 
     @placemethod
     def place_rectilinear(self, longer_side1=None, longer_side2=None, shorter_side1=None, shorter_side2=None):

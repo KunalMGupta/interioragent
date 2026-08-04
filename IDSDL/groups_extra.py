@@ -239,8 +239,8 @@ class MirrorStationGroup(AnchorGroup):
     SHELF_DEFAULT_CENTER_Y = 1.05
     DEFAULT_MAX_TOP = 2.7          # keep the whole station under a standard ~3 m ceiling
 
-    def __init__(self, scene, name=None, max_top=None):
-        super().__init__(scene, name=name)
+    def __init__(self, scene, name=None, max_top=None, sparsity=0.0, jitter=0.0):
+        super().__init__(scene, name=name, sparsity=sparsity, jitter=jitter)
         # the station's topmost point (mirror top) is kept at/under this height so the unit never
         # breaches the ceiling; pass a smaller value for a known-short room.
         self.max_top = self.DEFAULT_MAX_TOP if max_top is None else float(max_top)
@@ -427,8 +427,8 @@ class WorkstationGroup(AnchorGroup):
     CHAIR_GAP = 0.10          # desk front face -> chair (tucked but not interpenetrating)
     MAX_DESKTOP_ITEMS = 3     # place_on_top is reliable with only a few items; keep the desk clean
 
-    def __init__(self, scene, name=None):
-        super().__init__(scene, name=name)
+    def __init__(self, scene, name=None, sparsity=0.0, jitter=0.0):
+        super().__init__(scene, name=name, sparsity=sparsity, jitter=jitter)
         # Deterministic seat + delegated on-top placement: skip the per-instance VLM proportion
         # render (waste, and it would re-render N identical desks in a row). place_on_top runs its
         # own VLM pass; the room-level VLM still vets the whole scene.
@@ -673,8 +673,8 @@ class KitchenIslandGroup(AnchorGroup):
     STOOL_GAP = 0.08        # island outward face -> stool front
     MIN_ISLAND_WIDTH = 0.6  # below this, shrinking the island to protect the entry is refused
 
-    def __init__(self, scene, name=None, cell=_KI_CELL):
-        super().__init__(scene, name=name)
+    def __init__(self, scene, name=None, cell=_KI_CELL, sparsity=0.0, jitter=0.0):
+        super().__init__(scene, name=name, sparsity=sparsity, jitter=jitter)
         self.cell = cell
         # Deterministic, self-auditing layout: the per-group VLM proportion render is waste
         # (and the room-level VLM still vets the whole scene).
