@@ -2287,6 +2287,125 @@ def test_66():
         "jittered rotations differ across same-seed builds"
 
 
+def test_67():
+    """place_arc "theatre law" (user-approved redesign): seats spread over at most
+    150 deg in FRONT of the focal point at whatever radius fits them; sparsity
+    monotonically widens seat gap / standoff / row gap; GridGroup rows fill to
+    geometric capacity (front row never a lone chair) with a half-pitch stagger
+    between neighbouring rows for sightlines."""
+    header(67, "place_arc theatre law (Around single arc + Grid rows)")
+
+    # ---- AroundGroup: single arc that grows its radius to fit ----
+    def around(n, **kw):
+        scene = SceneProgRoom("test67a", seed=SEED)
+        with scene.AroundGroup(**kw) as g:
+            g.grad_solver = None
+            podium = scene.AddAsset("a wooden lecture podium")
+            g.set_anchor(podium)
+            chairs = [scene.AddAsset("a cozy lounge chair") for _ in range(n)]
+            g.place_arc(chairs)
+        a = np.array(podium.get_location(), dtype=float)
+        P = np.array([[float(v) for v in c.get_location()] for c in chairs])
+        rel = P - a
+        radii = np.hypot(rel[:, 0], rel[:, 2])
+        az = np.degrees(np.arctan2(rel[:, 0], rel[:, 2]))
+        yaw_err = []
+        for c, r in zip(chairs, rel):
+            facing = float(np.degrees(np.arctan2(-r[0], -r[2])))
+            yaw_err.append(abs((float(c.get_rotation()) - facing + 180.0) % 360.0 - 180.0))
+        min_dim = min(min(float(c.get_width()), float(c.get_depth())) for c in chairs)
+        return P, radii, np.sort(az), max(yaw_err), min_dim
+
+    P, radii, az, yaw, min_dim = around(5)
+    span = az[-1] - az[0]
+    print(f"  around: radius={radii.mean():.2f} (std {radii.std():.3f})  "
+          f"center span={span:.1f} deg  max yaw err={yaw:.3f}")
+    assert span < 150.0, f"arc spills past the 150-deg cap: {span:.1f}"
+    assert np.all(np.abs(az) < 76.0), "a chair sits outside the frontal 150-deg cone"
+    assert radii.std() < 0.02, "single arc should have one radius"
+    assert yaw < 0.5, "chairs must face the anchor"
+    dmin = min(float(np.hypot(*(P[i, [0, 2]] - P[j, [0, 2]])))
+               for i in range(len(P)) for j in range(i + 1, len(P)))
+    print(f"  around: min pairwise seat distance={dmin:.2f} (seat min dim {min_dim:.2f})")
+    assert dmin > 0.9 * min_dim, f"seats interpenetrate: min distance {dmin:.2f}"
+
+    # sparsity strictly monotone in radius (linear spacing grows with it)
+    r_by_s = [around(5, sparsity=s)[1].mean() for s in (0.0, 0.5, 1.0)]
+    print(f"  around: radius vs sparsity {['%.2f' % r for r in r_by_s]}")
+    assert r_by_s[0] < r_by_s[1] < r_by_s[2], f"sparsity not monotone: {r_by_s}"
+
+    # default invariance: no-kwargs bit-identical to explicit zeros
+    Pa = around(5)[0]
+    Pb = around(5, sparsity=0.0, jitter=0.0)[0]
+    assert np.allclose(Pa, Pb, atol=0), "no-kwargs != (sparsity=0, jitter=0)"
+
+    # ---- GridGroup: rows filled to capacity, staggered ----
+    def grid(n, **kw):
+        scene = SceneProgRoom("test67g", seed=SEED)
+        with scene.GridGroup(**kw) as g:
+            chairs = [scene.AddAsset("a cozy lounge chair") for _ in range(n)]
+            g.place_arc(chairs)
+        scene.bind(g)
+        P = np.array([[float(v) for v in c.get_location()] for c in chairs])
+        rots = np.array([float(c.get_rotation()) for c in chairs])
+        return P, rots
+
+    P, rots = grid(8)
+    # Every chair faces the (virtual) focal point, so at randomness=0 the focal
+    # is the least-squares intersection of the facing rays — translation-
+    # invariant, so the group's compile recentering doesn't matter.
+    F = np.stack([np.sin(np.radians(rots)), np.cos(np.radians(rots))], axis=1)
+    A = np.zeros((2, 2))
+    b = np.zeros(2)
+    for p, f in zip(P[:, [0, 2]], F):
+        M = np.eye(2) - np.outer(f, f)
+        A += M
+        b += M @ p
+    focal = np.linalg.solve(A, b)
+    rel = P[:, [0, 2]] - focal
+    radii = np.hypot(rel[:, 0], rel[:, 1])
+    resid = np.abs(rel[:, 0] * F[:, 1] - rel[:, 1] * F[:, 0])
+    assert resid.max() < 0.05, "chairs do not share a focal point"
+
+    # rows = 1-D radius clusters (row step is a full seat depth + row gap,
+    # while within-row radius spread is exactly zero at randomness=0)
+    order = np.argsort(radii)
+    splits = [i for i in range(1, len(order))
+              if radii[order[i]] - radii[order[i - 1]] > 0.25]
+    groups = np.split(order, splits)
+    counts = sorted(len(g) for g in groups)
+    print(f"  grid: row sizes={counts}  radii={[f'{radii[g].mean():.2f}' for g in groups]}")
+    assert counts == [3, 5], f"expected theatre rows [3, 5], got {counts}"
+
+    # stagger: no chair in one row shares an azimuth with a chair in the other
+    az = np.degrees(np.arctan2(rel[:, 0], rel[:, 1]))
+    r0, r1 = groups if len(groups[0]) < len(groups[1]) else groups[::-1]
+    min_dang = min(abs((az[i] - az[j] + 180.0) % 360.0 - 180.0)
+                   for i in r0 for j in r1)
+    print(f"  grid: min inter-row angular offset={min_dang:.1f} deg")
+    assert min_dang > 3.0, "rows are radially aligned — stagger missing"
+
+    # rows physically separated by at least the design row gap
+    row_step = radii[r1].mean() - radii[r0].mean() if radii[r1].mean() > radii[r0].mean() \
+        else radii[r0].mean() - radii[r1].mean()
+    dmin_rows = min(float(np.hypot(P[i, 0] - P[j, 0], P[i, 2] - P[j, 2]))
+                    for i in r0 for j in r1)
+    print(f"  grid: row step={row_step:.2f}  min inter-row seat distance={dmin_rows:.2f}")
+    assert dmin_rows > 0.9 * row_step, f"rows too close: {dmin_rows:.2f}"
+
+    # sparsity monotone: the whole formation loosens
+    def mean_nn(P):
+        out = []
+        for i in range(len(P)):
+            out.append(min(np.hypot(P[i, 0] - P[j, 0], P[i, 2] - P[j, 2])
+                           for j in range(len(P)) if j != i))
+        return float(np.mean(out))
+
+    nn = [mean_nn(grid(8, sparsity=s)[0]) for s in (0.0, 0.5, 1.0)]
+    print(f"  grid: mean nearest-neighbour distance vs sparsity {['%.2f' % v for v in nn]}")
+    assert nn[0] < nn[1] < nn[2], f"grid sparsity not monotone: {nn}"
+
+
 # ---------------------------------------------------------------------------
 # Registry + runner
 # ---------------------------------------------------------------------------
@@ -2367,6 +2486,7 @@ TESTS = {
     65: test_65,   # RelativeGroup _further clears the measured ring edge (asymmetric rings)
     # --- GridGroup randomness gains rotation (2026-08) ---
     66: test_66,   # GridGroup rotational jitter (rows + arcs; defaults stay bit-identical)
+    67: test_67,   # place_arc theatre law: 150-deg cap, fitting radius, capacity rows, stagger
 }
 
 

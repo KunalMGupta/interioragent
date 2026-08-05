@@ -819,6 +819,15 @@ class AroundGroup(AnchorGroup):
             self._apply_jitter(obj)
             self.add_child(obj)
 
+    # place_arc geometry (the "theatre law"): seats spread over at most
+    # ARC_MAX_SPAN_DEG centered on the anchor's front, at whatever radius fits
+    # them — the span is a ceiling, not a target, so a short row makes a short
+    # arc. Sparsity widens the seat gap and the standoff, both monotone.
+    ARC_MAX_SPAN_DEG = 150.0
+    ARC_SEAT_GAP = 0.05           # lateral gap between neighbouring seats (m)
+    ARC_SEAT_GAP_SPARSITY = 0.45  # extra seat gap at sparsity=1 (m)
+    ARC_DIST_SPARSITY = 0.5       # extra anchor standoff at sparsity=1 (m)
+
     @placemethod
     def place_arc(self, objects=None, dist=0.1):
         objects = self.to_list([] if objects is None else objects)
@@ -826,35 +835,34 @@ class AroundGroup(AnchorGroup):
         if N == 0:
             return
 
-        def angle_subtended(obj, radius):
-            width = obj.get_width()
-            depth = obj.get_depth()
-            return 2 * np.arctan((width / 2) / (radius - depth / 2))
-
         front_dir, back_dir, left_dir, right_dir, center, w0, height, d0 = self.get_anchor_center_dirs(force=True)
         x0, y0, z0 = center
 
-        total_angle_subtended = np.sum([
-            angle_subtended(obj, d0 / 2 + dist + obj.get_depth() / 2) for obj in objects
-        ])
+        seat_gap = self.ARC_SEAT_GAP + self.sparsity * self.ARC_SEAT_GAP_SPARSITY
+        dist = dist + self.sparsity * self.ARC_DIST_SPARSITY
 
-        minimum_angle = total_angle_subtended * 180 / np.pi
-        maximum_angle = 150
-        angle = (1 - self.sparsity) * minimum_angle + self.sparsity * maximum_angle
+        def pitch(obj, extra):
+            # degrees of arc one seat (width + gap) occupies at its own radius
+            radius = d0 / 2 + extra + obj.get_depth() / 2
+            return float(np.degrees(2 * np.arctan(
+                ((obj.get_width() + seat_gap) / 2) / (radius - obj.get_depth() / 2))))
 
-        def compute_rotations(angle, N):
-            if N == 1:
-                return [0]
-            # symmetric spread over the full angle for any N (odd or even)
-            step = angle / (N - 1)
-            return [(-(N - 1) / 2 + i) * step for i in range(N)]
+        # Grow the standoff until every seat fits inside the capped span — the
+        # arc analogue of place_circle's compute_min_fitting_dist.
+        while sum(pitch(obj, dist) for obj in objects) > self.ARC_MAX_SPAN_DEG:
+            dist += 0.05
 
-        rot = compute_rotations(angle, N)
-        for i, obj in enumerate(objects):
+        # Seats laid out shoulder to shoulder at their own pitch, the whole run
+        # centered on the anchor's facing direction.
+        pitches = [pitch(obj, dist) for obj in objects]
+        cum = -sum(pitches) / 2
+        for obj, p in zip(objects, pitches):
+            a = cum + p / 2 + self.anchor.get_rotation()
+            cum += p
             radius = d0 / 2 + dist + obj.get_depth() / 2
-            x = x0 + radius * np.sin(np.radians(rot[i] + self.anchor.get_rotation()))
+            x = x0 + radius * np.sin(np.radians(a))
             y = self.compute_obj_y(obj)
-            z = z0 + radius * np.cos(np.radians(rot[i] + self.anchor.get_rotation()))
+            z = z0 + radius * np.cos(np.radians(a))
             obj.set_location(x, y, z)
             obj.face_towards(self.anchor)
             self._apply_jitter(obj)
@@ -1077,6 +1085,20 @@ class GridGroup(SceneProgObject):
         for row in object_rows:
             self._place_row(row, along='x', facing='z', z0=z_positions.pop(0))
 
+    # place_arc "theatre law": rows of seats on concentric arcs facing a focal
+    # point (the towards= target, or the group origin). Each row fills to its
+    # geometric capacity within ARC_MAX_SPAN_DEG, so capacity grows with radius
+    # like real theatre rows; sparsity widens the seat gap and the row gap,
+    # both monotone. Alternate rows take a quarter-pitch phase in opposite
+    # directions, so neighbouring rows sit half a pitch apart and sightlines to
+    # the focal point pass between the seats in front.
+    ARC_MAX_SPAN_DEG = 150.0
+    ARC_SEAT_GAP = 0.05           # lateral gap between neighbouring seats (m)
+    ARC_SEAT_GAP_SPARSITY = 0.45  # extra seat gap at sparsity=1 (m)
+    ARC_ROW_GAP = 0.1             # radial gap between successive rows (m)
+    ARC_ROW_GAP_SPARSITY = 0.6    # extra row gap at sparsity=1 (m)
+    ARC_MIN_FIRST_CAPACITY = 3    # front row must hold this many (or all N)
+
     @placemethod
     def place_arc(self, objects, towards=None):
         objects = self.to_list(objects)
@@ -1084,9 +1106,8 @@ class GridGroup(SceneProgObject):
         if N == 0:
             return
 
-        dist = np.max((np.log10(N), 1.0))
-        inter_row_gap = self.sparsity * 0.5
-        angle = 90 + self.sparsity * 60
+        seat_gap = self.ARC_SEAT_GAP + self.sparsity * self.ARC_SEAT_GAP_SPARSITY
+        row_gap = self.ARC_ROW_GAP + self.sparsity * self.ARC_ROW_GAP_SPARSITY
 
         # With towards=, the arc curves AROUND the target: row radii are measured
         # from the target's boundary, and the arc opens from the target back toward
@@ -1101,67 +1122,52 @@ class GridGroup(SceneProgObject):
         else:
             target_loc, base_radius, phi = None, 0.0, 0.0
 
-        def angle_subtended(obj, radius):
-            width = obj.get_width()
-            depth = obj.get_depth()
+        def pitch(obj, radius):
+            # degrees of arc one seat (width + gap) occupies at this radius
+            return float(np.degrees(2 * np.arctan(
+                ((obj.get_width() + seat_gap) / 2)
+                / max(radius - obj.get_depth() / 2, 0.05))))
 
-            width += self.sparsity * width / 2
-            depth += self.sparsity * depth / 2
-            return (2 * np.arctan((width / 2) / (radius - depth / 2))) * 180 / np.pi
+        def capacity(radius, obj):
+            return max(1, int(self.ARC_MAX_SPAN_DEG // pitch(obj, radius)))
 
-        def compute_object_rows():
-            object_rows = []
-            tmp = []
-            curr_dist = dist
-            used_angle = 0
+        # First-row radius comes from geometry (target boundary + circulation +
+        # seat half-depth), never from the seat count; it is then pushed out
+        # until the front row can hold a sensible number of seats, so the arc
+        # never opens with a lone chair.
+        radius = base_radius + CIRCULATION_GAP + objects[0].get_depth() / 2
+        while capacity(radius, objects[0]) < min(N, self.ARC_MIN_FIRST_CAPACITY):
+            radius += 0.1
 
-            for obj in objects:
-                obj_angle = angle_subtended(obj, base_radius + curr_dist)
-                if used_angle + obj_angle > angle:
-                    if tmp:
-                        object_rows.append(tmp)
-                        curr_dist += 1.2 * max(o.get_depth() for o, _ in tmp) + inter_row_gap
-                    tmp = [(obj, curr_dist)]
-                    used_angle = obj_angle
-                else:
-                    tmp.append((obj, curr_dist))
-                    used_angle += obj_angle
+        # Fill rows to capacity, radii stepping outward by seat depth + row gap.
+        rows, i = [], 0
+        while i < N:
+            row = objects[i:i + capacity(radius, objects[i])]
+            rows.append((row, radius))
+            radius += max(o.get_depth() for o in row) + row_gap
+            i += len(row)
 
-            if tmp:
-                object_rows.append(tmp)
-
-            return object_rows
-
-        object_rows = compute_object_rows()
-        if len(object_rows) > 2:
-            while len(object_rows[-1]) < 0.3 * len(object_rows[-2]):
-                inter_row_gap += 0.1
-                object_rows = compute_object_rows()
-
-        def compute_rotations(angle, N):
-            if N == 1:
-                return [0]
-            # symmetric spread over the full angle for any N (odd or even)
-            step = angle / (N - 1)
-            return [(-(N - 1) / 2 + i) * step for i in range(N)]
-
-        for row in object_rows:
-            rots = compute_rotations(angle, len(row))
-            for (obj, dist), rot in zip(row, rots):
+        for k, (row, r) in enumerate(rows):
+            p = max(pitch(o, r) for o in row)
+            # quarter-pitch phase, alternating sign: adjacent rows end up half a
+            # pitch apart while each stays nearly centered on the axis
+            phase = (p / 4.0) * (1 if k % 2 else -1)
+            n = len(row)
+            for j, obj in enumerate(row):
+                rot = (j - (n - 1) / 2.0) * p + phase
                 jx = (self.rng.random() - 0.5) * self.randomness * 0.5 * obj.get_width()
                 jz = (self.rng.random() - 0.5) * self.randomness * 0.5 * obj.get_depth()
                 y = self.compute_obj_y(obj)
                 if towards is not None:
-                    radius = base_radius + dist
-                    x = target_loc[0] + radius * np.sin(np.radians(phi + rot)) + jx
-                    z = target_loc[2] + radius * np.cos(np.radians(phi + rot)) + jz
+                    x = target_loc[0] + r * np.sin(np.radians(phi + rot)) + jx
+                    z = target_loc[2] + r * np.cos(np.radians(phi + rot)) + jz
                     obj.set_location(x, y, z)
                     obj.face_towards(towards)
                     self._apply_rand_rot(obj)
                     self._arc_towards.append((obj, towards))
                 else:
-                    x = dist * np.sin(np.radians(rot)) + jx
-                    z = -dist * np.cos(np.radians(rot)) + jz
+                    x = r * np.sin(np.radians(rot)) + jx
+                    z = -r * np.cos(np.radians(rot)) + jz
                     obj.set_location(x, y, z)
                     obj.set_rotation(-rot)
                     self._apply_rand_rot(obj)

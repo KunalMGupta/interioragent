@@ -99,7 +99,7 @@ diagonal `place_on_front_left/front_right/back_left/back_right` and their
 ```python
 with scene.AroundGroup(sparsity=0.2, jitter=0.4) as g:
     g.set_anchor(table)
-    g.place_arc(2 * scene.AddAsset("an accent chair"))   # arc on one side
+    g.place_arc(2 * scene.AddAsset("an accent chair"))   # arc facing the anchor's front
     # also: g.place_circle(objs), g.place_rectilinear(...)
 ```
 `AroundGroup(sparsity=0.0, jitter=0.0)`. **`jitter` (0–1) adds real-world irregularity** —
@@ -299,9 +299,9 @@ At the 0.0 defaults every layout is exactly the legacy deterministic one.
 
 | Group | sparsity | jitter |
 |-------|----------|--------|
-| `AroundGroup` | standoff from the anchor | per-seat offset (≤40% of the object's size) + ±30° on `place_circle`/`place_arc`/`place_rectilinear`; draws floored at 40% of max so every seat shows the dial |
+| `AroundGroup` | standoff from the anchor; on `place_arc` also the seat-to-seat gap (the arc itself spans ≤150°, centered on the anchor's front, pushed outward until the seats fit) | per-seat offset (≤40% of the object's size) + ±30° on `place_circle`/`place_arc`/`place_rectilinear`; draws floored at 40% of max so every seat shows the dial |
 | `RingsGroup` | radial standoff **and** ring-to-ring separation | as AroundGroup |
-| `GridGroup(randomness=)` | row/grid gaps | jitters inter-item gaps (works even at `sparsity=0`) + turns each item up to ±14° off its row/arc facing (tamer than free groups so the formation survives; draws floored at 40% of max) |
+| `GridGroup(randomness=)` | row/grid gaps; on `place_arc` the seat gap and row gap (rows fill to geometric capacity within 150°, staggered half a pitch) | jitters inter-item gaps (works even at `sparsity=0`) + turns each item up to ±14° off its row/arc facing (tamer than free groups so the formation survives; draws floored at 40% of max) |
 | `RoomGroup(randomness=)` | — | floor items drift within the **free space of their own slot** (translation only — facing preserved) |
 | `RelativeGroup` | scales the side/front/circulation gaps of every directional slot **and** steps each slot away from the anchor by `sparsity × 0.5 × max(w, d)` of the placed object (so the widening is visible even for small base gaps; exactly the legacy constants at 0) | in-slot slide (toward the anchor clamped to half the gap, so "left" stays left) + perpendicular nudge (≤40% of the object's size) + ±30° off the slot pose |
 | `StackGroup` | vertical gap between levels | upper levels slide within the footprint below + ±8° (bottom level stays put) |
