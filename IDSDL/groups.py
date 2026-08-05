@@ -1086,18 +1086,20 @@ class GridGroup(SceneProgObject):
             self._place_row(row, along='x', facing='z', z0=z_positions.pop(0))
 
     # place_arc "theatre law": rows of seats on concentric arcs facing a focal
-    # point (the towards= target, or the group origin). Each row fills to its
-    # geometric capacity within ARC_MAX_SPAN_DEG, so capacity grows with radius
-    # like real theatre rows; sparsity widens the seat gap and the row gap,
-    # both monotone. Alternate rows take a quarter-pitch phase in opposite
-    # directions, so neighbouring rows sit half a pitch apart and sightlines to
-    # the focal point pass between the seats in front.
+    # point (the towards= target, or the group origin), laid out like a curved
+    # seating bank. The block is wide and shallow (rows ~ sqrt(N/2)), the front
+    # row is the shortest and rows grow toward the back, and EVERY row shares
+    # ONE angular pitch — measured at the front row — so seats fall on a
+    # repeating grid of radial columns. Alternate rows take a quarter-pitch
+    # phase in opposite directions, putting neighbouring rows exactly half a
+    # pitch apart (brick stagger): sightlines to the focal point pass between
+    # the seats in front. Sparsity widens seat gap and row gap, both monotone.
     ARC_MAX_SPAN_DEG = 150.0
     ARC_SEAT_GAP = 0.05           # lateral gap between neighbouring seats (m)
     ARC_SEAT_GAP_SPARSITY = 0.45  # extra seat gap at sparsity=1 (m)
     ARC_ROW_GAP = 0.1             # radial gap between successive rows (m)
     ARC_ROW_GAP_SPARSITY = 0.6    # extra row gap at sparsity=1 (m)
-    ARC_MIN_FIRST_CAPACITY = 3    # front row must hold this many (or all N)
+    ARC_MIN_FRONT_ROW = 3         # front row must hold this many (or all N)
 
     @placemethod
     def place_arc(self, objects, towards=None):
@@ -1122,35 +1124,49 @@ class GridGroup(SceneProgObject):
         else:
             target_loc, base_radius, phi = None, 0.0, 0.0
 
+        # Wide & shallow row split, front row shortest: R ~ sqrt(N/2) rows with
+        # counts stepping up toward the back (8 -> 3+5, 12 -> 5+7, 18 -> 5+6+7);
+        # the front row is merged away if it would fall under ARC_MIN_FRONT_ROW.
+        R = max(1, int(round(np.sqrt(N / 2.0))))
+        while R > 1:
+            base, extra = divmod(N - R * (R - 1) // 2, R)
+            counts = [base + k for k in range(R)]
+            for k in range(extra):
+                counts[R - 1 - k] += 1
+            if counts[0] >= self.ARC_MIN_FRONT_ROW:
+                break
+            R -= 1
+        else:
+            counts = [N]
+
         def pitch(obj, radius):
             # degrees of arc one seat (width + gap) occupies at this radius
             return float(np.degrees(2 * np.arctan(
                 ((obj.get_width() + seat_gap) / 2)
                 / max(radius - obj.get_depth() / 2, 0.05))))
 
-        def capacity(radius, obj):
-            return max(1, int(self.ARC_MAX_SPAN_DEG // pitch(obj, radius)))
+        # One shared pitch for the whole bank, measured at the front row on the
+        # widest seat: the first radius grows until the WIDEST (back) row fits
+        # inside the span cap on that shared grid. Larger radius = flatter,
+        # more theatre-like.
+        widest = max(objects, key=lambda o: float(o.get_width()))
+        r0 = base_radius + CIRCULATION_GAP + objects[0].get_depth() / 2
+        while pitch(widest, r0) * max(counts) > self.ARC_MAX_SPAN_DEG:
+            r0 += 0.1
+        shared_pitch = pitch(widest, r0)
 
-        # First-row radius comes from geometry (target boundary + circulation +
-        # seat half-depth), never from the seat count; it is then pushed out
-        # until the front row can hold a sensible number of seats, so the arc
-        # never opens with a lone chair.
-        radius = base_radius + CIRCULATION_GAP + objects[0].get_depth() / 2
-        while capacity(radius, objects[0]) < min(N, self.ARC_MIN_FIRST_CAPACITY):
-            radius += 0.1
-
-        # Fill rows to capacity, radii stepping outward by seat depth + row gap.
-        rows, i = [], 0
-        while i < N:
-            row = objects[i:i + capacity(radius, objects[i])]
+        rows, i, radius = [], 0, r0
+        for c in counts:
+            row = objects[i:i + c]
             rows.append((row, radius))
             radius += max(o.get_depth() for o in row) + row_gap
-            i += len(row)
+            i += c
 
         for k, (row, r) in enumerate(rows):
-            p = max(pitch(o, r) for o in row)
-            # quarter-pitch phase, alternating sign: adjacent rows end up half a
-            # pitch apart while each stays nearly centered on the axis
+            p = shared_pitch
+            # quarter-pitch phase, alternating sign: adjacent rows sit exactly
+            # half a pitch apart on the shared grid (brick pattern) while the
+            # bank as a whole stays centered on the axis
             phase = (p / 4.0) * (1 if k % 2 else -1)
             n = len(row)
             for j, obj in enumerate(row):

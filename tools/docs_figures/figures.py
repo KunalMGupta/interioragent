@@ -117,13 +117,16 @@ def rel_basic(scene):
 
 @fig("rel_adjacent", views=("top", "persp"))
 def rel_adjacent(scene):
-    # the classic sofa table: a narrow console flush against the sofa's back
-    with scene.RelativeGroup() as seating:
-        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
-        console = scene.AddAsset("a narrow wooden console table")
-        seating.set_anchor(sofa)
-        seating.place_on_back_adjacent(console)
-    scene.bind(seating)
+    # the canonical adjacent use: a chair tucked into a desk. Dataset desks are
+    # modeled with the knee-hole at +z, so the chair goes on the back and the
+    # desk turns 180 to face it — exactly what place_desk_chair wraps.
+    with scene.RelativeGroup() as workspace:
+        desk = scene.AddAsset("a wooden desk with drawers")
+        chair = scene.AddAsset("a dark wooden dining chair")
+        workspace.set_anchor(desk)
+        workspace.place_on_back_adjacent(chair)
+        workspace.rotate(desk, 180)
+    scene.bind(workspace)
 
 
 @fig("rel_near", views=("top", "persp"))
@@ -132,8 +135,8 @@ def rel_near(scene):
         bed = scene.AddAsset("a queen-sized bed with a wooden frame")
         bedside.set_anchor(bed)
         nightstands = 2 * scene.AddAsset("a small wooden nightstand with a drawer")
-        bedside.place_on_left(nightstands[0])
-        bedside.place_on_right(nightstands[1])
+        bedside.place_on_back_left(nightstands[0])
+        bedside.place_on_back_right(nightstands[1])
     scene.bind(bedside)
 
 
@@ -224,11 +227,11 @@ def around_rectilinear(scene):
 
 @fig("around_arc")
 def around_arc(scene):
-    with scene.AroundGroup(sparsity=0.5) as seating:
-        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
+    with scene.AroundGroup() as seating:
+        podium = scene.AddAsset("a wooden lecture podium")
         chair = scene.AddAsset("a cozy lounge chair")
-        seating.set_anchor(sofa)
-        seating.place_arc(objects=3 * chair)
+        seating.set_anchor(podium)
+        seating.place_arc(objects=5 * chair)
     scene.bind(seating)
 
 
@@ -300,7 +303,9 @@ def grid_arc(scene):
     fireplace.set_location(0, -fireplace.get_aabb()[0, 1], -2.4)  # rest on the floor
     with scene.GridGroup(sparsity=0.4) as seating:
         chair = scene.AddAsset("a dark wooden dining chair")
-        seating.place_arc(5 * chair, towards=fireplace)
+        # 8 chairs: enough to overflow the front row's capacity, so the figure
+        # shows the two-row theatre structure with the half-pitch stagger
+        seating.place_arc(8 * chair, towards=fireplace)
     scene.bind(fireplace)
     scene.bind(seating)
 
@@ -900,26 +905,289 @@ def sweep_room_randomness_10(scene):
 
 
 # ------------------------------------------------------------------
-# VLM constraints: a proportion failure, judged and corrected live
+# VLM constraints: real failures, judged live, corrected FROM the verdicts
 # ------------------------------------------------------------------
+# Only the fig(..., vlm=True) figures hit the real VLM: harness.py runs the live
+# constraint classes and logs every verdict to OUT/<name>_vlm.txt, and each
+# figure also snapshots scene.vlm_feedback to OUT/<name>_feedback.txt so the
+# docs can quote it verbatim. The VLM constraints only ever EMIT text (see
+# IDSDL/constraints.py — their responses accumulate on scene.vlm_feedback;
+# nothing in the engine parses them), so the "after" figures act on the
+# captured verdict exactly the way a user program would: parse the factor out
+# of the feedback, apply it, re-solve. Never a hand-picked number.
 
-def _vlm_proportions(scene):
-    # main-op placement: the VLM critique renders BEFORE delayed verbs like
-    # place_on_top run, so the oversized object must be a main placement
+import os
+import re
+
+_RESCALE_RE = re.compile(r"rescale\s+(?:the\s+)?(.+?)\s+by\s+([0-9]*\.?[0-9]+)",
+                         re.IGNORECASE)
+
+
+def _fig_out_dir():
+    repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    scratch = os.environ.get("DOCS_FIG_SCRATCH",
+                             os.path.join(repo, "tmp", "docs_figures"))
+    return os.environ.get("DOCS_FIG_OUT", os.path.join(scratch, "out"))
+
+
+def _save_feedback(name, scene):
+    """Snapshot scene.vlm_feedback next to the figure renders (quoted by the docs)."""
+    out = _fig_out_dir()
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, f"{name}_feedback.txt"), "w") as f:
+        f.write((scene.vlm_feedback or "") + "\n")
+
+
+def _parse_rescales(text):
+    return [(m.group(1).strip().lower(), float(m.group(2)))
+            for m in _RESCALE_RE.finditer(text or "")]
+
+
+def _match_child(group, target):
+    """Map a verdict's object name ('dining chair') onto the group member whose
+    natural-language description it refers to."""
+    words = set(target.split())
+    best, best_score = None, 0
+    for child in group.children:
+        desc = (getattr(child, "description", "") or "").lower()
+        if not desc:
+            continue
+        if target in desc:
+            return child
+        score = len(words & set(desc.split()))
+        if score > best_score:
+            best, best_score = child, score
+    return best if best_score > 0 else None
+
+
+def _resolve_layout(group):
+    """Re-solve the group's placements against the corrected sizes. The VLM has
+    already judged this group — mute the critique for the deterministic re-seat
+    (also dodges any stale by-prompt response cache on an unchanged prompt).
+    The with-block exit ran recenter(), which bakes a T0 offset; the re-executed
+    placement ops mix world-frame reads with local-frame writes, so T0 must be
+    identity during the recompile (vlm_scale._recompile only zeroes transform)
+    and is recomputed from the corrected footprint afterwards."""
+    from IDSDL.object import Transform
+    from IDSDL.vlm_scale import _recompile
+    prev = os.environ.get("IDSDL_MINIMAL_RENDERS")
+    os.environ["IDSDL_MINIMAL_RENDERS"] = "1"
+    group.T0 = Transform()
+    try:
+        _recompile(group, print)
+    finally:
+        if prev is None:
+            os.environ.pop("IDSDL_MINIMAL_RENDERS", None)
+        else:
+            os.environ["IDSDL_MINIMAL_RENDERS"] = prev
+    group.recenter()
+
+
+def _apply_verdicts_once(scene, group, verdict_text):
+    """Apply every object-rescale instruction in `verdict_text` to the matching
+    group member. Returns [(description, factor), ...] of what was applied."""
+    applied = []
+    for target, factor in _parse_rescales(verdict_text):
+        if "room" in target.split():
+            continue
+        obj = _match_child(group, target)
+        if obj is None:
+            print(f"[vlm demo] no member matches verdict target {target!r} — skipped")
+            continue
+        w0 = float(obj.get_width())
+        obj.scale(w0 * factor)
+        applied.append((obj.description, factor))
+        print(f"[vlm demo] applied 'rescale {target} by {factor}': "
+              f"'{obj.description}' width {w0:.2f} m -> {float(obj.get_width()):.2f} m")
+    return applied
+
+
+def _apply_object_rescales(scene, group, max_rounds=4):
+    """Act on ObjectProportions verdicts as a user program would: apply each
+    returned factor, re-solve the layout, and re-judge the corrected group,
+    until the constraint answers 'no rescale' (or max_rounds). Every verdict is
+    the model's own — never a hand-picked number. Raises if the FIRST pass
+    flagged nothing (the demo depends on the mistake being caught)."""
+    from IDSDL.constraints import ObjectProportionsConstraint
+
+    applied = _apply_verdicts_once(scene, group, scene.vlm_feedback)
+    if not applied:
+        raise RuntimeError(
+            "VLM proportions demo: no applicable rescale verdict in feedback:\n"
+            + (scene.vlm_feedback or "(empty)"))
+    _resolve_layout(group)
+
+    for round_no in range(2, max_rounds + 1):
+        response = str(ObjectProportionsConstraint(group).compute_gradients()).strip()
+        scene.vlm_feedback += "\n" + response
+        print(f"[vlm demo] round {round_no} verdict: {response}")
+        more = _apply_verdicts_once(scene, group, response)
+        if not more:
+            break
+        applied.extend(more)
+        _resolve_layout(group)
+    return applied
+
+
+def _room_factor_from_verdict(from_fig):
+    """The room rescale factor the VLM returned when `from_fig` was built (read
+    from that run's verdict log, never typed in by hand)."""
+    path = os.path.join(_fig_out_dir(), f"{from_fig}_vlm.txt")
+    if not os.path.exists(path):
+        raise RuntimeError(f"build {from_fig} first — its verdict log is missing: {path}")
+    with open(path) as f:
+        text = f.read()
+    for target, factor in _parse_rescales(text):
+        if "room" in target.split():
+            print(f"[vlm demo] captured verdict from {from_fig}: rescale room by {factor}")
+            return factor
+    raise RuntimeError(f"no room rescale verdict in {path}:\n{text}")
+
+
+# --- ObjectProportionsConstraint: proportion is RELATIVE -----------------
+# A lone object can't be out of proportion; a coffee table three times the
+# size of its own sofa can. The constraint judges the group's 4-view render
+# during compile and returns a rescale factor for the flagged object.
+# Composition probed for judge reliability (probe_verdicts.py, 2026-08-05):
+# a dining table + 3x armchair was flagged on only ~1/5 passes by the
+# gpt-5-nano judge, while sofa + 3x coffee table (+ a floor lamp as an extra
+# scale reference) was flagged 4/4 with factor 0.5 — so the docs demo uses
+# the composition the judge actually catches. Fresh table wording keeps this
+# figure's VLM prompt distinct (the response cache keys on prompt text).
+
+def _vlm_proportions_build(scene):
     with scene.RelativeGroup() as seating:
         sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
+        table = scene.AddAsset("a chunky rustic coffee table",
+                               asset_id=PLAIN_COFFEE_TABLE, modulate_scale=3.0)
+        lamp = scene.AddAsset("a slim brass floor lamp")
         seating.set_anchor(sofa)
-        table = scene.AddAsset("a low rectangular oak coffee table",
-                               modulate_scale=3.2)
         seating.place_on_front(table)
+        seating.place_on_right(lamp)
+    return seating, table
+
+
+@fig("vlm_proportions_before", views=("persp", "left"))    # VLM muted: giant table stays
+def vlm_proportions_before(scene):
+    seating, _ = _vlm_proportions_build(scene)
     scene.bind(seating)
 
 
-@fig("vlm_proportions_before", views=("persp",))          # VLM stubbed: no rescale
-def vlm_proportions_before(scene):
-    _vlm_proportions(scene)
-
-
-@fig("vlm_proportions_after", views=("persp",), vlm=True)  # real VLM critique runs
+@fig("vlm_proportions_after", views=("persp", "left"), vlm=True)  # live verdicts, applied
 def vlm_proportions_after(scene):
-    _vlm_proportions(scene)
+    seating, table = _vlm_proportions_build(scene)
+    _apply_object_rescales(scene, seating)
+    _save_feedback("vlm_proportions_after", scene)
+    scene.bind(seating)
+
+
+# --- RoomProportionsConstraint: the room judged around its contents ------
+# The same seating cluster in a deliberately cavernous room (modulate_scale
+# 1.8). The constraint sees the interior strip + the occupancy ratio and
+# returns a room rescale; the "after" figure rebuilds the room with the
+# captured factor applied to modulate_scale.
+
+_VLM_ROOM_BASE = 1.8
+
+
+def _vlm_room_build(scene, modulate):
+    with scene.RoomGroup(modulate_scale=modulate, auto_render=False) as room:
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
+        table = scene.AddAsset("a wooden coffee table",
+                               asset_id=PLAIN_COFFEE_TABLE)
+        room.place_on_back_wall_center(sofa, facing="front")
+        room.place_on_center(table)
+        room.place_walls(
+            floor_texture="light oak wood floor",
+            ceiling_texture="smooth white ceiling",
+            wall_texture="warm off-white painted wall",
+        )
+
+
+@fig("vlm_room_proportions_before", mode="room", views=("persp",), vlm=True)
+def vlm_room_proportions_before(scene):
+    _vlm_room_build(scene, _VLM_ROOM_BASE)
+    _save_feedback("vlm_room_proportions_before", scene)
+
+
+@fig("vlm_room_proportions_after", mode="room", views=("persp",), vlm=True)
+def vlm_room_proportions_after(scene):
+    factor = _room_factor_from_verdict("vlm_room_proportions_before")
+    _vlm_room_build(scene, _VLM_ROOM_BASE * factor)
+    _save_feedback("vlm_room_proportions_after", scene)
+
+
+# --- WallOverlapConstraint: two pieces fighting for one wall slot --------
+# Deterministic (no VLM call): the room tracks slot occupancy per wall, and two
+# artworks sent to back-center collide. The constraint's feedback names the
+# conflict; the "after" build moves the mirror to the free right slot, exactly
+# as the feedback suggests.
+
+def _vlm_wall_build(scene, fixed):
+    with scene.RoomGroup() as room:
+        console = scene.AddAsset("a low wooden media console")
+        room.place_on_back_wall_center(console, facing="front")
+        painting = scene.AddAsset("a large colorful abstract painting")
+        mirror = scene.AddAsset("a round framed wall mirror")
+        room.place_on_wall_back_center(painting)
+        if fixed:
+            room.place_on_wall_back_right(mirror)   # per the constraint's feedback
+        else:
+            room.place_on_wall_back_center(mirror)  # same slot as the painting
+        room.place_walls(
+            floor_texture="light oak wood floor",
+            ceiling_texture="smooth white ceiling",
+            wall_texture="warm off-white painted wall",
+        )
+
+
+@fig("vlm_wall_overlap_before", mode="room", views=("persp",))
+def vlm_wall_overlap_before(scene):
+    _vlm_wall_build(scene, fixed=False)
+    _save_feedback("vlm_wall_overlap_before", scene)
+
+
+@fig("vlm_wall_overlap_after", mode="room", views=("persp",))
+def vlm_wall_overlap_after(scene):
+    _vlm_wall_build(scene, fixed=True)
+    _save_feedback("vlm_wall_overlap_after", scene)
+
+
+# --- Working with feedback: the full loop on a cramped dining room -------
+# A dining set in a room squeezed to 0.7x. RoomProportions reads the high
+# occupancy and asks for a bigger room; the "after" figure applies the
+# captured factor to modulate_scale and rebuilds — detect, read, fix.
+# (0.55 was tried for extra drama: the verdicts got NOISIER — 1.1/1.2/2.0
+# across rolls, and the 2.0 overshot so the re-check pushed back with 0.8.
+# At 0.7 the loop converges in one pass: 1.3, then 'no rescale'.)
+
+_VLM_FEEDBACK_BASE = 0.7
+
+
+def _vlm_feedback_build(scene, modulate):
+    with scene.AroundGroup() as dining:
+        table = scene.AddAsset(
+            "a large rectangular dining table with a dark wood finish")
+        chair = scene.AddAsset("an elegant dining chair with a cushioned seat")
+        dining.set_anchor(table)
+        dining.place_rectilinear(longer_side1=2 * chair, longer_side2=2 * chair)
+    with scene.RoomGroup(modulate_scale=modulate, auto_render=False) as room:
+        room.place_on_center(dining)
+        room.place_walls(
+            floor_texture="light oak wood floor",
+            ceiling_texture="smooth white ceiling",
+            wall_texture="warm off-white painted wall",
+        )
+
+
+@fig("vlm_feedback_before", mode="room", views=("persp",), vlm=True)
+def vlm_feedback_before(scene):
+    _vlm_feedback_build(scene, _VLM_FEEDBACK_BASE)
+    _save_feedback("vlm_feedback_before", scene)
+
+
+@fig("vlm_feedback_after", mode="room", views=("persp",), vlm=True)
+def vlm_feedback_after(scene):
+    factor = _room_factor_from_verdict("vlm_feedback_before")
+    _vlm_feedback_build(scene, _VLM_FEEDBACK_BASE * factor)
+    _save_feedback("vlm_feedback_after", scene)
