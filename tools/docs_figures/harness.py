@@ -5,9 +5,15 @@ receives a fresh seeded SceneProgRoom and composes the scene exactly like the co
 snippet shown in the docs (with asset_id pins where the natural-language pick is
 poor). The scene is exported to a scratch .blend and rendered by studio_render.py.
 
-Run from the repo root:
-    python tools/docs_figures/harness.py <figure> [figure ...]
-    python tools/docs_figures/harness.py --all
+Run from any WRITABLE cwd (SceneProgRoom writes a cwd-relative tmp/, and the
+repo's own tmp/ is root-owned — running from the repo root fails with
+Permission denied). Point DOCS_FIG_SCRATCH at a writable scratch dir too, since
+its default also lives under the repo's tmp/:
+    cd <writable-scratch-dir>
+    DOCS_FIG_SCRATCH=<writable-scratch-dir>/figscratch \
+        python /path/to/repo/tools/docs_figures/harness.py <figure> [figure ...]
+    ... harness.py --all
+(imports resolve via the repo path the script inserts into sys.path itself)
 """
 import os
 import subprocess

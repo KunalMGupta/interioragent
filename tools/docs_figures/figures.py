@@ -7,6 +7,25 @@ Output names match the filenames referenced by the docs markdown.
 """
 FIGURES = {}
 
+# The natural seeded pick (seed 7) for "a wooden coffee table" ships a baked-in
+# tabletop tray with decor cubes that the two-line snippets can't explain to a
+# reader; pin the plain rustic wooden table so the living-room vignettes stay
+# coherent across pages. The docs snippet text stays natural-language.
+PLAIN_COFFEE_TABLE = "hssd/369c08f9b552f142e00f496b5c08f00324550496"
+# AroundGroup circle figures need a round-ish anchor (the chairs surround it);
+# this is the mesh the docs' previous "a round wooden coffee table" wording
+# retrieved at seed 7, so those figures keep their look.
+ROUND_COFFEE_TABLE = "future/297ecba4-d2a9-408f-b52b-fa6277611011"
+# The canonical docs sofa: what "a modern gray sofa" retrieves at seed 7 (the
+# installation page and the object-registration figures). getting_started runs at
+# seed 42, where the natural pick is a different mesh — pin so every page shows
+# the same sofa. The docs snippet text stays natural-language.
+GRAY_SOFA = "hssd/6a9b9f8c5c14b981eb58dc8971b426c00e2f409c"
+# rel_basic's side piece: the seed-7 natural pick for "a small wooden end table"
+# is a spindly tripod accent table; pin the sturdy wood-and-metal end table with
+# a lower shelf so it reads as an end table beside the sofa.
+WOOD_END_TABLE = "hssd/c704f340a1e05311492912024355e34f1bb9433e"
+
 
 def fig(name, mode="group", views=("persp", "top"), seed=7, vlm=False):
     def reg(fn):
@@ -36,7 +55,8 @@ def reg_copies(scene):
 
 @fig("reg_rotation", views=("persp", "top"))
 def reg_rotation(scene):
-    table = scene.AddAsset("a rectangular wooden coffee table")
+    table = scene.AddAsset("a wooden coffee table",
+                           asset_id=PLAIN_COFFEE_TABLE)
     chair_default = scene.AddAsset("a cozy lounge chair")
     chair_rotated = scene.AddAsset("a cozy lounge chair")
     chair_facing = scene.AddAsset("a cozy lounge chair")
@@ -78,13 +98,15 @@ def retrieval_custom(scene):
 def rel_basic(scene):
     with scene.RelativeGroup() as seating:
         sofa = scene.AddAsset("a modern 3-seat sofa")
-        table = scene.AddAsset("a rectangular wooden coffee table")
-        chair_l = scene.AddAsset("a cozy lounge chair")
-        chair_r = scene.AddAsset("a cozy lounge chair")
+        table = scene.AddAsset("a wooden coffee table",
+                               asset_id=PLAIN_COFFEE_TABLE)
+        end_table = scene.AddAsset("a small wooden end table",
+                                   asset_id=WOOD_END_TABLE)
+        nightstand = scene.AddAsset("a small wooden nightstand with a drawer")
         seating.set_anchor(sofa)
         seating.place_on_front(table)
-        seating.place_on_left(chair_l)
-        seating.place_on_right(chair_r)
+        seating.place_on_left(end_table)
+        seating.place_on_right(nightstand)
     scene.bind(seating)
 
 
@@ -106,12 +128,32 @@ def rel_corners(scene):
 def rel_further(scene):
     # identical chairs so the near-vs-further distance contrast is unmistakable
     with scene.RelativeGroup() as g:
-        table = scene.AddAsset("a rectangular wooden coffee table")
+        table = scene.AddAsset("a wooden coffee table",
+                               asset_id=PLAIN_COFFEE_TABLE)
         g.set_anchor(table)
         chairs = 2 * scene.AddAsset("a cozy lounge chair")
         g.place_on_left(chairs[0])            # near ring
         g.place_on_left_further(chairs[1])    # further ring: clears the near chair
     scene.bind(g)
+
+
+@fig("rel_rings")
+def rel_rings(scene):
+    # one object per distance tier: end table on the 10 cm side slot, coffee
+    # table on the 45 cm front slot, and a second sofa on the further ring
+    # (circulation gap past the near ring, rotated to face the anchor)
+    with scene.RelativeGroup() as seating:
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
+        end_table = scene.AddAsset("a small wooden end table",
+                                   asset_id=WOOD_END_TABLE)
+        coffee = scene.AddAsset("a wooden coffee table",
+                                asset_id=PLAIN_COFFEE_TABLE)
+        second_sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
+        seating.set_anchor(sofa)
+        seating.place_on_left(end_table)          # near ring, side gap
+        seating.place_on_front(coffee)            # near ring, front gap
+        seating.place_on_right_further(second_sofa)  # further ring
+    scene.bind(seating)
 
 
 @fig("rel_top")
@@ -146,7 +188,8 @@ def rel_rug(scene):
 @fig("around_circle")
 def around_circle(scene):
     with scene.AroundGroup() as seating:
-        table = scene.AddAsset("a round wooden coffee table")
+        table = scene.AddAsset("a wooden coffee table",
+                               asset_id=ROUND_COFFEE_TABLE)
         chair = scene.AddAsset("an upholstered accent chair")
         seating.set_anchor(table)
         seating.place_circle(objects=4 * chair)
@@ -179,7 +222,8 @@ def around_arc(scene):
 
 def _sparsity_circle(scene, sparsity):
     with scene.AroundGroup(sparsity=sparsity) as seating:
-        table = scene.AddAsset("a round wooden coffee table")
+        table = scene.AddAsset("a wooden coffee table",
+                               asset_id=ROUND_COFFEE_TABLE)
         chair = scene.AddAsset("an upholstered accent chair")
         seating.set_anchor(table)
         seating.place_circle(objects=6 * chair)
@@ -203,7 +247,7 @@ def around_sparsity_sparse(scene):
 @fig("grid_row")
 def grid_row(scene):
     with scene.GridGroup(sparsity=0.5) as g:
-        chair = scene.AddAsset("a standard classroom chair")
+        chair = scene.AddAsset("a dark wooden dining chair")
         g.place_row(4 * chair)
     scene.bind(g)
 
@@ -211,7 +255,7 @@ def grid_row(scene):
 @fig("grid_grid")
 def grid_grid(scene):
     with scene.GridGroup(sparsity=0.5) as classroom:
-        chair = scene.AddAsset("a standard classroom chair")
+        chair = scene.AddAsset("a dark wooden dining chair")
         classroom.place_grid(6 * chair, cols=3)
     scene.bind(classroom)
 
@@ -230,7 +274,7 @@ def grid_rectilinear(scene):
 @fig("grid_randomness")
 def grid_randomness(scene):
     with scene.GridGroup(sparsity=0.5, randomness=0.9) as g:
-        chair = scene.AddAsset("a standard classroom chair")
+        chair = scene.AddAsset("a dark wooden dining chair")
         g.place_grid(9 * chair, cols=3)
     scene.bind(g)
 
@@ -258,7 +302,8 @@ def room_walls(scene):
     with scene.RoomGroup() as room:
         with scene.RelativeGroup() as seating:
             sofa = scene.AddAsset("a modern 3-seat sofa")
-            table = scene.AddAsset("a rectangular wooden coffee table")
+            table = scene.AddAsset("a wooden coffee table",
+                                   asset_id=PLAIN_COFFEE_TABLE)
             seating.set_anchor(sofa)
             seating.place_on_front(table)
         room.place_on_back_wall_center(seating, facing="front")
@@ -344,7 +389,8 @@ def hier_nested(scene):
 
     with scene.RelativeGroup() as seating:
         sofa = scene.AddAsset("a modern 3-seat sofa")
-        coffee = scene.AddAsset("a rectangular wooden coffee table")
+        coffee = scene.AddAsset("a wooden coffee table",
+                                asset_id=PLAIN_COFFEE_TABLE)
         seating.set_anchor(sofa)
         seating.place_on_front(coffee)
 
@@ -376,7 +422,8 @@ def _walls(room):
 
 def _con_overlap(scene, solve):
     sofa = scene.AddAsset("a modern 3-seat sofa")
-    table = scene.AddAsset("a rectangular wooden coffee table")
+    table = scene.AddAsset("a wooden coffee table",
+                           asset_id=PLAIN_COFFEE_TABLE)
     chair = scene.AddAsset("a cozy lounge chair")
     with _basic_room(scene) as room:
         if not solve:
@@ -445,7 +492,8 @@ def con_clearance_after(scene):
 def _con_access(scene, hook):
     # a coffee table drifting out of reach of the sofa is pulled back within reach
     sofa = scene.AddAsset("a modern 3-seat sofa")
-    table = scene.AddAsset("a rectangular wooden coffee table")
+    table = scene.AddAsset("a wooden coffee table",
+                           asset_id=PLAIN_COFFEE_TABLE)
     with _basic_room(scene) as room:
         room.place([sofa, table],
                    positions=[(3.0, sofa.get_height() / 2, 1.0),
@@ -547,7 +595,8 @@ def extra_symmetry(scene):
 @fig("extra_facing")
 def extra_facing(scene):
     with scene.FacingGroup() as g:
-        table = scene.AddAsset("a rectangular wooden coffee table")
+        table = scene.AddAsset("a wooden coffee table",
+                               asset_id=PLAIN_COFFEE_TABLE)
         g.set_anchor(table)
         chair = scene.AddAsset("a cozy lounge chair")
         g.place_facing_rows(2 * chair, 2 * chair)
@@ -565,6 +614,39 @@ def extra_rings(scene):
 
 
 # ------------------------------------------------------------------
+# Getting started: the complete example, verbatim (docs claim seed=42)
+# ------------------------------------------------------------------
+
+@fig("getting_started_complete", mode="room", seed=42)
+def getting_started_complete(scene):
+    with scene.RelativeGroup() as seating:
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
+        table = scene.AddAsset("a wooden coffee table")
+        seating.set_anchor(sofa)            # the sofa anchors the group
+        seating.place_on_front(table)       # table goes in front of the sofa
+    with scene.RoomGroup() as room:
+        room.place_on_back_wall_center(seating, facing="front")
+        room.place_walls(
+            floor_texture="light oak wood floor",
+            ceiling_texture="smooth white ceiling",
+            wall_texture="warm off-white painted wall",
+        )
+
+
+# The groups.md "Your first group" snippet, verbatim: a sofa anchoring a coffee
+# table in a RelativeGroup (same living-room vignette convention as rel_basic).
+@fig("your_first_group")
+def your_first_group(scene):
+    with scene.RelativeGroup() as seating:
+        sofa = scene.AddAsset("a modern 3-seat sofa")
+        table = scene.AddAsset("a wooden coffee table",
+                               asset_id=PLAIN_COFFEE_TABLE)
+        seating.set_anchor(sofa)
+        seating.place_on_front(table)
+    scene.bind(seating)
+
+
+# ------------------------------------------------------------------
 # Legacy page figures
 # ------------------------------------------------------------------
 
@@ -572,11 +654,8 @@ def extra_rings(scene):
 def installation(scene):
     with scene.RelativeGroup() as seating_area:
         sofa = scene.AddAsset("a modern gray sofa")
-        # pinned: the natural pick ships with a baked-in tabletop tray that the
-        # two-asset program can't explain to a first-time reader
-        coffee_table = scene.AddAsset(
-            "a wooden coffee table",
-            asset_id="hssd/369c08f9b552f142e00f496b5c08f00324550496")
+        coffee_table = scene.AddAsset("a wooden coffee table",
+                                      asset_id=PLAIN_COFFEE_TABLE)
         seating_area.set_anchor(sofa)
         seating_area.place_on_front(coffee_table)
     with scene.RoomGroup() as room:
@@ -598,7 +677,8 @@ def rendered_views(scene):
 def reg_lighting(scene):
     # add_lighting is a ceiling-fixture verb: pendants centred over the caller
     sofa = scene.AddAsset("a modern gray sofa")
-    table = scene.AddAsset("a rectangular wooden coffee table")
+    table = scene.AddAsset("a wooden coffee table",
+                           asset_id=PLAIN_COFFEE_TABLE)
     with _basic_room(scene, w=5.0, d=4.0) as room:
         room.place([sofa, table],
                    positions=[(2.5, sofa.get_height() / 2, 1.0),
@@ -684,7 +764,8 @@ def room_doors_windows(scene):
 
 def _sweep_around_jitter(scene, jitter):
     with scene.AroundGroup(sparsity=0.3, jitter=jitter) as seating:
-        table = scene.AddAsset("a round wooden coffee table")
+        table = scene.AddAsset("a wooden coffee table",
+                               asset_id=ROUND_COFFEE_TABLE)
         chair = scene.AddAsset("an upholstered accent chair")
         seating.set_anchor(table)
         seating.place_circle(objects=6 * chair)
@@ -713,7 +794,7 @@ def around_sparsity_mid(scene):
 
 def _sweep_grid_sparsity(scene, sparsity):
     with scene.GridGroup(sparsity=sparsity) as g:
-        chair = scene.AddAsset("a standard classroom chair")
+        chair = scene.AddAsset("a dark wooden dining chair")
         g.place_grid(9 * chair, cols=3)
     scene.bind(g)
 
@@ -735,7 +816,7 @@ def sweep_grid_sparsity_08(scene):
 
 def _sweep_grid_randomness(scene, randomness):
     with scene.GridGroup(sparsity=0.2, randomness=randomness) as g:
-        chair = scene.AddAsset("a standard classroom chair")
+        chair = scene.AddAsset("a dark wooden dining chair")
         g.place_grid(9 * chair, cols=3)
     scene.bind(g)
 
