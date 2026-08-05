@@ -73,12 +73,16 @@ def classroom_sparsity(scene, sparsity):
 
 
 def _bedroom_rel(scene, **kw):
-    """RelativeGroup bed + two nightstands (place_on_left / place_on_right)."""
+    """RelativeGroup bed + two nightstands at the headboard corners
+    (place_on_back_left / place_on_back_right — flush with the bed's back edge,
+    which is where this bed mesh's headboard sits)."""
     with scene.RelativeGroup(**kw) as rel:
         bed = scene.AddAsset("a queen-sized bed with a wooden frame")
         rel.set_anchor(bed)
-        rel.place_on_left(scene.AddAsset("a small wooden nightstand with a drawer"))
-        rel.place_on_right(scene.AddAsset("a small wooden nightstand with a drawer"))
+        rel.place_on_back_left(
+            scene.AddAsset("a small wooden nightstand with a drawer"))
+        rel.place_on_back_right(
+            scene.AddAsset("a small wooden nightstand with a drawer"))
     scene.bind(rel)
 
 

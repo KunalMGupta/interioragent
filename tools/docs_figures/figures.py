@@ -97,16 +97,16 @@ def retrieval_custom(scene):
 @fig("rel_basic")
 def rel_basic(scene):
     with scene.RelativeGroup() as seating:
-        sofa = scene.AddAsset("a modern 3-seat sofa")
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
         table = scene.AddAsset("a wooden coffee table",
                                asset_id=PLAIN_COFFEE_TABLE)
         end_table = scene.AddAsset("a small wooden end table",
                                    asset_id=WOOD_END_TABLE)
-        nightstand = scene.AddAsset("a small wooden nightstand with a drawer")
+        lamp = scene.AddAsset("a slim brass floor lamp")
         seating.set_anchor(sofa)
         seating.place_on_front(table)
         seating.place_on_left(end_table)
-        seating.place_on_right(nightstand)
+        seating.place_on_right(lamp)
     scene.bind(seating)
 
 
@@ -263,7 +263,7 @@ def grid_grid(scene):
 @fig("grid_rectilinear")
 def grid_rectilinear(scene):
     with scene.GridGroup(sparsity=0.4) as border:
-        chair = scene.AddAsset("an elegant dining chair with a cushioned seat")
+        chair = scene.AddAsset("a dark wooden dining chair")
         border.place_rectilinear(
             width1=3 * chair, width2=3 * chair,
             depth1=2 * chair, depth2=2 * chair,
@@ -287,7 +287,7 @@ def grid_arc(scene):
         asset_id="hssd/afbe5bf0c84434cd80351009cc16cc741d9900e2")
     fireplace.set_location(0, -fireplace.get_aabb()[0, 1], -2.4)  # rest on the floor
     with scene.GridGroup(sparsity=0.4) as seating:
-        chair = scene.AddAsset("a cozy lounge chair")
+        chair = scene.AddAsset("a dark wooden dining chair")
         seating.place_arc(5 * chair, towards=fireplace)
     scene.bind(fireplace)
     scene.bind(seating)
@@ -638,7 +638,7 @@ def getting_started_complete(scene):
 @fig("your_first_group")
 def your_first_group(scene):
     with scene.RelativeGroup() as seating:
-        sofa = scene.AddAsset("a modern 3-seat sofa")
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
         table = scene.AddAsset("a wooden coffee table",
                                asset_id=PLAIN_COFFEE_TABLE)
         seating.set_anchor(sofa)
