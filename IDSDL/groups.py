@@ -1093,9 +1093,11 @@ class GridGroup(SceneProgObject):
     # bank facing a focal point (the towards= target, or the group origin).
     # The block is wide and shallow (rows ~ sqrt(N/2)), the front row is the
     # shortest and rows grow toward the back, and EVERY seat sits on ONE
-    # shared LINEAR pitch so seats fall on exact lateral columns; alternate
-    # rows shift by half a pitch (brick stagger) so sightlines pass between
-    # the seats in front. Rows are gently BOWED lines, not circles around the
+    # shared LINEAR pitch. Each row is exactly centered on the bank axis —
+    # odd counts on the integer grid, even counts on the half-integer grid —
+    # so the bank is always mirror-symmetric, and adjacent rows of opposite
+    # parity come out brick-staggered by half a pitch (sightlines pass
+    # between the seats in front). Rows are gently BOWED lines, not circles around the
     # target: each row sags onto an arc whose curvature center sits
     # ARC_FOCUS_SETBACK behind the focal point, so wings pull toward the
     # target without ever wrapping around it, and the whole bank stands far
@@ -1157,9 +1159,11 @@ class GridGroup(SceneProgObject):
         if towards is not None:
             fwd = np.array([float(bisector[0]), float(bisector[1])])
             origin = np.array([float(target_loc[0]), float(target_loc[2])])
-            # remember the bank's aim so RoomGroup can re-orient the frozen
-            # bank at the target's FINAL position, not just re-aim seat yaws
-            self._arc_banks.append((-float(fwd[0]), -float(fwd[1]), towards))
+            # remember the bank's aim and its seats so RoomGroup can re-orient
+            # the frozen bank at the target's FINAL position (about the seats'
+            # true centroid), not just re-aim seat yaws
+            self._arc_banks.append((-float(fwd[0]), -float(fwd[1]), towards,
+                                    list(objects)))
         else:
             fwd = np.array([0.0, -1.0])
             origin = np.array([0.0, 0.0])
@@ -1168,7 +1172,7 @@ class GridGroup(SceneProgObject):
         # Front-row distance: geometric standoff, pushed back until the widest
         # row's wing seat sits within ARC_MAX_OFF_AXIS_DEG of the bank axis —
         # the bank views the focal point, it doesn't huddle around it.
-        u_bank = (max(counts) - 1) / 2.0 * s + s / 4.0
+        u_bank = (max(counts) - 1) / 2.0 * s
         d = max(base_radius + CIRCULATION_GAP + objects[0].get_depth() / 2,
                 u_bank / np.tan(np.radians(self.ARC_MAX_OFF_AXIS_DEG)))
 
@@ -1176,13 +1180,15 @@ class GridGroup(SceneProgObject):
         for k, c in enumerate(counts):
             row = objects[i:i + c]
             i += c
-            # half-pitch brick stagger via alternating quarter-pitch phases
-            phase = (s / 4.0) * (1 if k % 2 else -1)
-            u_wing = (c - 1) / 2.0 * s + s / 4.0
+            # every row is exactly centered on the axis: odd counts sit on the
+            # integer grid, even counts on the half-integer grid, so the bank
+            # is always symmetric and adjacent rows of opposite parity come
+            # out brick-staggered by half a pitch for free
+            u_wing = (c - 1) / 2.0 * s
             # gentle bow: curvature center ARC_FOCUS_SETBACK behind the focal
-            R = max(d + self.ARC_FOCUS_SETBACK, 1.15 * u_wing)
+            R = max(d + self.ARC_FOCUS_SETBACK, 1.15 * max(u_wing, s))
             for j, obj in enumerate(row):
-                u = (j - (c - 1) / 2.0) * s + phase
+                u = (j - (c - 1) / 2.0) * s
                 sag = R - float(np.sqrt(R * R - u * u))
                 jx = (self.rng.random() - 0.5) * self.randomness * 0.5 * obj.get_width()
                 jz = (self.rng.random() - 0.5) * self.randomness * 0.5 * obj.get_depth()
@@ -2409,16 +2415,23 @@ class RoomGroup(SceneProgObject):
                 yield from walk(c)
 
         for node in walk(self):
-            for ax, az, target in getattr(node, "_arc_banks", []):
-                t = np.asarray(target.get_world_location(), dtype=float)
-                c = np.asarray(node.get_world_location(), dtype=float)
-                if np.hypot(t[0] - c[0], t[2] - c[2]) < 1e-6:
-                    continue
-                want = float(np.degrees(np.arctan2(t[0] - c[0], t[2] - c[2])))
-                have = float(np.degrees(np.arctan2(ax, az))) \
-                    + float(node.get_world_rotation())
-                delta = float((want - have + 180.0) % 360.0 - 180.0)
-                if abs(delta) > 1e-3:
+            for ax, az, target, seats in getattr(node, "_arc_banks", []):
+                # aim from the seats' true centroid — the node origin can sit
+                # off the bank's center, and aiming from it tilts the bank.
+                # Two passes: rotating about the node origin shifts the
+                # centroid, so the second pass absorbs the residual.
+                for _ in range(2):
+                    t = np.asarray(target.get_world_location(), dtype=float)
+                    c = np.mean([np.asarray(s.get_world_location(), dtype=float)
+                                 for s in seats], axis=0)
+                    if np.hypot(t[0] - c[0], t[2] - c[2]) < 1e-6:
+                        break
+                    want = float(np.degrees(np.arctan2(t[0] - c[0], t[2] - c[2])))
+                    have = float(np.degrees(np.arctan2(ax, az))) \
+                        + float(node.get_world_rotation())
+                    delta = float((want - have + 180.0) % 360.0 - 180.0)
+                    if abs(delta) < 1e-3:
+                        break
                     node.set_rotation(float(node.get_local_rotation()) + delta)
 
         for node in walk(self):

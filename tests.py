@@ -2377,17 +2377,25 @@ def test_67():
     print(f"  grid: row sizes={counts}  radii={[f'{radii[g].mean():.2f}' for g in groups]}")
     assert counts == [3, 5], f"expected theatre rows [3, 5], got {counts}"
 
-    # brick stagger on the shared linear pitch: project seats onto the bank's
-    # lateral axis — rows must interleave by ~half a pitch, never align
+    # shared linear pitch + exact symmetry: every row centered on the bank
+    # axis, every seat on the s/2 lateral grid (odd rows integer, even rows
+    # half-integer — parity-derived brick)
     r0, r1 = groups if len(groups[0]) < len(groups[1]) else groups[::-1]
     axis = np.array([np.mean(rel[:, 0]), np.mean(rel[:, 1])])
     axis /= np.linalg.norm(axis)
     sidev = np.array([axis[1], -axis[0]])
     u = rel @ sidev
     pitch = float(np.median(np.diff(np.sort(u[r1]))))
-    min_du = min(abs(u[i] - u[j]) for i in r0 for j in r1)
-    print(f"  grid: lateral pitch={pitch:.2f}  min cross-row column offset={min_du:.2f}")
-    assert min_du > 0.35 * pitch, "rows share lateral columns — brick stagger missing"
+    for rr in (r0, r1):
+        us = np.sort(u[rr])
+        mid = 0.5 * (us[0] + us[-1])
+        assert abs(mid) < 0.08 * pitch, \
+            f"row not centered on the bank axis (midpoint {mid:+.3f})"
+    grid_err = max(abs(v / (pitch / 2) - round(v / (pitch / 2))) * (pitch / 2)
+                   for v in u)
+    print(f"  grid: lateral pitch={pitch:.2f}  rows centered, "
+          f"max off-grid error={grid_err:.3f}")
+    assert grid_err < 0.06 * pitch, "seats off the shared lateral grid"
 
     # rows bow toward the focal point, never away: within the widest row, the
     # wing seats sit axially closer to the focal than the center seat (sag)
@@ -2430,13 +2438,20 @@ def test_67():
     widest = max(rows_r, key=len)
     wo = sorted(widest, key=lambda i: u[i])
     sag_room = 0.5 * (ax_coord[wo[0]] + ax_coord[wo[-1]]) - ax_coord[wo[len(wo) // 2]]
+    mid_room = 0.5 * (u[wo[0]] + u[wo[-1]])
+    tilt = np.degrees(np.arctan(np.polyfit(u[list(widest)],
+                                           ax_coord[list(widest)], 1)[0]))
     print(f"  grid+room: rows={sorted(len(r) for r in rows_r)}  "
           f"wing sag toward podium={-sag_room:.3f} m  "
+          f"widest-row midpoint={mid_room:+.3f} m  tilt={tilt:+.2f} deg  "
           f"nearest seat dist={dist.min():.2f}")
     assert sorted(len(r) for r in rows_r) == [3, 5], \
         f"room-placed bank lost its rows: {sorted(len(r) for r in rows_r)}"
     assert sag_room < -0.005, \
         f"room-placed bank bows away from the podium (sag={-sag_room:.3f})"
+    assert abs(mid_room) < 0.1, \
+        f"room-placed bank asymmetric about the podium axis ({mid_room:+.3f} m)"
+    assert abs(tilt) < 1.5, f"room-placed bank tilted {tilt:+.2f} deg"
 
     # sparsity monotone: the whole formation loosens
     def mean_nn(P):
