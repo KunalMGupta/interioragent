@@ -1191,3 +1191,77 @@ def vlm_feedback_after(scene):
     factor = _room_factor_from_verdict("vlm_feedback_before")
     _vlm_feedback_build(scene, _VLM_FEEDBACK_BASE * factor)
     _save_feedback("vlm_feedback_after", scene)
+
+
+# ------------------------------------------------------------------
+# Writing your own constraint (gradient-constraints.md)
+# ------------------------------------------------------------------
+# The custom AlignToWallConstraint shown in the docs, run verbatim. It is
+# registered per-group through add_constraint_hook and is NEVER appended to
+# IDSDL.constraints.CONSTRAINTS, so it cannot leak into any other figure:
+# nothing outside these two builds ever sees the class.
+#   (Registry note, verified: appending to CONSTRAINTS does give every group a
+#    .AlignToWallConstraint(...) method, but calling that method inside the
+#    `with` block has no effect — compile() starts with clear_constraints(),
+#    which wipes anything registered before it. Hooks re-run after that wipe,
+#    which is why they are the only durable registration path.)
+
+def _align_to_wall_cls():
+    import numpy as np
+    from IDSDL.constraints import ConstraintBase
+
+    class AlignToWallConstraint(ConstraintBase):
+        """Pull an object straight back until its rear edge rests against a wall."""
+
+        def __init__(self, group, obj, wall="back", gap=0.05):
+            self.name = "AlignToWallConstraint"
+            self.type = "GRADIENT"
+            self.weight = 1.0
+            self.obj = obj
+            self.wall = wall
+            self.gap = float(gap)
+            super().__init__(group)
+
+        def compute_gradients(self):
+            aabb = self.obj.get_aabb()
+            if self.wall == "back":                    # the z = 0 wall
+                offset = float(aabb[0, 2]) - self.gap  # > 0 while out in the room
+                axis = np.array([0, 0, -1], dtype=np.float32)
+            else:                                      # "front": the z = DEPTH wall
+                offset = float(self.group.DEPTH) - self.gap - float(aabb[1, 2])
+                axis = np.array([0, 0, 1], dtype=np.float32)
+            self.obj.grad += axis * offset * self.weight
+
+    return AlignToWallConstraint
+
+
+def _con_custom(scene, hook):
+    shelf = scene.AddAsset("a tall wooden bookshelf")
+    console = scene.AddAsset("a low wooden media console")
+    with _basic_room(scene) as room:
+        room.place([shelf, console],
+                   positions=[(1.7, shelf.get_height() / 2, 2.7),
+                              (4.3, console.get_height() / 2, 2.7)],
+                   rotations=[0, 0])
+        _walls(room)
+        if hook:
+            AlignToWallConstraint = _align_to_wall_cls()
+            room.add_constraint_hook(
+                lambda g: AlignToWallConstraint(g, shelf, wall="back"))
+            room.add_constraint_hook(
+                lambda g: AlignToWallConstraint(g, console, wall="back"))
+    for name, obj in (("bookshelf", shelf), ("media console", console)):
+        aabb = obj.get_aabb()
+        print(f"[custom_constraint hook={hook}] {name}: "
+              f"center_z={float(obj.get_location()[2]):.3f} "
+              f"back_edge_z={float(aabb[0, 2]):.3f}")
+
+
+@fig("con_custom_before", mode="room", views=("persp",))
+def con_custom_before(scene):
+    _con_custom(scene, hook=False)
+
+
+@fig("con_custom_after", mode="room", views=("persp",))
+def con_custom_after(scene):
+    _con_custom(scene, hook=True)
