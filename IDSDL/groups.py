@@ -37,12 +37,16 @@ BUFFER = 0.05
 
 class AnchorGroup(SceneProgObject):
     # Max perturbation at jitter=1.0: position offset as a fraction of the object's own
-    # size, and rotation in degrees. Kept modest so a real-world "lived-in" irregularity
-    # is added without breaking the arrangement (and, where a group runs the post-layout
-    # OverlapConstraint + grad solve, anything the jitter pushes into a neighbour still
-    # gets separated).
-    JITTER_POS_FRACTION = 0.25
-    JITTER_ROT_DEG = 12.0
+    # size, and rotation in degrees. Sized so the dial reads clearly in a rendered scene
+    # (at jitter=0.8 a dining chair visibly turns and shifts at arm's length); where a
+    # group runs the post-layout OverlapConstraint + grad solve, anything the jitter
+    # pushes into a neighbour still gets separated.
+    JITTER_POS_FRACTION = 0.40
+    JITTER_ROT_DEG = 30.0
+    # Every nonzero jitter draw reaches at least this fraction of its max magnitude:
+    # a plain uniform draw lands near zero often enough that some children look
+    # untouched, which reads as "jitter not working" rather than natural variation.
+    JITTER_FLOOR = 0.4
 
     def __init__(self, scene, name=None, sparsity=0.0, jitter=0.0):
         super().__init__(scene, name=name)
@@ -53,19 +57,26 @@ class AnchorGroup(SceneProgObject):
         self.rng = scene._make_rng() if scene is not None and hasattr(scene, "_make_rng") \
             else np.random.default_rng()
 
+    def _jit_shaped(self):
+        """One shaped jitter draw: uniform sign and spread, but magnitude-floored to
+        [JITTER_FLOOR, 1] so every child visibly shows the dial. Exactly one rng draw."""
+        u = float(self.rng.uniform(-1, 1))
+        s = 1.0 if u >= 0 else -1.0
+        return s * (self.JITTER_FLOOR + (1.0 - self.JITTER_FLOOR) * abs(u))
+
     def _jit_pos(self, obj):
         """Random (dx, dz) world offset for `obj`, scaled by jitter and the object size."""
         if self.jitter <= 0:
             return 0.0, 0.0
         w, _, d = obj.get_whd()
         mag = self.jitter * self.JITTER_POS_FRACTION
-        return float(self.rng.uniform(-1, 1) * mag * w), float(self.rng.uniform(-1, 1) * mag * d)
+        return float(self._jit_shaped() * mag * w), float(self._jit_shaped() * mag * d)
 
     def _jit_rot(self):
         """Random rotation perturbation (degrees), scaled by jitter."""
         if self.jitter <= 0:
             return 0.0
-        return float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_ROT_DEG)
+        return float(self._jit_shaped() * self.jitter * self.JITTER_ROT_DEG)
 
     def _apply_jitter(self, obj):
         """Nudge an already-placed object's local position and rotation by a jittered amount."""
@@ -363,82 +374,101 @@ class RelativeGroup(AnchorGroup):
             'place_inside',
         ]
 
+    # Sparsity growth beyond the scaled base gap: each directional slot also steps away
+    # from the anchor by this fraction of the placed object's own footprint per unit
+    # sparsity. Scaling a small base gap alone (SIDE_GAP=0.1 -> 8 cm at sparsity=0.8) is
+    # invisible at arm's length; a nightstand-sized push reads. Exactly zero at
+    # sparsity=0, so the legacy constants still hold there (test_64 pins this).
+    SPARSITY_EXTENT_FRACTION = 0.5
+
     def _gap(self, g):
         """Instance-scaled spacing: exactly ``g`` at sparsity=0. Never mutates the module
         constants (they have consumers outside this group)."""
         return g * (1.0 + self.sparsity)
 
     def _jit_rel(self, obj, axis_dir, gap):
-        """Lived-in wobble for a directional slot: slide along the placement axis (clamped to
-        half the slot's gap so 'left' stays unambiguously left), a freer nudge perpendicular
-        to it, and a small yaw added to the slot's hard rotation. Draws nothing at jitter=0;
-        overlaps this introduces are relaxed by the group's grad solve."""
-        if self.jitter <= 0:
+        """Per-slot variation, applied right after the slot's hard placement.
+
+        sparsity: a deterministic extra step away from the anchor along the placement
+        axis — ``sparsity * SPARSITY_EXTENT_FRACTION * max(w, d)`` on top of the
+        ``_gap``-scaled base gap (no rng draws).
+        jitter: a slide along the placement axis (toward the anchor clamped to half the
+        slot's gap so 'left' stays unambiguously left; away from it is free), a nudge
+        perpendicular to it, and a yaw off the slot's hard rotation. Draws nothing at
+        jitter=0; overlaps this introduces are relaxed by the group's grad solve."""
+        if self.jitter <= 0 and self.sparsity <= 0:
             return
         w, _, d = (float(v) for v in obj.get_whd())
-        along = float(np.clip(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_POS_FRACTION
-                              * max(w, d), -gap / 2.0, gap / 2.0))
-        perp = float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_POS_FRACTION * min(w, d))
+        along = self.sparsity * self.SPARSITY_EXTENT_FRACTION * max(w, d)
+        perp = 0.0
+        if self.jitter > 0:
+            mag = self.jitter * self.JITTER_POS_FRACTION
+            along += float(np.clip(self._jit_shaped() * mag * max(w, d),
+                                   -gap / 2.0, None))
+            perp = float(self._jit_shaped() * mag * max(w, d))
         ax = np.asarray(axis_dir, dtype=float)
         ax = ax / (np.linalg.norm(ax) + 1e-9)
         pv = np.array([ax[2], 0.0, -ax[0]])   # horizontal perpendicular
         t = obj.transform.translation
         obj.set_location(t[0] + along * ax[0] + perp * pv[0], t[1],
                          t[2] + along * ax[2] + perp * pv[2])
-        obj.set_rotation(float(obj.transform.rotation)
-                         + float(self.rng.uniform(-1, 1) * self.jitter * 10.0))
+        if self.jitter > 0:
+            obj.set_rotation(float(obj.transform.rotation)
+                             + float(self._jit_shaped() * self.jitter * self.JITTER_ROT_DEG))
+
+    def _ring_edge(self, direction, lateral_half=None):
+        """Measured extent of the placed inner ring along `direction`.
+
+        Distance (m) from the anchor center to the farthest world-AABB face over the
+        anchor plus every already-placed inner-ring child. operation_order runs every
+        inner-ring op before any _further op, so at _further time the children hold
+        concrete analytic positions — this measures real geometry instead of predicting
+        occupancy, which is what asymmetric rings need (an object only in front must
+        not shift the back edge, and side columns must not inflate the depth).
+
+        `lateral_half`: when given (the straight _further ops), only ring members whose
+        span across the placement axis intersects the further object's own lateral
+        footprint (centered on the anchor, half-width `lateral_half`) can define the
+        edge — a deep chair sitting fully off to the side must not push a front
+        further away when the two would never meet. The anchor always counts.
+
+        Objects placed by the _further ops themselves are excluded (tagged with
+        `_placed_by_further`), so successive furthers stay independent of each other —
+        exactly the old semantics in the empty-ring and symmetric cases.
+        """
+        d = np.asarray(direction, dtype=float).reshape(-1)
+        center = self.get_anchor_center_dirs()[4]
+        members = list(self.children)
+        if self.anchor is not None and self.anchor not in members:
+            members.append(self.anchor)
+        edge = 0.0
+        for m in members:
+            if getattr(m, "_placed_by_further", False) or getattr(m, "is_light", False):
+                continue
+            a = m.get_aabb()
+            cx = (a[0, 0] + a[1, 0]) / 2.0 - center[0]
+            cz = (a[0, 2] + a[1, 2]) / 2.0 - center[2]
+            hx = (a[1, 0] - a[0, 0]) / 2.0
+            hz = (a[1, 2] - a[0, 2]) / 2.0
+            if lateral_half is not None and m is not self.anchor:
+                # signed offset and half-extent across the placement axis
+                lat_c = cx * d[2] - cz * d[0]
+                lat_h = hx * abs(d[2]) + hz * abs(d[0])
+                if abs(lat_c) >= lat_h + lateral_half:
+                    continue  # no lateral overlap: the further slides past this member
+            # support of the world AABB along d (horizontal components only)
+            edge = max(edge, cx * d[0] + cz * d[2] + hx * abs(d[0]) + hz * abs(d[2]))
+        return float(edge)
 
     def get_inner_aabb(self):
-        if self.inner_aabb is not None:
-            return self.inner_aabb
-
+        """Total world-space footprint (width, depth) of the anchor plus the placed
+        inner ring, measured from the children's actual AABBs. Kept public as a
+        diagnostic; the _further ops place off the per-direction _ring_edge distances
+        directly (a total is not enough when the ring is asymmetric). Recomputed on
+        every call — the ring grows as ops execute, so caching would go stale."""
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-
-        op_front_right = self.get_operation('place_on_front_right')
-        op_back_right = self.get_operation('place_on_back_right')
-        op_right = self.get_operation('place_on_right')
-        op_back = self.get_operation('place_on_back')
-        op_front = self.get_operation('place_on_front')
-
-        op_front_left = self.get_operation('place_on_front_left')
-        op_back_left = self.get_operation('place_on_back_left')
-        op_left = self.get_operation('place_on_left')
-
-        right_extent = max([
-            op_front_right.obj.get_width() + self._gap(SIDE_GAP) if op_front_right is not None else 0,
-            op_back_right.obj.get_width() + self._gap(SIDE_GAP) if op_back_right is not None else 0,
-            op_right.obj.get_width() + self._gap(SIDE_GAP) if op_right is not None else 0,
-            op_back.obj.get_width() / 2 - width / 2 if op_back is not None else 0,
-            op_front.obj.get_width() / 2 - width / 2 if op_front is not None else 0,
-        ])
-
-        left_extent = max([
-            op_front_left.obj.get_width() + self._gap(SIDE_GAP) if op_front_left is not None else 0,
-            op_back_left.obj.get_width() + self._gap(SIDE_GAP) if op_back_left is not None else 0,
-            op_left.obj.get_width() + self._gap(SIDE_GAP) if op_left is not None else 0,
-            op_back.obj.get_width() / 2 - width / 2 if op_back is not None else 0,
-            op_front.obj.get_width() / 2 - width / 2 if op_front is not None else 0,
-        ])
-
-        inner_width = right_extent + left_extent + width
-
-        inner_depth = sum([
-            op_front.obj.get_depth() + self._gap(FRONT_BACK_GAP) if op_front is not None else 0,
-            op_back.obj.get_depth() + self._gap(FRONT_BACK_GAP) if op_back is not None else 0,
-        ]) + max([
-            sum([
-                op_front_right.obj.get_depth() if op_front_right is not None else 0,
-                op_right.obj.get_depth() if op_right is not None else 0,
-                op_back_right.obj.get_depth() if op_back_right is not None else 0,
-            ]),
-            sum([
-                op_front_left.obj.get_depth() if op_front_left is not None else 0,
-                op_left.obj.get_depth() if op_left is not None else 0,
-                op_back_left.obj.get_depth() if op_back_left is not None else 0,
-            ]),
-            depth,
-        ])
-
+        inner_width = self._ring_edge(left_dir) + self._ring_edge(right_dir)
+        inner_depth = self._ring_edge(front_dir) + self._ring_edge(back_dir)
         self.inner_aabb = (inner_width, inner_depth)
         return self.inner_aabb
 
@@ -548,87 +578,93 @@ class RelativeGroup(AnchorGroup):
         self.rotate(desk, 180)
         return desk
 
+    # The _further ops place at (measured ring edge along the placement direction)
+    # + CIRCULATION_GAP + (the object's half-extent along that axis). The half-extent
+    # is read pre-rotation, matching the set_rotation each method applies (a 90/-90
+    # yaw swaps the world width/depth), so raw get_depth()/get_width() below are the
+    # POST-rotation extents along the placement axis — same conventions as before.
+
     @placemethod
     def place_on_left_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        inner_width, inner_depth = self.get_inner_aabb()
-        left_further = center + left_dir * (inner_width / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
+        left_further = center + left_dir * (self._ring_edge(left_dir, lateral_half=obj.get_width() / 2) + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(left_further[0], self.compute_obj_y(obj), left_further[2])
         obj.set_rotation(90)
         self._jit_rel(obj, left_dir, self._gap(CIRCULATION_GAP))
+        obj._placed_by_further = True
         self.add_child(obj)
 
     @placemethod
     def place_on_right_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        inner_width, inner_depth = self.get_inner_aabb()
-        right_further = center + right_dir * (inner_width / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
+        right_further = center + right_dir * (self._ring_edge(right_dir, lateral_half=obj.get_width() / 2) + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(right_further[0], self.compute_obj_y(obj), right_further[2])
         obj.set_rotation(-90)
         self._jit_rel(obj, right_dir, self._gap(CIRCULATION_GAP))
+        obj._placed_by_further = True
         self.add_child(obj)
 
     @placemethod
     def place_on_front_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        inner_width, inner_depth = self.get_inner_aabb()
-        front_further = center + front_dir * (inner_depth / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
+        front_further = center + front_dir * (self._ring_edge(front_dir, lateral_half=obj.get_width() / 2) + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(front_further[0], self.compute_obj_y(obj), front_further[2])
         obj.set_rotation(180)
         self._jit_rel(obj, front_dir, self._gap(CIRCULATION_GAP))
+        obj._placed_by_further = True
         self.add_child(obj)
 
     @placemethod
     def place_on_back_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        inner_width, inner_depth = self.get_inner_aabb()
-        back_further = center + back_dir * (inner_depth / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
+        back_further = center + back_dir * (self._ring_edge(back_dir, lateral_half=obj.get_width() / 2) + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(back_further[0], self.compute_obj_y(obj), back_further[2])
         obj.set_rotation(0)
         self._jit_rel(obj, back_dir, self._gap(CIRCULATION_GAP))
+        obj._placed_by_further = True
         self.add_child(obj)
 
     @placemethod
     def place_on_front_right_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        inner_width, inner_depth = self.get_inner_aabb()
         # rotation -90 swaps the object's world extents: width along z, depth along x
         # (mirrors place_on_front_left_further; the unswapped form overlapped/gapped
         # non-square objects on this one diagonal)
-        front_right_further = center + front_dir * (inner_depth / 2 + obj.get_width() / 2 + self._gap(CIRCULATION_GAP)) + right_dir * (inner_width / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
+        front_right_further = center + front_dir * (self._ring_edge(front_dir) + obj.get_width() / 2 + self._gap(CIRCULATION_GAP)) + right_dir * (self._ring_edge(right_dir) + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(front_right_further[0], self.compute_obj_y(obj), front_right_further[2])
         obj.set_rotation(-90)
         self._jit_rel(obj, front_dir + right_dir, self._gap(CIRCULATION_GAP))
+        obj._placed_by_further = True
         self.add_child(obj)
 
     @placemethod
     def place_on_front_left_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        inner_width, inner_depth = self.get_inner_aabb()
-        front_left_further = center + front_dir * (inner_depth / 2 + obj.get_width() / 2 + self._gap(CIRCULATION_GAP)) + left_dir * (inner_width / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
+        front_left_further = center + front_dir * (self._ring_edge(front_dir) + obj.get_width() / 2 + self._gap(CIRCULATION_GAP)) + left_dir * (self._ring_edge(left_dir) + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(front_left_further[0], self.compute_obj_y(obj), front_left_further[2])
         obj.set_rotation(90)
         self._jit_rel(obj, front_dir + left_dir, self._gap(CIRCULATION_GAP))
+        obj._placed_by_further = True
         self.add_child(obj)
 
     @placemethod
     def place_on_back_right_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        inner_width, inner_depth = self.get_inner_aabb()
-        back_right_further = center + back_dir * (inner_depth / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP)) + right_dir * (inner_width / 2 + obj.get_width() / 2 + self._gap(CIRCULATION_GAP))
+        back_right_further = center + back_dir * (self._ring_edge(back_dir) + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP)) + right_dir * (self._ring_edge(right_dir) + obj.get_width() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(back_right_further[0], self.compute_obj_y(obj), back_right_further[2])
         obj.set_rotation(0)
         self._jit_rel(obj, back_dir + right_dir, self._gap(CIRCULATION_GAP))
+        obj._placed_by_further = True
         self.add_child(obj)
 
     @placemethod
     def place_on_back_left_further(self, obj):
         front_dir, back_dir, left_dir, right_dir, center, width, height, depth = self.get_anchor_center_dirs()
-        inner_width, inner_depth = self.get_inner_aabb()
-        back_left_further = center + back_dir * (inner_depth / 2 + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP)) + left_dir * (inner_width / 2 + obj.get_width() / 2 + self._gap(CIRCULATION_GAP))
+        back_left_further = center + back_dir * (self._ring_edge(back_dir) + obj.get_depth() / 2 + self._gap(CIRCULATION_GAP)) + left_dir * (self._ring_edge(left_dir) + obj.get_width() / 2 + self._gap(CIRCULATION_GAP))
         obj.set_location(back_left_further[0], self.compute_obj_y(obj), back_left_further[2])
         obj.set_rotation(0)
         self._jit_rel(obj, back_dir + left_dir, self._gap(CIRCULATION_GAP))
+        obj._placed_by_further = True
         self.add_child(obj)
 
 class AroundGroup(AnchorGroup):
@@ -825,6 +861,14 @@ class AroundGroup(AnchorGroup):
             self.add_child(obj)
 
 class GridGroup(SceneProgObject):
+    # Max facing perturbation (degrees) at randomness=1.0. Grids are formations —
+    # rows must still read as rows — so this is much tamer than a free group's
+    # AnchorGroup.JITTER_ROT_DEG (30). Same magnitude-floor idea as
+    # AnchorGroup.JITTER_FLOOR: every nonzero draw reaches at least
+    # RANDOM_ROT_FLOOR of its max, so a child near a zero draw still visibly turns.
+    RANDOM_ROT_DEG = 14.0
+    RANDOM_ROT_FLOOR = 0.4
+
     def __init__(self, scene, name=None, sparsity=0.0, randomness=0.0):
         super().__init__(scene, name=name)
         self.sparsity = max(0.0, min(sparsity, 1.0))
@@ -834,6 +878,24 @@ class GridGroup(SceneProgObject):
         # (obj, target) pairs from place_arc(towards=...), re-aimed at the target's
         # final world position by RoomGroup._reaim_arc_children after room layout
         self._arc_towards = []
+
+    def _rot_shaped(self):
+        """One shaped rotation draw: uniform sign and spread, but magnitude-floored
+        to [RANDOM_ROT_FLOOR, 1] so every child visibly shows the dial (mirrors
+        AnchorGroup._jit_shaped). Exactly one rng draw."""
+        u = float(self.rng.uniform(-1, 1))
+        s = 1.0 if u >= 0 else -1.0
+        return s * (self.RANDOM_ROT_FLOOR + (1.0 - self.RANDOM_ROT_FLOOR) * abs(u))
+
+    def _apply_rand_rot(self, obj):
+        """Perturb an already-oriented child's yaw by the randomness dial. Called
+        AFTER the placement path sets the child's facing. MUST stay a strict no-op
+        with ZERO rng draws at randomness <= 0: the group rng is shared with the
+        solver, and the seeded stream at defaults is a release invariant (test_64)."""
+        if self.randomness <= 0:
+            return
+        delta = self._rot_shaped() * self.randomness * self.RANDOM_ROT_DEG
+        obj.set_rotation(float(obj.transform.rotation) + float(delta))
 
     def _place_row(self, objects=None, along='x', facing='z', x0=0, z0=0):
         objects = self.to_list([] if objects is None else objects)
@@ -888,6 +950,7 @@ class GridGroup(SceneProgObject):
                 zpos = z0
                 obj.set_location(xpos, ypos, zpos)
                 set_rotation(obj, facing)
+                self._apply_rand_rot(obj)
                 self.add_child(obj)
 
         elif along == 'z':
@@ -897,6 +960,7 @@ class GridGroup(SceneProgObject):
                 zpos = x_positions.pop(0) + z0
                 obj.set_location(xpos, ypos, zpos)
                 set_rotation(obj, facing)
+                self._apply_rand_rot(obj)
                 self.add_child(obj)
         else:
             raise ValueError(f"Unknown axis for row placement: {along}")
@@ -1093,12 +1157,14 @@ class GridGroup(SceneProgObject):
                     z = target_loc[2] + radius * np.cos(np.radians(phi + rot)) + jz
                     obj.set_location(x, y, z)
                     obj.face_towards(towards)
+                    self._apply_rand_rot(obj)
                     self._arc_towards.append((obj, towards))
                 else:
                     x = dist * np.sin(np.radians(rot)) + jx
                     z = -dist * np.cos(np.radians(rot)) + jz
                     obj.set_location(x, y, z)
                     obj.set_rotation(-rot)
+                    self._apply_rand_rot(obj)
                 self.add_child(obj)
 
     def compile(self):

@@ -13,7 +13,7 @@ import traceback
 import numpy as np
 
 from IDSDL.scene import SceneProgRoom
-from IDSDL.groups import BasicRoomGroup, SIDE_GAP
+from IDSDL.groups import BasicRoomGroup, RelativeGroup, SIDE_GAP, CIRCULATION_GAP
 
 SEED = 42
 
@@ -1917,14 +1917,18 @@ def test_61():
             side = scene.AddAsset("a small wooden nightstand with a drawer")
             g.place_on_left(side)
         scene.bind(g)
-        return float(abs(side.get_location()[0] - sofa.get_location()[0])) \
+        gap = float(abs(side.get_location()[0] - sofa.get_location()[0])) \
             - float(sofa.get_width()) / 2.0 - float(side.get_width()) / 2.0
+        return gap, max(float(side.get_width()), float(side.get_depth()))
 
-    g0, g1 = build_rel(), build_rel(sparsity=0.8)
-    print(f"  relative left gap: sparsity=0 -> {g0:.3f} (SIDE_GAP={SIDE_GAP}), 0.8 -> {g1:.3f}")
+    (g0, _), (g1, ext1) = build_rel(), build_rel(sparsity=0.8)
+    # scaled base gap + extent-proportional step away from the anchor
+    expect1 = SIDE_GAP * 1.8 + 0.8 * RelativeGroup.SPARSITY_EXTENT_FRACTION * ext1
+    print(f"  relative left gap: sparsity=0 -> {g0:.3f} (SIDE_GAP={SIDE_GAP}), "
+          f"0.8 -> {g1:.3f} (expect {expect1:.3f})")
     assert abs(g0 - SIDE_GAP) < 1e-5, "RelativeGroup default gap changed"
-    assert abs(g1 - SIDE_GAP * 1.8) < 1e-5, "RelativeGroup sparsity gap formula wrong"
-    gj = build_rel(jitter=0.8)
+    assert abs(g1 - expect1) < 1e-5, "RelativeGroup sparsity gap formula wrong"
+    gj, _ = build_rel(jitter=0.8)
     print(f"  relative left gap at jitter=0.8 -> {gj:.3f}")
     assert abs(gj - SIDE_GAP) > 1e-3, "RelativeGroup jitter did not move the placement"
 
@@ -2145,6 +2149,144 @@ def test_64():
     assert np.array_equal(rot_a, rot_b), "explicit 0.0 knobs differ from no-kwargs build (rot)"
 
 
+def test_65():
+    """RelativeGroup _further with an ASYMMETRIC inner ring: every further object sits
+    at exactly CIRCULATION_GAP from the nearest already-placed ring member (measured
+    world AABBs), instead of the old symmetric-ring prediction that overlapped the
+    occupied side and floated off the empty side."""
+    header(65, "RelativeGroup _further clears the measured ring edge")
+    scene = SceneProgRoom("test65", seed=SEED)
+
+    def aabb2d(o):
+        a = o.get_aabb()
+        return float(a[0, 0]), float(a[1, 0]), float(a[0, 2]), float(a[1, 2])
+
+    def clearance(a, b):
+        # min separation between two AABB footprints; negative = overlap depth
+        ax0, ax1, az0, az1 = a
+        bx0, bx1, bz0, bz1 = b
+        dx = max(ax0, bx0) - min(ax1, bx1)
+        dz = max(az0, bz0) - min(az1, bz1)
+        if dx < 0 and dz < 0:
+            return -min(-dx, -dz)
+        return max(dx, dz) if (dx < 0 or dz < 0) else float(np.hypot(max(dx, 0), max(dz, 0)))
+
+    def build(ring_ops, further_op):
+        with scene.RelativeGroup() as g:
+            g.grad_solver = None
+            anchor = scene.AddAsset("a modern 3-seat sofa")
+            g.set_anchor(anchor)
+            ring = [anchor]
+            for op_name, desc in ring_ops:
+                o = scene.AddAsset(desc)
+                getattr(g, op_name)(o)
+                ring.append(o)
+            f = scene.AddAsset("a tall wooden bookshelf")
+            getattr(g, further_op)(f)
+        scene.bind(g)
+        return ring, f
+
+    fixtures = [
+        ("front table + front_further",
+         [("place_on_front", "a wooden coffee table")], "place_on_front_further"),
+        ("back chair + back_further",
+         [("place_on_back", "a cozy lounge chair")], "place_on_back_further"),
+        ("right chair + right_further",
+         [("place_on_right", "a cozy lounge chair")], "place_on_right_further"),
+        ("side column + front_further",
+         [("place_on_right", "a cozy lounge chair"),
+          ("place_on_front_right", "a cozy lounge chair"),
+          ("place_on_back_right", "a cozy lounge chair")], "place_on_front_further"),
+    ]
+    for label, ring_ops, further_op in fixtures:
+        ring, f = build(ring_ops, further_op)
+        gap = min(clearance(aabb2d(f), aabb2d(m)) for m in ring)
+        print(f"  {label:<30} nearest-ring clearance = {gap:.6f} (want {CIRCULATION_GAP})")
+        assert abs(gap - CIRCULATION_GAP) < 1e-6, \
+            f"{label}: clearance {gap:.6f} != CIRCULATION_GAP {CIRCULATION_GAP}"
+
+    # Corner further over an asymmetric ring: exactly CIRCULATION_GAP beyond BOTH
+    # measured ring edges (front edge set by the table, right edge by the sofa).
+    ring, f = build([("place_on_front", "a wooden coffee table")],
+                    "place_on_front_right_further")
+    front_edge = max(aabb2d(m)[3] for m in ring)
+    right_edge = max(aabb2d(m)[1] for m in ring)
+    fx0, _, fz0, _ = aabb2d(f)
+    print(f"  corner further: front-axis gap = {fz0 - front_edge:.6f}  "
+          f"side-axis gap = {fx0 - right_edge:.6f} (want {CIRCULATION_GAP})")
+    assert abs((fz0 - front_edge) - CIRCULATION_GAP) < 1e-6, \
+        "corner further front-axis gap != CIRCULATION_GAP"
+    assert abs((fx0 - right_edge) - CIRCULATION_GAP) < 1e-6, \
+        "corner further side-axis gap != CIRCULATION_GAP"
+
+    scene.export("results/test65_further_ring_edges.blend")
+
+
+def test_66():
+    """GridGroup randomness now perturbs ROTATION too (rows and arcs), not just gaps:
+    randomness=0.9 visibly turns chairs off their formation facing, randomness=0 stays
+    bit-identical to a no-kwargs build (the shared-rng release invariant), and the
+    jittered build is reproducible under the scene seed."""
+    header(66, "GridGroup rotational jitter (rows + arcs)")
+
+    def build(randomness):
+        kw = {} if randomness is None else dict(randomness=randomness)
+        scene = SceneProgRoom("test66", seed=SEED)
+
+        chair = scene.AddAsset("a standard classroom chair with a plastic seat")
+        row_chairs = 6 * chair
+        with scene.GridGroup(**kw) as row:
+            row.place_row(row_chairs)
+        scene.bind(row)
+
+        stove = scene.AddAsset("an electric fireplace with a dark mantel")
+        arc_chairs = 8 * chair
+        with scene.GridGroup(sparsity=0.3, **kw) as arc:
+            arc.place_arc(arc_chairs, towards=stove)
+        scene.bind(arc)
+
+        def rots(objs):
+            return np.array([float(o.get_rotation()) for o in objs], dtype=float)
+
+        def locs(objs):
+            return np.array([[float(v) for v in o.get_location()] for o in objs])
+
+        return (locs(row_chairs), rots(row_chairs),
+                locs(arc_chairs), rots(arc_chairs))
+
+    def wrap(deg):
+        return np.abs((deg + 180.0) % 360.0 - 180.0)
+
+    rl0, rr0, al0, ar0 = build(0.0)
+    rl9, rr9, al9, ar9 = build(0.9)
+
+    row_delta = wrap(rr9 - rr0).max()
+    arc_delta = wrap(ar9 - ar0).max()
+    print(f"  max |rot delta| at randomness=0.9: row={row_delta:.2f} deg  arc={arc_delta:.2f} deg")
+    assert row_delta > 5.0, f"place_row rotation jitter too small: {row_delta:.2f} deg"
+    assert arc_delta > 5.0, f"place_arc rotation jitter too small: {arc_delta:.2f} deg"
+
+    # randomness=0 must be bit-identical to a no-kwargs build (zero extra rng draws)
+    rl_n, rr_n, al_n, ar_n = build(None)
+    d0 = max(np.abs(rl0 - rl_n).max(), np.abs(al0 - al_n).max(),
+             np.abs(rr0 - rr_n).max(), np.abs(ar0 - ar_n).max())
+    print(f"  randomness=0 vs no-kwargs: max |delta| = {d0:.2e}")
+    assert np.allclose(rl0, rl_n, atol=0) and np.allclose(al0, al_n, atol=0), \
+        "randomness=0 positions differ from the no-kwargs build"
+    assert np.allclose(rr0, rr_n, atol=0) and np.allclose(ar0, ar_n, atol=0), \
+        "randomness=0 rotations differ from the no-kwargs build"
+
+    # seeded reproducibility with the dial on
+    rl9b, rr9b, al9b, ar9b = build(0.9)
+    drep = max(np.abs(rl9 - rl9b).max(), np.abs(al9 - al9b).max(),
+               np.abs(rr9 - rr9b).max(), np.abs(ar9 - ar9b).max())
+    print(f"  build-twice at randomness=0.9: max |delta| = {drep:.2e}")
+    assert np.allclose(rl9, rl9b, atol=1e-6) and np.allclose(al9, al9b, atol=1e-6), \
+        "jittered positions differ across same-seed builds"
+    assert np.allclose(rr9, rr9b, atol=1e-6) and np.allclose(ar9, ar9b, atol=1e-6), \
+        "jittered rotations differ across same-seed builds"
+
+
 # ---------------------------------------------------------------------------
 # Registry + runner
 # ---------------------------------------------------------------------------
@@ -2221,6 +2363,10 @@ TESTS = {
     62: test_62,   # contracts hold at max knobs (mirror pair, island audit, wall chain)
     63: test_63,   # seeded reproducibility with knobs on
     64: test_64,   # defaults are inert (the no-extra-RNG canary)
+    # --- _further placement measures the real ring (2026-08) ---
+    65: test_65,   # RelativeGroup _further clears the measured ring edge (asymmetric rings)
+    # --- GridGroup randomness gains rotation (2026-08) ---
+    66: test_66,   # GridGroup rotational jitter (rows + arcs; defaults stay bit-identical)
 }
 
 

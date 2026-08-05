@@ -148,7 +148,7 @@ class SymmetryGroup(AnchorGroup):
     twins, so the pair stays exactly symmetric about the anchor at any jitter."""
 
     SPARSITY_GAP_MAX = 0.6
-    JITTER_YAW_DEG = 10.0
+    JITTER_YAW_DEG = 25.0
 
     @placemethod
     def place_flanking(self, objs, gap=0.1):
@@ -164,10 +164,10 @@ class SymmetryGroup(AnchorGroup):
             d = offset + ow / 2.0
             dd = dz = dyaw = 0.0
             if self.jitter > 0:
-                dd = float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_POS_FRACTION * ow)
-                dz = float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_POS_FRACTION
+                dd = float(self._jit_shaped() * self.jitter * self.JITTER_POS_FRACTION * ow)
+                dz = float(self._jit_shaped() * self.jitter * self.JITTER_POS_FRACTION
                            * float(o.get_depth()))
-                dyaw = float(self.rng.uniform(-1, 1) * self.jitter * self.JITTER_YAW_DEG)
+                dyaw = float(self._jit_shaped() * self.jitter * self.JITTER_YAW_DEG)
             o.set_location(x0 + d + dd, self.compute_obj_y(o), z0 + dz)
             o.face_towards(self.anchor)
             if dyaw:

@@ -103,8 +103,9 @@ with scene.AroundGroup(sparsity=0.2, jitter=0.4) as g:
     # also: g.place_circle(objs), g.place_rectilinear(...)
 ```
 `AroundGroup(sparsity=0.0, jitter=0.0)`. **`jitter` (0–1) adds real-world irregularity** —
-each seat is nudged off its perfect position (≤25% of its own size) and rotation (±12° at
-1.0). The anchor group's `OverlapConstraint` + grad solve still run afterward, so jitter
+each seat is nudged off its perfect position (≤40% of its own size) and rotation (±30° at
+1.0; every draw is magnitude-floored at 40% of its max, so no seat looks untouched).
+The anchor group's `OverlapConstraint` + grad solve still run afterward, so jitter
 never produces interpenetration. Use it so ringed seating (dining/meeting/cafe) reads as
 lived-in rather than CAD-perfect. Reproducible under a seeded scene (see Randomness below).
 
@@ -115,8 +116,10 @@ with scene.GridGroup(sparsity=0.5, randomness=0.3) as g:
     g.place_grid(9 * desk_unit, cols=3)     # also place_row, place_rectilinear, place_arc
 ```
 `GridGroup(sparsity=0.0, randomness=0.0)`. `sparsity` sets the gap between items;
-**`randomness` (0–1) jitters those gaps** so rows aren't unnaturally even. (Now seeded —
-reproducible per scene seed.)
+**`randomness` (0–1) jitters those gaps *and* each item's facing** (up to ±14° at 1.0 —
+deliberately tamer than a free group's ±30°, so rows still read as rows; draws are
+magnitude-floored at 40% of max like `jitter`) so grids aren't unnaturally even. (Now
+seeded — reproducible per scene seed.)
 
 ### Shared anchor-group helpers (Relative/Around)
 
@@ -296,16 +299,16 @@ At the 0.0 defaults every layout is exactly the legacy deterministic one.
 
 | Group | sparsity | jitter |
 |-------|----------|--------|
-| `AroundGroup` | standoff from the anchor | per-seat offset (≤25% of the object's size) + ±12° on `place_circle`/`place_arc`/`place_rectilinear` |
+| `AroundGroup` | standoff from the anchor | per-seat offset (≤40% of the object's size) + ±30° on `place_circle`/`place_arc`/`place_rectilinear`; draws floored at 40% of max so every seat shows the dial |
 | `RingsGroup` | radial standoff **and** ring-to-ring separation | as AroundGroup |
-| `GridGroup(randomness=)` | row/grid gaps | jitters inter-item gaps (works even at `sparsity=0`) |
+| `GridGroup(randomness=)` | row/grid gaps | jitters inter-item gaps (works even at `sparsity=0`) + turns each item up to ±14° off its row/arc facing (tamer than free groups so the formation survives; draws floored at 40% of max) |
 | `RoomGroup(randomness=)` | — | floor items drift within the **free space of their own slot** (translation only — facing preserved) |
-| `RelativeGroup` | scales the side/front/circulation gaps of every directional slot (and the `_further` ring stays consistent) | in-slot slide (clamped to half the gap, so "left" stays left) + ±10° off the slot pose |
+| `RelativeGroup` | scales the side/front/circulation gaps of every directional slot **and** steps each slot away from the anchor by `sparsity × 0.5 × max(w, d)` of the placed object (so the widening is visible even for small base gaps; exactly the legacy constants at 0) | in-slot slide (toward the anchor clamped to half the gap, so "left" stays left) + perpendicular nudge (≤40% of the object's size) + ±30° off the slot pose |
 | `StackGroup` | vertical gap between levels | upper levels slide within the footprint below + ±8° (bottom level stays put) |
 | `PyramidGroup` | in-tier spacing | in-slot slide + ±6°; tiers stay centered and seated |
 | `PileGroup` | widens the scatter disk | accepted but inert — a pile is already maximal randomness |
-| `SymmetryGroup` | gap from the anchor | one draw per pair applied **mirrored** to both twins — the pair stays exactly symmetric |
-| `FacingGroup` | in-row spacing + row standoff | per-seat slide/push in the row's local frame + ±10° off dead-facing |
+| `SymmetryGroup` | gap from the anchor | one draw per pair applied **mirrored** to both twins (offset ≤40% of size, ±25° yaw) — the pair stays exactly symmetric |
+| `FacingGroup` | in-row spacing + row standoff | per-seat slide/push in the row's local frame (push ≤40% of depth) + ±10° off dead-facing |
 | `MirrorStationGroup` | chair↔counter and beside gaps | shelf decor drifts in its slot + anchor turns ±10°; the mirror/counter wall chain stays rigid |
 | `WorkstationGroup` | chair gap from the desk | chair slides along the desk, tucks/pushes back, ±20°; the desk and desktop items stay put |
 | `KitchenIslandGroup` | stool gap from the island | stools only: in-slot slide + ±15°; the island keeps its audited entry/aisle pose |
