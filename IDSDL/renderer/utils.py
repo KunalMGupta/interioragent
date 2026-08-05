@@ -11,12 +11,11 @@ from mathutils import Vector
 
 def enable_cuda_rendering():
     """
-    Enable CUDA GPU rendering for Cycles.
+    Enable GPU rendering for Cycles.
 
-    This assumes:
-    1. You are using an NVIDIA GPU.
-    2. The Docker/Linux container can see the GPU.
-    3. Blender was built with CUDA support.
+    Picks the best backend this Blender build actually supports (CUDA/OPTIX on
+    NVIDIA+Linux/Windows, METAL on macOS, HIP/ONEAPI elsewhere), rather than
+    assuming CUDA — hardcoding it crashes on macOS, where Metal is required.
     """
 
     prefs = bpy.context.preferences
@@ -27,13 +26,28 @@ def enable_cuda_rendering():
 
     cycles_prefs = prefs.addons["cycles"].preferences
 
-    # Use CUDA backend.
-    cycles_prefs.compute_device_type = "CUDA"
+    # Do not inspect ``compute_device_type.enum_items`` here.  In Blender 5.1
+    # background mode that dynamic enum is empty on macOS even though assigning
+    # METAL succeeds and get_devices() returns the Apple GPU.  Probe real
+    # capabilities instead and only accept a backend with a matching device.
+    backend = "NONE"
+    for candidate in ("OPTIX", "CUDA", "HIP", "ONEAPI", "METAL"):
+        try:
+            cycles_prefs.compute_device_type = candidate
+        except (TypeError, ValueError):
+            # The enum assignment itself rejects backends not compiled into
+            # this Blender build.
+            continue
 
-    # Refresh device list.
+        cycles_prefs.get_devices()
+        if any(device.type == candidate for device in cycles_prefs.devices):
+            backend = candidate
+            break
+
+    cycles_prefs.compute_device_type = backend
     cycles_prefs.get_devices()
 
-    print("\n========== Blender Cycles CUDA Device Info ==========")
+    print(f"\n========== Blender Cycles {backend} Device Info ==========")
     print(f"Compute device type: {cycles_prefs.compute_device_type}")
 
     gpu_found = False
@@ -41,24 +55,26 @@ def enable_cuda_rendering():
     for device in cycles_prefs.devices:
         print(f"Device found: name={device.name}, type={device.type}, use={device.use}")
 
-        if device.type == "CUDA":
+        if device.type == backend:
             device.use = True
             gpu_found = True
-            print(f"Enabled CUDA device: {device.name}")
+            print(f"Enabled {backend} device: {device.name}")
         elif device.type == "CPU":
-            # Usually disable CPU if you specifically want CUDA.
-            device.use = False
-            print(f"Disabled CPU device: {device.name}")
+            # Usually disable CPU if you specifically want a GPU backend.
+            device.use = backend == "NONE"
+            print(f"{'Enabled' if backend == 'NONE' else 'Disabled'} CPU device: {device.name}")
 
-    if not gpu_found:
-        print("WARNING: No CUDA GPU found by Blender. Rendering may fall back to CPU.")
+    if backend == "NONE":
+        print("No GPU backend available on this Blender build/platform — using CPU.")
+    elif not gpu_found:
+        print(f"WARNING: No {backend} GPU found by Blender. Rendering may fall back to CPU.")
     else:
-        print("CUDA GPU rendering enabled.")
+        print(f"{backend} GPU rendering enabled.")
 
     print("=====================================================\n")
 
-    # Set current scene to use GPU for Cycles.
-    bpy.context.scene.cycles.device = "GPU"
+    # Set current scene to use GPU for Cycles (falls back to CPU if backend is NONE).
+    bpy.context.scene.cycles.device = "CPU" if backend == "NONE" else "GPU"
 
 
 # ---------------------------------------------------------------------
