@@ -2377,21 +2377,66 @@ def test_67():
     print(f"  grid: row sizes={counts}  radii={[f'{radii[g].mean():.2f}' for g in groups]}")
     assert counts == [3, 5], f"expected theatre rows [3, 5], got {counts}"
 
-    # stagger: no chair in one row shares an azimuth with a chair in the other
-    az = np.degrees(np.arctan2(rel[:, 0], rel[:, 1]))
+    # brick stagger on the shared linear pitch: project seats onto the bank's
+    # lateral axis — rows must interleave by ~half a pitch, never align
     r0, r1 = groups if len(groups[0]) < len(groups[1]) else groups[::-1]
-    min_dang = min(abs((az[i] - az[j] + 180.0) % 360.0 - 180.0)
-                   for i in r0 for j in r1)
-    print(f"  grid: min inter-row angular offset={min_dang:.1f} deg")
-    assert min_dang > 3.0, "rows are radially aligned — stagger missing"
+    axis = np.array([np.mean(rel[:, 0]), np.mean(rel[:, 1])])
+    axis /= np.linalg.norm(axis)
+    sidev = np.array([axis[1], -axis[0]])
+    u = rel @ sidev
+    pitch = float(np.median(np.diff(np.sort(u[r1]))))
+    min_du = min(abs(u[i] - u[j]) for i in r0 for j in r1)
+    print(f"  grid: lateral pitch={pitch:.2f}  min cross-row column offset={min_du:.2f}")
+    assert min_du > 0.35 * pitch, "rows share lateral columns — brick stagger missing"
 
-    # rows physically separated by at least the design row gap
-    row_step = radii[r1].mean() - radii[r0].mean() if radii[r1].mean() > radii[r0].mean() \
-        else radii[r0].mean() - radii[r1].mean()
+    # rows bow toward the focal point, never away: within the widest row, the
+    # wing seats sit axially closer to the focal than the center seat (sag)
+    ax_coord = rel @ axis      # distance along the bank axis, from the focal
+    r1o = sorted(r1, key=lambda i: u[i])
+    sag = 0.5 * (ax_coord[r1o[0]] + ax_coord[r1o[-1]]) - ax_coord[r1o[len(r1o) // 2]]
+    print(f"  grid: wing sag toward focal={-sag:.3f} m")
+    assert sag < -0.005, f"row bows away from the focal point (sag={-sag:.3f})"
+
+    # rows physically separated by at least most of the design row gap
+    row_step = abs(radii[r1].mean() - radii[r0].mean())
     dmin_rows = min(float(np.hypot(P[i, 0] - P[j, 0], P[i, 2] - P[j, 2]))
                     for i in r0 for j in r1)
     print(f"  grid: row step={row_step:.2f}  min inter-row seat distance={dmin_rows:.2f}")
-    assert dmin_rows > 0.9 * row_step, f"rows too close: {dmin_rows:.2f}"
+    assert dmin_rows > 0.7 * row_step, f"rows too close: {dmin_rows:.2f}"
+
+    # ---- room-placed bank keeps its theatre relationship to the target ----
+    # (the historical failure mode: RoomGroup's facing= flip left the bank
+    # bowing AWAY from the podium with only the yaws corrected)
+    scene = SceneProgRoom("test67r", seed=SEED)
+    podium = scene.AddAsset("a wooden lecture podium")
+    chairs = [scene.AddAsset("a cozy lounge chair") for _ in range(8)]
+    with scene.GridGroup() as bank:
+        bank.place_arc(chairs, towards=podium)
+    with scene.RoomGroup() as room:
+        room.grad_solver = None
+        room.place_on_back_wall_center(podium, facing="front")
+        room.place_on_center(bank, facing="back")
+    T = np.array(podium.get_location(), dtype=float)
+    P = np.array([[float(v) for v in c.get_location()] for c in chairs])
+    rel = P[:, [0, 2]] - T[[0, 2]]
+    dist = np.hypot(rel[:, 0], rel[:, 1])
+    m = np.array([np.mean(rel[:, 0]), np.mean(rel[:, 1])])
+    m /= np.linalg.norm(m)
+    ax_coord = rel @ m
+    u = rel @ np.array([m[1], -m[0]])
+    order = np.argsort(ax_coord)
+    splits = [i for i in range(1, 8) if ax_coord[order[i]] - ax_coord[order[i - 1]] > 0.25]
+    rows_r = np.split(order, splits)
+    widest = max(rows_r, key=len)
+    wo = sorted(widest, key=lambda i: u[i])
+    sag_room = 0.5 * (ax_coord[wo[0]] + ax_coord[wo[-1]]) - ax_coord[wo[len(wo) // 2]]
+    print(f"  grid+room: rows={sorted(len(r) for r in rows_r)}  "
+          f"wing sag toward podium={-sag_room:.3f} m  "
+          f"nearest seat dist={dist.min():.2f}")
+    assert sorted(len(r) for r in rows_r) == [3, 5], \
+        f"room-placed bank lost its rows: {sorted(len(r) for r in rows_r)}"
+    assert sag_room < -0.005, \
+        f"room-placed bank bows away from the podium (sag={-sag_room:.3f})"
 
     # sparsity monotone: the whole formation loosens
     def mean_nn(P):

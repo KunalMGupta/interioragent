@@ -886,6 +886,10 @@ class GridGroup(SceneProgObject):
         # (obj, target) pairs from place_arc(towards=...), re-aimed at the target's
         # final world position by RoomGroup._reaim_arc_children after room layout
         self._arc_towards = []
+        # (bank_axis_x, bank_axis_z, target) per place_arc(towards=) call: the
+        # bank's local aim direction, used by RoomGroup._reaim_arc_children to
+        # re-orient the frozen bank at the target's final position
+        self._arc_banks = []
 
     def _rot_shaped(self):
         """One shaped rotation draw: uniform sign and spread, but magnitude-floored
@@ -1085,21 +1089,25 @@ class GridGroup(SceneProgObject):
         for row in object_rows:
             self._place_row(row, along='x', facing='z', z0=z_positions.pop(0))
 
-    # place_arc "theatre law": rows of seats on concentric arcs facing a focal
-    # point (the towards= target, or the group origin), laid out like a curved
-    # seating bank. The block is wide and shallow (rows ~ sqrt(N/2)), the front
-    # row is the shortest and rows grow toward the back, and EVERY row shares
-    # ONE angular pitch — measured at the front row — so seats fall on a
-    # repeating grid of radial columns. Alternate rows take a quarter-pitch
-    # phase in opposite directions, putting neighbouring rows exactly half a
-    # pitch apart (brick stagger): sightlines to the focal point pass between
-    # the seats in front. Sparsity widens seat gap and row gap, both monotone.
-    ARC_MAX_SPAN_DEG = 150.0
+    # place_arc "theatre law": rows of seats laid out like a theatre's seating
+    # bank facing a focal point (the towards= target, or the group origin).
+    # The block is wide and shallow (rows ~ sqrt(N/2)), the front row is the
+    # shortest and rows grow toward the back, and EVERY seat sits on ONE
+    # shared LINEAR pitch so seats fall on exact lateral columns; alternate
+    # rows shift by half a pitch (brick stagger) so sightlines pass between
+    # the seats in front. Rows are gently BOWED lines, not circles around the
+    # target: each row sags onto an arc whose curvature center sits
+    # ARC_FOCUS_SETBACK behind the focal point, so wings pull toward the
+    # target without ever wrapping around it, and the whole bank stands far
+    # enough back that no seat looks more than ARC_MAX_OFF_AXIS_DEG off the
+    # bank's axis. Sparsity widens seat gap and row gap, both monotone.
     ARC_SEAT_GAP = 0.05           # lateral gap between neighbouring seats (m)
     ARC_SEAT_GAP_SPARSITY = 0.45  # extra seat gap at sparsity=1 (m)
     ARC_ROW_GAP = 0.1             # radial gap between successive rows (m)
     ARC_ROW_GAP_SPARSITY = 0.6    # extra row gap at sparsity=1 (m)
     ARC_MIN_FRONT_ROW = 3         # front row must hold this many (or all N)
+    ARC_FOCUS_SETBACK = 2.0       # row curvature center sits this far behind the focal (m)
+    ARC_MAX_OFF_AXIS_DEG = 40.0   # no seat sits more than this off the bank axis
 
     @placemethod
     def place_arc(self, objects, towards=None):
@@ -1111,18 +1119,18 @@ class GridGroup(SceneProgObject):
         seat_gap = self.ARC_SEAT_GAP + self.sparsity * self.ARC_SEAT_GAP_SPARSITY
         row_gap = self.ARC_ROW_GAP + self.sparsity * self.ARC_ROW_GAP_SPARSITY
 
-        # With towards=, the arc curves AROUND the target: row radii are measured
-        # from the target's boundary, and the arc opens from the target back toward
-        # the group origin, so every object sits in front of the target facing it.
+        # With towards=, the bank opens from the target back toward the group
+        # origin, so every seat sits on the audience side of the target facing
+        # it; the bank's true pose relative to the target is finalized by
+        # RoomGroup._reaim_arc_children once the room has placed both.
         if towards is not None:
             target_loc = np.asarray(towards.get_world_location(), dtype=float)
             base_radius = max(float(towards.get_width()), float(towards.get_depth())) / 2.0
             v = np.array([-target_loc[0], -target_loc[2]], dtype=float)
             v_norm = float(np.linalg.norm(v))
             bisector = v / v_norm if v_norm > 1e-6 else np.array([0.0, 1.0])
-            phi = float(np.degrees(np.arctan2(bisector[0], bisector[1])))
         else:
-            target_loc, base_radius, phi = None, 0.0, 0.0
+            target_loc, base_radius = None, 0.0
 
         # Wide & shallow row split, front row shortest: R ~ sqrt(N/2) rows with
         # counts stepping up toward the back (8 -> 3+5, 12 -> 5+7, 18 -> 5+6+7);
@@ -1139,55 +1147,59 @@ class GridGroup(SceneProgObject):
         else:
             counts = [N]
 
-        def pitch(obj, radius):
-            # degrees of arc one seat (width + gap) occupies at this radius
-            return float(np.degrees(2 * np.arctan(
-                ((obj.get_width() + seat_gap) / 2)
-                / max(radius - obj.get_depth() / 2, 0.05))))
+        # One shared LINEAR pitch (widest seat + gap): seats fall on exact
+        # lateral columns, and alternate rows shift half a pitch (brick).
+        s = max(float(o.get_width()) for o in objects) + seat_gap
 
-        # One shared pitch for the whole bank, measured at the front row on the
-        # widest seat: the first radius grows until the WIDEST (back) row fits
-        # inside the span cap on that shared grid. Larger radius = flatter,
-        # more theatre-like.
-        widest = max(objects, key=lambda o: float(o.get_width()))
-        r0 = base_radius + CIRCULATION_GAP + objects[0].get_depth() / 2
-        while pitch(widest, r0) * max(counts) > self.ARC_MAX_SPAN_DEG:
-            r0 += 0.1
-        shared_pitch = pitch(widest, r0)
+        # Bank frame: fwd points from the focal point toward the audience,
+        # side is its lateral perpendicular. Without a target the bank grows
+        # down -z from the group origin.
+        if towards is not None:
+            fwd = np.array([float(bisector[0]), float(bisector[1])])
+            origin = np.array([float(target_loc[0]), float(target_loc[2])])
+            # remember the bank's aim so RoomGroup can re-orient the frozen
+            # bank at the target's FINAL position, not just re-aim seat yaws
+            self._arc_banks.append((-float(fwd[0]), -float(fwd[1]), towards))
+        else:
+            fwd = np.array([0.0, -1.0])
+            origin = np.array([0.0, 0.0])
+        side = np.array([fwd[1], -fwd[0]])
 
-        rows, i, radius = [], 0, r0
-        for c in counts:
+        # Front-row distance: geometric standoff, pushed back until the widest
+        # row's wing seat sits within ARC_MAX_OFF_AXIS_DEG of the bank axis —
+        # the bank views the focal point, it doesn't huddle around it.
+        u_bank = (max(counts) - 1) / 2.0 * s + s / 4.0
+        d = max(base_radius + CIRCULATION_GAP + objects[0].get_depth() / 2,
+                u_bank / np.tan(np.radians(self.ARC_MAX_OFF_AXIS_DEG)))
+
+        i = 0
+        for k, c in enumerate(counts):
             row = objects[i:i + c]
-            rows.append((row, radius))
-            radius += max(o.get_depth() for o in row) + row_gap
             i += c
-
-        for k, (row, r) in enumerate(rows):
-            p = shared_pitch
-            # quarter-pitch phase, alternating sign: adjacent rows sit exactly
-            # half a pitch apart on the shared grid (brick pattern) while the
-            # bank as a whole stays centered on the axis
-            phase = (p / 4.0) * (1 if k % 2 else -1)
-            n = len(row)
+            # half-pitch brick stagger via alternating quarter-pitch phases
+            phase = (s / 4.0) * (1 if k % 2 else -1)
+            u_wing = (c - 1) / 2.0 * s + s / 4.0
+            # gentle bow: curvature center ARC_FOCUS_SETBACK behind the focal
+            R = max(d + self.ARC_FOCUS_SETBACK, 1.15 * u_wing)
             for j, obj in enumerate(row):
-                rot = (j - (n - 1) / 2.0) * p + phase
+                u = (j - (c - 1) / 2.0) * s + phase
+                sag = R - float(np.sqrt(R * R - u * u))
                 jx = (self.rng.random() - 0.5) * self.randomness * 0.5 * obj.get_width()
                 jz = (self.rng.random() - 0.5) * self.randomness * 0.5 * obj.get_depth()
                 y = self.compute_obj_y(obj)
+                px = float(origin[0] + fwd[0] * (d - sag) + side[0] * u) + jx
+                pz = float(origin[1] + fwd[1] * (d - sag) + side[1] * u) + jz
+                obj.set_location(px, y, pz)
                 if towards is not None:
-                    x = target_loc[0] + r * np.sin(np.radians(phi + rot)) + jx
-                    z = target_loc[2] + r * np.cos(np.radians(phi + rot)) + jz
-                    obj.set_location(x, y, z)
                     obj.face_towards(towards)
                     self._apply_rand_rot(obj)
                     self._arc_towards.append((obj, towards))
                 else:
-                    x = r * np.sin(np.radians(rot)) + jx
-                    z = -r * np.cos(np.radians(rot)) + jz
-                    obj.set_location(x, y, z)
-                    obj.set_rotation(-rot)
+                    obj.set_rotation(float(np.degrees(np.arctan2(
+                        origin[0] - px, origin[1] - pz))))
                     self._apply_rand_rot(obj)
                 self.add_child(obj)
+            d += max(float(o.get_depth()) for o in row) + row_gap
 
     def compile(self):
         self.reset_compile_state()
@@ -2383,15 +2395,31 @@ class RoomGroup(SceneProgObject):
             obj.set_location(t[0] + dx, t[1], t[2] + dz)
 
     def _reaim_arc_children(self):
-        """Re-aim GridGroup.place_arc(towards=...) objects at their target's final
-        world position. The arc's facings were baked when the grid compiled (frame
-        identical to world at that point); once this room repositions the grid and/or
-        the target independently, only the yaw can still be honoured — positions stay
-        frozen with the group, but every arc object turns to look at the target."""
+        """Re-aim GridGroup.place_arc(towards=...) banks at their target's final
+        world position. The bank's geometry was baked when the grid compiled,
+        around wherever the target sat THEN; once this room repositions the grid
+        and/or the target independently, two corrections restore the theatre
+        relationship: (1) the frozen bank rotates about its own center so its
+        baked aim axis points at the target's final position (otherwise a
+        facing= flip leaves the rows bowing AWAY from the target), then (2)
+        every seat turns to look at the target."""
         def walk(node):
             yield node
             for c in getattr(node, "children", []):
                 yield from walk(c)
+
+        for node in walk(self):
+            for ax, az, target in getattr(node, "_arc_banks", []):
+                t = np.asarray(target.get_world_location(), dtype=float)
+                c = np.asarray(node.get_world_location(), dtype=float)
+                if np.hypot(t[0] - c[0], t[2] - c[2]) < 1e-6:
+                    continue
+                want = float(np.degrees(np.arctan2(t[0] - c[0], t[2] - c[2])))
+                have = float(np.degrees(np.arctan2(ax, az))) \
+                    + float(node.get_world_rotation())
+                delta = float((want - have + 180.0) % 360.0 - 180.0)
+                if abs(delta) > 1e-3:
+                    node.set_rotation(float(node.get_local_rotation()) + delta)
 
         for node in walk(self):
             for obj, target in getattr(node, "_arc_towards", []):
