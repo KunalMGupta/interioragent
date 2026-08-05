@@ -110,38 +110,50 @@ def rel_basic(scene):
     scene.bind(seating)
 
 
-@fig("rel_corners")
-def rel_corners(scene):
+# NOTE: the four ring figures render top BEFORE persp: studio_render's
+# frame_persp recenters via cam shift_x/shift_y and frame_top doesn't reset
+# them, so a top view rendered after persp inherits a stale film shift and
+# crops wide layouts (the further-ring sofa). Top-first keeps both correct.
+
+@fig("rel_adjacent", views=("top", "persp"))
+def rel_adjacent(scene):
+    # the classic sofa table: a narrow console flush against the sofa's back
+    with scene.RelativeGroup() as seating:
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
+        console = scene.AddAsset("a narrow wooden console table")
+        seating.set_anchor(sofa)
+        seating.place_on_back_adjacent(console)
+    scene.bind(seating)
+
+
+@fig("rel_near", views=("top", "persp"))
+def rel_near(scene):
     with scene.RelativeGroup() as bedside:
         bed = scene.AddAsset("a queen-sized bed with a wooden frame")
         bedside.set_anchor(bed)
-        ns = scene.AddAsset("a small wooden nightstand with a drawer")
-        nightstands = 4 * ns
-        bedside.place_on_back_left(nightstands[0])
-        bedside.place_on_back_right(nightstands[1])
-        bedside.place_on_front_left(nightstands[2])
-        bedside.place_on_front_right(nightstands[3])
+        nightstands = 2 * scene.AddAsset("a small wooden nightstand with a drawer")
+        bedside.place_on_left(nightstands[0])
+        bedside.place_on_right(nightstands[1])
     scene.bind(bedside)
 
 
-@fig("rel_further")
+@fig("rel_further", views=("top", "persp"))
 def rel_further(scene):
-    # identical chairs so the near-vs-further distance contrast is unmistakable
-    with scene.RelativeGroup() as g:
-        table = scene.AddAsset("a wooden coffee table",
-                               asset_id=PLAIN_COFFEE_TABLE)
-        g.set_anchor(table)
-        chairs = 2 * scene.AddAsset("a cozy lounge chair")
-        g.place_on_left(chairs[0])            # near ring
-        g.place_on_left_further(chairs[1])    # further ring: clears the near chair
-    scene.bind(g)
+    # identical sofas so the further-ring distance and facing are unmistakable;
+    # this scene grows into rel_rings on the same page
+    with scene.RelativeGroup() as seating:
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
+        second_sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
+        seating.set_anchor(sofa)
+        seating.place_on_front_right_further(second_sofa)  # further ring, diagonal
+    scene.bind(seating)
 
 
-@fig("rel_rings")
+@fig("rel_rings", views=("top", "persp"))
 def rel_rings(scene):
-    # one object per distance tier: end table on the 10 cm side slot, coffee
-    # table on the 45 cm front slot, and a second sofa on the further ring
-    # (circulation gap past the near ring, rotated to face the anchor)
+    # rel_further plus a populated near ring: end table on the 10 cm side slot,
+    # coffee table on the 45 cm front slot, and the second sofa on the further
+    # ring at the front-right diagonal (circulation gap past the measured ring)
     with scene.RelativeGroup() as seating:
         sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
         end_table = scene.AddAsset("a small wooden end table",
@@ -152,7 +164,7 @@ def rel_rings(scene):
         seating.set_anchor(sofa)
         seating.place_on_left(end_table)          # near ring, side gap
         seating.place_on_front(coffee)            # near ring, front gap
-        seating.place_on_right_further(second_sofa)  # further ring
+        seating.place_on_front_right_further(second_sofa)  # further ring
     scene.bind(seating)
 
 
@@ -213,7 +225,7 @@ def around_rectilinear(scene):
 @fig("around_arc")
 def around_arc(scene):
     with scene.AroundGroup(sparsity=0.5) as seating:
-        sofa = scene.AddAsset("a modern 3-seat sofa")
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
         chair = scene.AddAsset("a cozy lounge chair")
         seating.set_anchor(sofa)
         seating.place_arc(objects=3 * chair)
@@ -301,7 +313,7 @@ def grid_arc(scene):
 def room_walls(scene):
     with scene.RoomGroup() as room:
         with scene.RelativeGroup() as seating:
-            sofa = scene.AddAsset("a modern 3-seat sofa")
+            sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
             table = scene.AddAsset("a wooden coffee table",
                                    asset_id=PLAIN_COFFEE_TABLE)
             seating.set_anchor(sofa)
@@ -340,7 +352,7 @@ def room_grid_points(scene):
 @fig("room_wall_art", mode="room")
 def room_wall_art(scene):
     with scene.RoomGroup() as room:
-        sofa = scene.AddAsset("a modern 3-seat sofa")
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
         painting = scene.AddAsset("a large colorful abstract painting")
         room.place_on_back_wall_center(sofa, facing="front")
         room.place_on_wall_back_center(painting)
@@ -388,7 +400,7 @@ def hier_nested(scene):
         dining.place_rectilinear(longer_side1=2 * chair, longer_side2=2 * chair)
 
     with scene.RelativeGroup() as seating:
-        sofa = scene.AddAsset("a modern 3-seat sofa")
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
         coffee = scene.AddAsset("a wooden coffee table",
                                 asset_id=PLAIN_COFFEE_TABLE)
         seating.set_anchor(sofa)
@@ -421,7 +433,7 @@ def _walls(room):
 
 
 def _con_overlap(scene, solve):
-    sofa = scene.AddAsset("a modern 3-seat sofa")
+    sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
     table = scene.AddAsset("a wooden coffee table",
                            asset_id=PLAIN_COFFEE_TABLE)
     chair = scene.AddAsset("a cozy lounge chair")
@@ -447,7 +459,7 @@ def con_overlap_after(scene):
 
 
 def _con_oob(scene, solve):
-    sofa = scene.AddAsset("a modern 3-seat sofa")
+    sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
     with _basic_room(scene, w=5.0) as room:
         if not solve:
             room.grad_solver = None
@@ -491,7 +503,7 @@ def con_clearance_after(scene):
 
 def _con_access(scene, hook):
     # a coffee table drifting out of reach of the sofa is pulled back within reach
-    sofa = scene.AddAsset("a modern 3-seat sofa")
+    sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
     table = scene.AddAsset("a wooden coffee table",
                            asset_id=PLAIN_COFFEE_TABLE)
     with _basic_room(scene) as room:
@@ -515,7 +527,7 @@ def con_access_after(scene):
 
 
 def _con_visibility(scene, hook):
-    sofa = scene.AddAsset("a modern 3-seat sofa")
+    sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
     tv = scene.AddAsset("a wide TV console cabinet with a television on top")
     plant = scene.AddAsset("a potted plant with bright green leaves",
                            asset_id="future/c80cdc2c-d9d5-4da5-8c9d-b54fadf43003")
@@ -549,7 +561,7 @@ def con_visibility_after(scene):
 @fig("ascii_hi")
 def ascii_hi(scene):
     with scene.SentenceASCIIGenerator() as ascii_gen:
-        plant = scene.AddAsset("a small succulent plant in a pot")
+        plant = scene.AddAsset("a small succulent plant in a pot", modulate_scale=5.0)
         ascii_gen.place(plant, "HI")
     scene.bind(ascii_gen)
 
@@ -695,7 +707,7 @@ def reg_lighting(scene):
 @fig("room_against_wall", mode="room")
 def room_against_wall(scene):
     with scene.RoomGroup() as room:
-        sofa = scene.AddAsset("a modern 3-seat sofa")
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
         console = scene.AddAsset("a narrow wooden console table")
         bookshelf = scene.AddAsset("a tall wooden bookshelf")
         dresser = scene.AddAsset("a mid-century wooden sideboard")
@@ -746,7 +758,7 @@ def room_wall_gallery(scene):
 @fig("room_doors_windows", mode="room")
 def room_doors_windows(scene):
     with scene.RoomGroup() as room:
-        sofa = scene.AddAsset("a modern 3-seat sofa")
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
         room.place_on_right_wall_center(sofa, facing="left")
         room.place_walls(
             floor_texture="light oak wood floor",
@@ -895,7 +907,7 @@ def _vlm_proportions(scene):
     # main-op placement: the VLM critique renders BEFORE delayed verbs like
     # place_on_top run, so the oversized object must be a main placement
     with scene.RelativeGroup() as seating:
-        sofa = scene.AddAsset("a modern 3-seat sofa")
+        sofa = scene.AddAsset("a modern gray sofa", asset_id=GRAY_SOFA)
         seating.set_anchor(sofa)
         table = scene.AddAsset("a low rectangular oak coffee table",
                                modulate_scale=3.2)

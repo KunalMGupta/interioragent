@@ -175,10 +175,18 @@ def hide_camera_side_walls(lo, hi):
             (bb_hi.z - bb_lo.z) > (hi.z - lo.z) * 0.7
             and min(bb_hi.x - bb_lo.x, bb_hi.y - bb_lo.y) < 0.3)
         # Doors / windows / wall art hugging a culled wall must be culled with it,
-        # or they render as slabs floating at the room's open edge.
+        # or they render as slabs floating at the room's open edge. True wall
+        # slabs are paper-thin (doors/windows ~0.05-0.1 m) or hang off the floor
+        # (wall art); floor-standing furniture flush to the wall (e.g. a 0.37 m
+        # deep console) must NOT be culled with the wall.
+        def _slabbish(depth):
+            return depth < 0.15 or bb_lo.z > lo.z + 0.15
+
         hugs_culled_wall = (
-            (cy < lo.y + 0.2 and (bb_hi.y - bb_lo.y) < 0.4)
-            or (ocx > hi.x - 0.2 and (bb_hi.x - bb_lo.x) < 0.4))
+            (cy < lo.y + 0.2 and (bb_hi.y - bb_lo.y) < 0.4
+             and _slabbish(bb_hi.y - bb_lo.y))
+            or (ocx > hi.x - 0.2 and (bb_hi.x - bb_lo.x) < 0.4
+                and _slabbish(bb_hi.x - bb_lo.x)))
         if not (is_wallish or hugs_culled_wall):
             continue
         if cy < lo.y + 0.3 or ocx > hi.x - 0.3:
