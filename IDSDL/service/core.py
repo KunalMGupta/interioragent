@@ -349,7 +349,7 @@ def plan_refine(prompt, renders, prior=None, instruction=None, top_k=3, out=None
             "stderr_tail": "\n".join((p.stderr or "").splitlines()[-12:]) if p.returncode else ""}
 
 
-def run_scene(program_path, timeout=2400, phase=None):
+def run_scene(program_path, timeout=2400, phase=None, workdir=None):
     """Build+render a DSL scene program. Subprocess-isolated (a fresh scene/retriever + cold
     Blender, like batchgen). Returns the run's ``report`` dict + the room view paths.
 
@@ -364,11 +364,18 @@ def run_scene(program_path, timeout=2400, phase=None):
     import time as _time
     start = _time.time()
     env = {**os.environ, "PYTHONPATH": REPO_ROOT}
-    cmd = [sys.executable, "workbench.py", "run", program_path]
+    cmd = [sys.executable, os.path.join(REPO_ROOT, "workbench.py"), "run",
+           os.path.abspath(program_path)]
     if phase is not None:
         cmd += ["--phase", str(int(phase))]
+    # `workdir` isolates a run: scene programs export cwd-relative .blend files and
+    # write a cwd-relative tmp/, so agents sharing the repo root as cwd overwrite each
+    # other's files. Pass a per-run workspace (IDSDL/service/workspace.py) and the
+    # run's outputs land inside it. Defaults to the repo root for back-compat.
+    cwd = os.path.abspath(workdir) if workdir else REPO_ROOT
+    os.makedirs(cwd, exist_ok=True)
     p = subprocess.run(cmd,
-                       cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=timeout)
+                       cwd=cwd, env=env, capture_output=True, text=True, timeout=timeout)
     out = p.stdout + "\n" + p.stderr
     report, run_dir = {}, None
     # Resolve THIS build's report from the child's own stdout (workbench prints
@@ -377,26 +384,32 @@ def run_scene(program_path, timeout=2400, phase=None):
     # once, whoever finished last won the mtime sort and the caller could be handed
     # the OTHER scene's report and renders, silently. Parallel MCP agents make that a
     # real race, so the run directory must come from the process we launched.
+    # Paths workbench prints are relative to the cwd it ran in, which is the
+    # workspace when one was given — resolve against that, not the repo root.
     m = re.search(r"run_dir\s*[:=]\s*(tmp/\S+)", out)
     if m:
-        rp = os.path.join(REPO_ROOT, m.group(1), "report.json")
+        rp = os.path.join(cwd, m.group(1), "report.json")
         if os.path.exists(rp) and os.path.getmtime(rp) >= start:
             report = _json.load(open(rp))
-            run_dir = report.get("run_dir") or m.group(1)
+            run_dir = os.path.join(cwd, m.group(1)) if workdir else (
+                report.get("run_dir") or m.group(1))
     if not report:
         # Fallback for an older/quiet workbench that did not print the run dir.
-        # Still mtime-based, so still only trustworthy when nothing else is building.
-        for rp in sorted(glob.glob(os.path.join(_TMP, "*", "report.json")),
+        # Still mtime-based, so still only trustworthy when nothing else is building
+        # in the same directory.
+        scan = os.path.join(cwd, "tmp") if workdir else _TMP
+        for rp in sorted(glob.glob(os.path.join(scan, "*", "report.json")),
                          key=os.path.getmtime, reverse=True):
             if os.path.getmtime(rp) >= start:
                 report = _json.load(open(rp))
-                run_dir = report.get("run_dir")
+                run_dir = os.path.dirname(rp) if workdir else report.get("run_dir")
                 break
     views = []
     if run_dir:
-        views = sorted(glob.glob(os.path.join(REPO_ROOT, run_dir, "room_views", "*.png")))
+        rd = run_dir if os.path.isabs(run_dir) else os.path.join(cwd, run_dir)
+        views = sorted(glob.glob(os.path.join(rd, "room_views", "*.png")))
         if not views:   # minimal render policy: only the VLM strip exists
-            views = sorted(glob.glob(os.path.join(REPO_ROOT, run_dir, "vlm_views", "combined_*.png")),
+            views = sorted(glob.glob(os.path.join(rd, "vlm_views", "combined_*.png")),
                            key=os.path.getmtime)
     return {"program": program_path, "ok": p.returncode == 0 and bool(report), "run_dir": run_dir,
             "report": report, "room_views": views,
