@@ -110,3 +110,6 @@ ramen_bar/
 /_d.json
 /_launch.json
 /_disk.txt
+
+# per-run workspaces (IDSDL/service/workspace.py)
+runs/
