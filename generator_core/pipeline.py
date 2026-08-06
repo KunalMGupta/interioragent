@@ -349,27 +349,45 @@ class SceneGenerator:
         cmd = [self.python, str(ROOT / "workbench.py"), "run", str(program)]
         if phase is not None:
             cmd += ["--phase", str(phase)]
+        # Build inside THIS run's own directory. Scene programs write a cwd-relative
+        # tmp/ and export cwd-relative .blend files, so building from the repo root
+        # (a) collides when several runs build concurrently and (b) fails outright
+        # when the repo's tmp/ is not writable — which is how five parallel runs
+        # each burned their revision budget "fixing" a PermissionError.
+        build_cwd = out / "build_cwd"
+        build_cwd.mkdir(parents=True, exist_ok=True)
         proc = subprocess.run(
             cmd,
-            cwd=ROOT, env=env, capture_output=True, text=True, timeout=3600,
+            cwd=build_cwd, env=env, capture_output=True, text=True, timeout=3600,
         )
         (out / f"build_{tag}.log").write_text(
             proc.stdout + "\n--- stderr ---\n" + proc.stderr)
 
         report, run_dir = None, None
-        for rp in sorted(ROOT.glob("tmp/*/report.json"), key=os.path.getmtime,
-                         reverse=True):
-            if rp.stat().st_mtime >= start:
+        # Take the run directory this build printed rather than the newest report
+        # on disk: with concurrent runs the mtime scan can return another run's
+        # report, silently attributing someone else's scene to this build.
+        m = re.search(r"run_dir\s*[:=]\s*(tmp/\S+)", proc.stdout + "\n" + proc.stderr)
+        if m:
+            rp = build_cwd / m.group(1) / "report.json"
+            if rp.exists() and rp.stat().st_mtime >= start:
                 report = json.loads(rp.read_text())
                 run_dir = str(rp.parent)
-                break
+        if report is None:
+            for rp in sorted(build_cwd.glob("tmp/*/report.json"), key=os.path.getmtime,
+                             reverse=True):
+                if rp.stat().st_mtime >= start:
+                    report = json.loads(rp.read_text())
+                    run_dir = str(rp.parent)
+                    break
 
         if report is None:
             tail = "\n".join((proc.stdout + proc.stderr).splitlines()[-25:])
             log(f"  build failed (no report). tail:\n{tail}")
             return BuildResult(False, None, "", None, [], tail)
 
-        renders = [str((ROOT / r).resolve()) if not os.path.isabs(r) else r
+        # report paths are relative to the cwd the build ran in
+        renders = [str((build_cwd / r).resolve()) if not os.path.isabs(r) else r
                    for r in report.get("renders", [])]
         strips = [r for r in renders if "vlm_views" in r and "combined" in r]
         strip = max(strips, key=os.path.getmtime) if strips else None
