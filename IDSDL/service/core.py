@@ -371,12 +371,27 @@ def run_scene(program_path, timeout=2400, phase=None):
                        cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=timeout)
     out = p.stdout + "\n" + p.stderr
     report, run_dir = {}, None
-    for rp in sorted(glob.glob(os.path.join(_TMP, "*", "report.json")),
-                     key=os.path.getmtime, reverse=True):
-        if os.path.getmtime(rp) >= start:
+    # Resolve THIS build's report from the child's own stdout (workbench prints
+    # "run_dir : tmp/<run>"), the way batchgen does. The previous newest-report-in-tmp
+    # scan was safe only while builds were serialized: with two agents building at
+    # once, whoever finished last won the mtime sort and the caller could be handed
+    # the OTHER scene's report and renders, silently. Parallel MCP agents make that a
+    # real race, so the run directory must come from the process we launched.
+    m = re.search(r"run_dir\s*[:=]\s*(tmp/\S+)", out)
+    if m:
+        rp = os.path.join(REPO_ROOT, m.group(1), "report.json")
+        if os.path.exists(rp) and os.path.getmtime(rp) >= start:
             report = _json.load(open(rp))
-            run_dir = report.get("run_dir")
-            break
+            run_dir = report.get("run_dir") or m.group(1)
+    if not report:
+        # Fallback for an older/quiet workbench that did not print the run dir.
+        # Still mtime-based, so still only trustworthy when nothing else is building.
+        for rp in sorted(glob.glob(os.path.join(_TMP, "*", "report.json")),
+                         key=os.path.getmtime, reverse=True):
+            if os.path.getmtime(rp) >= start:
+                report = _json.load(open(rp))
+                run_dir = report.get("run_dir")
+                break
     views = []
     if run_dir:
         views = sorted(glob.glob(os.path.join(REPO_ROOT, run_dir, "room_views", "*.png")))

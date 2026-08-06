@@ -13,7 +13,26 @@ worker = SceneRendererWorker({resolution_x}, {resolution_y}, {samples}, {frame_r
         self.verbose = verbose
 
     def run(self, script):
-        self.exec(script, verbose=self.verbose)
+        # Every render in IDSDL funnels through here, so this is where the
+        # cross-process GPU budget is enforced: many agents may BUILD in parallel
+        # (build is ~30x longer than render and is CPU/network bound), but only a
+        # bounded number may have Blender on a card at once. No-op unless gating is
+        # configured — see IDSDL/gpu_gate.py.
+        from IDSDL.gpu_gate import gpu_slot
+        import os as _os
+        with gpu_slot("SceneRenderer") as gpu:
+            if gpu is None:
+                self.exec(script, verbose=self.verbose)
+                return
+            prev = _os.environ.get("CUDA_VISIBLE_DEVICES")
+            _os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
+            try:
+                self.exec(script, verbose=self.verbose)
+            finally:
+                if prev is None:
+                    _os.environ.pop("CUDA_VISIBLE_DEVICES", None)
+                else:
+                    _os.environ["CUDA_VISIBLE_DEVICES"] = prev
 
     def render(self, path, output_path, location=None, target=None):
         script = f"""
